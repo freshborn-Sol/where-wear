@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% block bodyclass %}kiosk{% endblock %}{% block body %}
+<header class="ktop">where:wear · 옷 찾기
+  {% if step != 'cat' %}<a class="kback" href="/kiosk">처음으로</a>{% endif %}
+</header>
+<main class="kwrap">
+{% if step == 'cat' %}
+  <h1>무엇을 찾으세요?</h1>
+  <div class="kgrid">
+    {% for c in cats %}<a class="kbtn" href="/kiosk?step=sub&cat={{c}}">{{c}}</a>{% endfor %}
+  </div>
+{% elif step == 'sub' %}
+  <h1>{{cat}} · 어떤 종류인가요?</h1>
+  <div class="kgrid ktiles">
+    {% for t in tiles %}
+      <a class="ktile" href="/kiosk?step=color&cat={{cat}}&sub={{t.sub}}">
+        <img src="{{ imgsrc(t.rep) }}" alt=""><div>{{t.sub}}</div></a>
+    {% endfor %}
+    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><span>전체</span><div>잘 모르겠어요</div></a>
+  </div>
+{% elif step == 'color' %}
+  <h1>{{ sub or cat }} · 어떤 색인가요?</h1>
+  <div class="kgrid color">
+    {% for name, hex, n in kcolors %}
+      <a class="kbtn" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}&color={{name}}">
+        <i style="background:{{hex}}"></i>{{name}}</a>
+    {% endfor %}
+  </div>
+{% else %}
+  {% set base = '/kiosk?step=result&cat=' ~ cat ~ '&sub=' ~ sub ~ '&color=' ~ color %}
+  <h1>{{color}} {{ sub or cat }} <small class="kcount">{{items|length}}개</small></h1>
+  {% if kf.fit|length > 1 or kf.pattern|length > 1 or fit or pattern %}
+  <section class="knarrow">
+    <div class="knh">더 좁히기 <span>(안 눌러도 돼요)</span>
+      {% if fit or pattern %}<a class="kclear" href="{{base}}">조건 지우기</a>{% endif %}</div>
+    {% for key, label, cur, okey, oval in [('fit','핏',fit,'pattern',pattern), ('pattern','무늬',pattern,'fit',fit)] %}
+      {% if kf[key]|length > 1 or cur %}
+      <div class="krow"><div class="kl">{{label}}</div><div class="kchips">
+        {% for v, n in kf[key] %}
+          {% set on = (v == cur) %}
+          <a class="kchip{{ ' on' if on }}" href="{{base}}&{{key}}={{ '' if on else v }}&{{okey}}={{oval}}">{{ '✓ ' if on }}{{v}} <small>{{n}}</small></a>
+        {% endfor %}
+      </div></div>
+      {% endif %}
+    {% endfor %}
+  </section>
+  {% endif %}
+  {% if not items %}<p class="kempty">지금은 해당하는 옷이 없어요.</p>{% endif %}
+  <div class="kgrid">
+    {% for it in items %}
+      <a class="kcard" href="/kiosk/item/{{it.sku}}">
+        <img src="{{ imgsrc(it) }}" alt="">
+        <div>{{it.name}}</div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+</main>
+{% endblock %}

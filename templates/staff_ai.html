@@ -1,0 +1,80 @@
+{% extends "base.html" %}{% block body %}
+<header class="top"><a class="back" href="/staff">←</a>
+  <div class="brand">직원 · 사진으로 상품 등록</div></header>
+<main class="wrap">
+
+{% if done %}<p class="okmsg">✅ {{done}}</p>{% endif %}
+
+{% if step == 'photo' %}
+  <ol class="steps">
+    <li><b>1</b> 걸어둘 선반을 고르고</li>
+    <li><b>2</b> 옷을 정면에서 찍으면 AI가 특징을 채워요</li>
+    <li><b>3</b> 확인·수정 후 저장</li>
+  </ol>
+  <form action="/staff/ai/analyze" method="post" enctype="multipart/form-data" class="aiform" onsubmit="busy()">
+    <div class="manual">
+      <label>선반
+        <select name="fixture">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select>
+      </label>
+      <label>단
+        <select name="level"><option>상단</option><option selected>중단</option><option>하단</option></select>
+      </label>
+    </div>
+    <div class="photo2">
+      <label class="filebtn">📷 촬영하기
+        <input type="file" name="photo" accept="image/*" capture="environment" onchange="this.form.requestSubmit()"></label>
+      <label class="filebtn ghost">🖼 사진 고르기
+        <input type="file" name="photo" accept="image/*" onchange="this.form.requestSubmit()"></label>
+    </div>
+    <p class="hint">밝은 곳에서, 옷이 화면을 꽉 채우게 찍으면 정확해져요.</p>
+  </form>
+
+{% elif step == 'confirm' %}
+  {% if err %}<p class="aiq-w">{{err}}</p>{% endif %}
+  <form action="/staff/ai/save" method="post" class="confirm">
+    <input type="hidden" name="img" value="{{img}}">
+    <input type="hidden" name="fixture" value="{{fx}}">
+    <input type="hidden" name="level" value="{{lv}}">
+    <div class="detail">
+      <img class="hero" src="{{ url_for('static', filename=img) }}" alt="">
+      <div class="fields">
+        {% if a.desc %}<p class="aiq-d">AI: “{{a.desc}}”</p>{% endif %}
+        {% set fields = [('category','분류',V.CATEGORIES),('subcat','종류',V.ALL_SUBS),
+                         ('color','색',V.COLORS),('pattern','패턴',V.PATTERNS),('fit','핏',V.FITS)] %}
+        {% for key, label, opts in fields %}
+          <label>{{label}}
+            <select name="{{key}}">{% for o in opts %}<option {{'selected' if a.get(key)==o}}>{{o}}</option>{% endfor %}</select>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="manual">
+      <label>상품명 <input name="name" placeholder="{{ (a.color ~ ' ' ~ a.subcat) if a else '예) 검정 오버핏 후드' }}"></label>
+      <label>가격 <input name="price" inputmode="numeric" placeholder="39900"></label>
+      <label>사이즈:수량 <input name="sizes" value="S:1,M:2,L:2,XL:1"></label>
+    </div>
+    <p class="hint">위치: <b>{{fx}} {{lv}}</b></p>
+    <div class="btns">
+      <a class="btn warn" href="/staff/ai">다시 찍기</a>
+      <button class="btn">저장</button>
+    </div>
+  </form>
+{% endif %}
+
+  <h2>전시 실물 ({{demos|length}})</h2>
+  <ul class="log">
+  {% for d in demos %}
+    <li class="demo-row">
+      <img src="{{ imgsrc(d) }}" alt="">
+      <a href="/item/{{d.sku}}">{{d.sku}} · {{d.name}}<br>
+        <small>{{d.subcat}} · {{d.color}} · {% if d.place %}{{d.place.fixture_id}} {{d.place.level}}{% else %}위치 없음{% endif %}</small></a>
+      <form method="post" action="/staff/ai/delete/{{d.sku}}" onsubmit="return confirm('{{d.sku}} 를 삭제할까요?')">
+        <button class="x">삭제</button></form>
+    </li>
+  {% else %}<li class="hint">아직 없어요</li>{% endfor %}
+  </ul>
+</main>
+<div id="busy" class="busy"><div>🤖 AI가 옷을 분석하고 있어요…</div></div>
+<script>function busy(){document.getElementById('busy').style.display='flex'}
+window.addEventListener('pageshow',()=>document.getElementById('busy').style.display='none');</script>
+{% endblock %}

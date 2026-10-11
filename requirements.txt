@@ -1,0 +1,7 @@
+flask
+pillow
+qrcode
+# 선택: AI 검색 정확도 향상
+# torch
+# transformers
+# cairosvg

@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% block body %}
+<header class="top">
+  <a class="back" href="/go?at={{at}}">←</a>
+  <div class="brand">사진으로 찾기</div>
+</header>
+<main class="wrap">
+
+  <section class="aiq">
+    <img src="{{ url_for('static', filename=qimg) }}" alt="올린 사진">
+    <div>
+      <div class="aiq-h">AI가 본 특징
+        <small>{% if q._cached %}· 저장된 결과{% else %}· {{ (q._ms/1000)|round(1) }}초{% endif %}</small></div>
+      <div class="tags">
+        <span class="tg">{{q.category}}</span><span class="tg">{{q.subcat}}</span>
+        <span class="tg"><i class="sw" style="background:{{ colors.get(q.color, '#ccc') }}"></i>{{q.color}}</span>
+        <span class="tg">{{q.pattern}}</span>
+        {% if q.fit != '알수없음' %}<span class="tg">{{q.fit}}</span>{% endif %}
+      </div>
+      {% if q.desc %}<p class="aiq-d">“{{q.desc}}”</p>{% endif %}
+      {% if not q.is_clothing %}<p class="aiq-w">옷 사진이 아닌 것 같아요. 옷이 크게 나오게 다시 찍어 주세요.</p>{% endif %}
+    </div>
+  </section>
+
+  {% if best %}
+  <h2>가장 비슷한 옷</h2>
+  <a class="best {{verdict[1]}}" href="/item/{{best.sku}}?at={{at}}">
+    <img src="{{ imgsrc(best) }}" alt="">
+    <div class="best-b">
+      <div class="vd">{{verdict[0]}}</div>
+      <div class="nm">{{best.name}}{% if best.is_demo %} <span class="demo">전시 실물</span>{% endif %}</div>
+      <div class="meter"><i style="width:{{best.score}}%"></i></div>
+      <div class="mt">일치도 <b>{{best.score}}%</b> · {{ best.hits|join(' · ') }}</div>
+      <div class="pl">{% if best.place %}📍 {{best.place.fixture_name}} · {{best.place.level}}
+                      {% else %}위치 미등록{% endif %}</div>
+      <div class="fr {{best.fresh[1]}}">🕐 {{best.fresh[0]}}</div>
+      <span class="go">길 안내 →</span>
+    </div>
+  </a>
+  {% endif %}
+
+  {% if others %}
+  <h2>비슷한 추천</h2>
+  <div class="grid">
+  {% for it in others %}
+    <a class="card" href="/item/{{it.sku}}?at={{at}}">
+      <img src="{{ imgsrc(it) }}" alt="">
+      <div class="nm">{{it.name}}{% if it.is_demo %} <span class="demo">실물</span>{% endif %}</div>
+      <div class="mt">일치도 {{it.score}}%</div>
+      <div class="pl">{% if it.place %}{{it.place.zone}}구역 · {{it.place.fixture_id}} · {{it.place.level}}
+                      {% else %}위치 미등록{% endif %}</div>
+    </a>
+  {% endfor %}
+  </div>
+  {% endif %}
+
+  <p class="foot">원하는 옷이 아닌가요? <a href="/go?at={{at}}">글자·필터로 찾기</a></p>
+</main>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}{% block body %}
+<header class="top"><div class="brand">직원 · 위치 등록</div>
+  <a class="back" href="/staff/ai" style="margin-left:auto;font-size:14px">📷 사진 등록</a>
+  <a class="back" href="/staff/reports" style="font-size:14px">신고함</a></header>
+<main class="wrap">
+  <ol class="steps">
+    <li><b>1</b> 선반 QR을 찍으세요 <span id="fxnow" class="tag">미선택</span></li>
+    <li><b>2</b> 옷 태그를 계속 찍으세요 (여러 벌 연속)</li>
+  </ol>
+
+  <div id="reader"></div>
+  <p class="hint">카메라가 안 되면 아래에서 직접 고르세요 (시연·발표용 대비)</p>
+
+  <div class="manual">
+    <label>선반
+      <select id="fx">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select>
+    </label>
+    <label>단
+      <select id="lv"><option>상단</option><option selected>중단</option><option>하단</option></select>
+    </label>
+    <label>옷(SKU)
+      <select id="sku">{% for i in items %}<option value="{{i.sku}}">{{i.sku}} · {{i.name}}</option>{% endfor %}</select>
+    </label>
+    <button class="btn" onclick="reg(document.getElementById('sku').value)">등록</button>
+  </div>
+
+  <h2>최근 등록</h2>
+  <ul id="log" class="log"></ul>
+</main>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+// 선반 QR(…/go?at=A-H1)을 찍으면 선반이 정해지고, 그 뒤 찍는 코드는 옷(SKU)으로 본다.
+let fixture = null, last = 0;
+function setFixture(id){
+  fixture = id;
+  document.getElementById('fxnow').textContent = id;
+  document.getElementById('fx').value = id;
+}
+function reg(sku){
+  const fx = fixture || document.getElementById('fx').value;
+  fetch('/api/register', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({sku:sku, fixture:fx, level:document.getElementById('lv').value})})
+   .then(r=>r.json()).then(d=>{
+      const li = document.createElement('li');
+      li.textContent = (d.ok ? '✅ ' : '⚠️ ') + d.message;
+      document.getElementById('log').prepend(li);
+      if (d.ok && navigator.vibrate) navigator.vibrate(60);   // 찍혔다는 신호
+   });
+}
+function onScan(text){
+  const t = Date.now();
+  if (t - last < 1200) return;            // 같은 코드 연속 인식 방지
+  last = t;
+  const m = text.match(/[?&]at=([A-Za-z0-9\-]+)/);
+  if (m) { setFixture(m[1]); return; }    // 선반 QR
+  reg(text.trim().toUpperCase());         // 옷 QR / 바코드
+}
+// html5-qrcode : QR + 주요 바코드(EAN-13 등) 모두 읽음. 아이폰 사파리에서도 동작.
+new Html5Qrcode("reader").start({facingMode:"environment"},
+   {fps:10, qrbox:240}, onScan, ()=>{})
+   .catch(e => { document.getElementById('reader').innerHTML =
+      '<p class="hint">카메라를 쓸 수 없어요 (' + e + '). 아래에서 직접 선택하세요.</p>'; });
+</script>
+{% endblock %}

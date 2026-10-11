@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block bodyclass %}kiosk{% endblock %}{% block body %}
+<header class="ktop">{{it.name}}<a class="kback" href="/kiosk">처음으로</a></header>
+<main class="kwrap">
+  {% if it.place %}
+    <div class="kloc">{{it.place.zone}}구역 · {{it.place.fixture_name}} · <b>{{it.place.level}}</b></div>
+    <div class="kfresh {{it.fresh[1]}}">🕐 {{it.fresh[0]}}</div>
+  {% else %}<div class="kloc">위치가 등록되지 않았어요</div>{% endif %}
+  {% include "_map.html" %}
+  <div class="kbtns">
+    <button class="kbtn2" onclick="report('none')">여기 없어요</button>
+    <button class="kbtn2" onclick="report('call')">직원 불러주세요</button>
+  </div>
+  <p id="msg" class="kmsg"></p>
+</main>
+<script>
+function report(kind){
+  fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({sku:'{{it.sku}}',fixture:'{{ it.place.fixture_id if it.place }}',kind:kind})})
+  .then(r=>r.json()).then(d=>{document.getElementById('msg').textContent='✅ '+d.message;});
+}
+setTimeout(()=>location.href='/kiosk', 60000);   // 1분 뒤 첫 화면으로
+</script>
+{% endblock %}

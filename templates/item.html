@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block body %}
+<header class="top"><a class="back" href="javascript:history.back()">←</a>
+  <div class="brand">{{it.name}}</div></header>
+<main class="wrap">
+  <div class="detail">
+    <img class="hero" src="{{ imgsrc(it) }}" alt="">
+    <div>
+      <div class="price">{{ "{:,}".format(it.price) }}원</div>
+      <div class="sizes">
+        {% for s in it.sizes %}<span class="sz {{'zero' if s.qty==0}}">{{s.size}} {{s.qty}}</span>{% endfor %}
+      </div>
+      {% if it.place %}
+        <div class="locbox">
+          <div class="loc">{{it.place.zone}}구역 · {{it.place.fixture_name}}<br><b>{{it.place.level}}</b></div>
+          <div class="fr {{it.fresh[1]}}">🕐 {{it.fresh[0]}}
+            {% if it.fresh[1] == 'old' %}<br><small>위치가 바뀌었을 수 있어요</small>{% endif %}</div>
+        </div>
+      {% else %}<div class="locbox"><div class="loc">아직 위치가 등록되지 않았어요</div></div>{% endif %}
+    </div>
+  </div>
+
+  {% include "_map.html" %}
+  <p class="legend">주황 점이 지금 내 위치, 파란 칸이 찾는 옷이 있는 선반이에요.</p>
+
+  <div class="btns">
+    <button class="btn warn" onclick="report('none')">여기 없어요</button>
+    <button class="btn" onclick="report('call')">직원 호출</button>
+  </div>
+  <p id="msg" class="msg"></p>
+  <p class="foot"><a href="/credits">상품 사진 출처</a></p>
+</main>
+<script>
+function report(kind){
+  fetch('/api/report', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({sku:'{{it.sku}}', fixture:'{{ it.place.fixture_id if it.place }}', kind:kind})})
+  .then(r=>r.json()).then(d=>{ document.getElementById('msg').textContent = '✅ ' + d.message; });
+}
+</script>
+{% endblock %}

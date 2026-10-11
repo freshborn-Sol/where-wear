@@ -1,0 +1,17 @@
+{# 검색창 하나로 글자·사진 검색. 📷는 휴대폰에서 '사진 찍기 / 앨범에서 고르기'를 함께 띄운다 #}
+<form id="pf" action="/search/photo" method="post" enctype="multipart/form-data" onsubmit="busy()">
+  <input type="hidden" name="at" value="{{at}}"></form>
+<form class="searchbox" action="/search">
+  <input type="hidden" name="at" value="{{at}}">
+  <div class="sb">
+    <input name="q" value="{{ q or '' }}" placeholder="예) 파란색 후드티, 오버핏 맨투맨" {{ 'autofocus' if autofocus }}>
+    <label class="cam" title="사진으로 찾기" aria-label="사진으로 찾기">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.2h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>
+      <input type="file" name="photo" accept="image/*" form="pf" onchange="document.getElementById('pf').requestSubmit()">
+    </label>
+  </div>
+  <button>찾기</button>
+</form>
+<div id="busy" class="busy"><div>🤖 AI가 사진 속 옷을 분석하고 있어요…</div></div>
+<script>function busy(){document.getElementById('busy').style.display='flex'}
+window.addEventListener('pageshow',()=>document.getElementById('busy').style.display='none');</script>

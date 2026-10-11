@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block body %}
+<header class="top"><a class="back" href="javascript:history.back()">←</a>
+  <div class="brand">상품 사진 출처</div></header>
+<main class="wrap">
+  <p class="note">이 프로토타입의 상품 사진은
+     <a href="https://www.pexels.com">Pexels</a> 에서 제공받았습니다.
+     각 사진의 촬영자는 아래와 같습니다.</p>
+  {% if not rows %}
+    <p class="empty">아직 받아온 사진이 없어요. (색상 그림을 쓰는 중)</p>
+  {% endif %}
+  <ul class="log">
+  {% for r in rows %}
+    <li>{{ r.sku }} ·
+      <a href="{{ r.photographer_url }}">{{ r.photographer }}</a>
+      <small><a href="{{ r.pexels_url }}">Pexels에서 보기</a> · {{ r.query }}</small></li>
+  {% endfor %}
+  </ul>
+  <p class="foot">Photos provided by <a href="https://www.pexels.com">Pexels</a></p>
+</main>
+{% endblock %}

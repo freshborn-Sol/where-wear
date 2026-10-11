@@ -1,0 +1,21 @@
+{# 2D 매장 도면 + 경로 #}
+<svg class="map" viewBox="0 0 620 470" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="8" width="604" height="454" rx="10" fill="#fbfcfe" stroke="#d7dee8"/>
+  {% for z, lab, x, y in [('A','A구역',120,70),('B','B구역',430,70),('C','C구역',430,265)] %}
+    <text x="{{x}}" y="{{y}}" class="zone">{{lab}}</text>
+  {% endfor %}
+  {% for f in map.fixtures %}
+    {% set on = (f.id == map.target) %}
+    <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="5"
+          fill="{{ '#1f6fbf' if on else '#e8edf4' }}" stroke="{{ '#12508f' if on else '#c6d0dd' }}"/>
+    <text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 5}}" class="fx {{'on' if on else ''}}">{{f.id}}</text>
+  {% endfor %}
+  {% if map.path %}
+    <polyline points="{{map.path}}" fill="none" stroke="#1f6fbf" stroke-width="5"
+              stroke-dasharray="10 7" stroke-linecap="round"/>
+  {% endif %}
+  {% for f in map.fixtures if f.id == map.at %}
+    <circle cx="{{f.x + f.w/2}}" cy="{{f.y + f.h/2}}" r="13" fill="#e8590c"/>
+    <text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 5}}" class="me">나</text>
+  {% endfor %}
+</svg>

@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block body %}
+<header class="top"><a class="back" href="/staff">←</a><div class="brand">신고 · 호출</div></header>
+<main class="wrap">
+  {% if not reports %}<p class="empty">아직 신고가 없어요.</p>{% endif %}
+  <ul class="log">
+  {% for r in reports %}
+    <li class="{{'done' if r.done}}">
+      {{ '🙋 직원 호출' if r.kind=='call' else '❌ 여기 없어요' }} ·
+      {{ r.name or r.sku }} · {{ r.fixture_id }}
+      <small>{{ r.created_at.replace('T',' ') }}</small>
+      {% if r.done %}<span class="tag">처리됨</span>{% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+</main>
+{% endblock %}

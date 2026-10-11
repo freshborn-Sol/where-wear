@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% block body %}
+<header class="top">
+  <div class="brand">where<span>:</span>wear</div>
+  <div class="at">📍 지금 위치 · <b>{{ here.name if here else at }}</b></div>
+</header>
+<main class="wrap">
+  {% set autofocus = False %}{% include "_searchbar.html" %}
+  <p class="hint">📷 를 누르면 사진을 찍거나 골라서, AI가 가장 비슷한 옷을 매장에서 찾아줘요</p>
+
+  <h2>종류</h2>
+  <div class="tabs" role="tablist">
+    {% for c in cats %}<button class="tab {{'on' if c == tab}}" data-tab="{{c}}" role="tab">{{c}}</button>{% endfor %}
+  </div>
+  {% for c in cats %}
+  <div class="tiles {{'on' if c == tab}}" data-panel="{{c}}">
+    <a class="tile all" href="/search?at={{at}}&cat={{c}}"><span class="ti">전체</span><b>{{c}} 전체</b>
+      <small>{{ tiles[c]|sum(attribute='n') }}개</small></a>
+    {% for t in tiles[c] %}
+    <a class="tile" href="/search?at={{at}}&cat={{c}}&sub={{t.sub}}">
+      <img src="{{ imgsrc(t.rep) }}" alt="" loading="lazy"><b>{{t.sub}}</b><small>{{t.n}}개</small></a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <h2>색상</h2>
+  <div class="chips">
+    {% for name, hex in colors.items() %}
+      <a class="chip color" href="/search?at={{at}}&color={{name}}">
+        <i style="background:{{hex}}"></i>{{name}}</a>
+    {% endfor %}
+  </div>
+  <p class="foot">어르신은 매장 입구 키오스크를 이용하세요 · <a href="/kiosk">키오스크 화면 보기</a><br>
+     직원용 <a href="/staff">위치 등록</a> · <a href="/staff/ai">사진으로 상품 등록</a><br>
+     상품 사진 <a href="/credits">출처</a></p>
+</main>
+<script>
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.tiles').forEach(p => p.classList.toggle('on', p.dataset.panel === b.dataset.tab));
+});
+</script>
+{% endblock %}

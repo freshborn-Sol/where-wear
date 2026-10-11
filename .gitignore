@@ -1,0 +1,15 @@
+# API 키 (절대 올리지 않기)
+gemini_key.txt
+pexels_key.txt
+*.key
+.env
+
+# 실행 환경·임시 파일
+.venv/
+__pycache__/
+.DS_Store
+
+# 실행하면 다시 생기는 것들
+store.db
+ai_cache.json
+static/uploads/

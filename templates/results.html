@@ -1,0 +1,53 @@
+{% extends "base.html" %}{% block body %}
+<header class="top">
+  <a class="back" href="/go?at={{at}}">←</a>
+  <div class="brand">검색 결과</div>
+</header>
+<main class="wrap">
+  {% include "_searchbar.html" %}
+  {% set sel = sel or {} %}{% set facets = facets or {} %}
+
+  {% set active = [] %}
+  {% for k, label in [('cat','분류'),('sub','종류'),('color','색'),('fit','핏'),('pattern','패턴')] %}
+    {% if sel.get(k) %}{% set _ = active.append((k, sel[k])) %}{% endif %}
+  {% endfor %}
+  {% if active %}
+  <div class="active">
+    {% for k, v in active %}
+      {% set off = {'cat': '', 'sub': ''} if k == 'cat' else {k: ''} %}
+      <a class="achip" href="{{ with_args(**off) }}">{{v}} <span>×</span></a>
+    {% endfor %}
+    <a class="aclear" href="/search?at={{at}}{{ '&q=' ~ q if q }}">모두 해제</a>
+  </div>
+  {% endif %}
+
+  {% for k, label in [('sub','종류'),('color','색상'),('fit','핏'),('pattern','패턴')] %}
+    {% if facets.get(k) and (facets[k]|length > 1 or sel.get(k)) %}
+    <div class="frow"><span class="fl">{{label}}</span>
+      <div class="fchips">
+      {% for v, n in facets[k] %}
+        <a class="fchip {{'on' if sel.get(k) == v}}" href="{{ with_args(**{k: '' if sel.get(k) == v else v}) }}">
+          {% if k == 'color' %}<i style="background:{{ colors.get(v, '#ccc') }}"></i>{% endif %}{{v}} <small>{{n}}</small></a>
+      {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  <p class="note">{% if swatch %}<i class="sw" style="background:{{swatch}}"></i>{% endif %}
+     {{note}} · <b>{{items|length}}개</b></p>
+  {% if not items %}<p class="empty">조건에 맞는 옷이 없어요. 위에서 조건을 하나 빼보세요.</p>{% endif %}
+  <div class="grid">
+  {% for it in items %}
+    <a class="card" href="/item/{{it.sku}}?at={{at}}">
+      <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
+      <div class="nm">{{it.name}}</div>
+      <div class="mt">{{it.color}} · {{it.fit}}{% if it.pattern and it.pattern != '무지' %} · {{it.pattern}}{% endif %}</div>
+      <div class="pl">{% if it.place %}{{it.place.zone}}구역 · {{it.place.fixture_id}} · {{it.place.level}}
+                      {% else %}위치 미등록{% endif %}</div>
+      <div class="fr {{it.fresh[1]}}">🕐 {{it.fresh[0]}}</div>
+    </a>
+  {% endfor %}
+  </div>
+</main>
+{% endblock %}
