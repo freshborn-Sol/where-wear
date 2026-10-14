@@ -1,4 +1,12 @@
 {% extends "base.html" %}{% block body %}
+{% macro alt_card(o, show_color=False) %}
+  <a class="hcard" href="/item/{{o.sku}}?at={{at}}">
+    <img src="{{ imgsrc(o) }}" alt="">
+    <div><div class="nm">{% if show_color %}<i class="sw" style="background:{{o.hex}}"></i>{{o.color}}{% else %}{{o.name}}{% endif %}</div>
+      <small>{% if not show_color %}{{o.color}} · {% endif %}{% if o.place %}{{o.place.zone}}구역 · {{o.place.fixture_id}} · {{o.place.level}}{% else %}위치 미등록{% endif %}</small></div>
+    <span class="hgo">›</span>
+  </a>
+{% endmacro %}
 <header class="top"><a class="back" href="javascript:history.back()">←</a>
   <div class="brand">{{it.name}}</div></header>
 <main class="wrap">
@@ -7,33 +15,218 @@
     <div>
       <div class="price">{{ "{:,}".format(it.price) }}원</div>
       <div class="sizes">
-        {% for s in it.sizes %}<span class="sz {{'zero' if s.qty==0}}">{{s.size}} {{s.qty}}</span>{% endfor %}
+        {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')">{{s.size}} <small>{{ s.qty if s.qty else '없음' }}</small></button>{% endfor %}
       </div>
+      <div id="rec" class="rec" hidden></div>
       {% if it.place %}
         <div class="locbox">
           <div class="loc">{{it.place.zone}}구역 · {{it.place.fixture_name}}<br><b>{{it.place.level}}</b></div>
           <div class="fr {{it.fresh[1]}}">🕐 {{it.fresh[0]}}
-            {% if it.fresh[1] == 'old' %}<br><small>위치가 바뀌었을 수 있어요</small>{% endif %}</div>
+            {% if it.fresh[1] == 'old' and not flag %}<br><small>위치가 바뀌었을 수 있어요</small>{% endif %}</div>
+          {% if flag %}<div class="lflag {{flag[0]}}">{{ '⚠️' if flag[0]=='warn' else '✅' }} {{flag[1]}}</div>{% endif %}
         </div>
       {% else %}<div class="locbox"><div class="loc">아직 위치가 등록되지 않았어요</div></div>{% endif %}
     </div>
   </div>
 
+  {% for s in hsizes if s.qty == 0 %}
+  <div class="szres" data-size="{{s.size}}" hidden>
+    <p class="ans no">이 옷은 <b>{{s.size}}</b> 사이즈가 매장에 없어요.</p>
+    {% if size_alts[s.size] %}
+      <p class="sh-sub">비슷한 옷 중 {{s.size}} 사이즈가 있는 것</p>
+      <div class="hlist">{% for o in size_alts[s.size] %}{{ alt_card(o) }}{% endfor %}</div>
+    {% endif %}
+    <button class="btn" onclick="sendInline('size','{{s.size}} 입고·창고 문의')">직원에게 창고 재고 확인 요청</button>
+  </div>
+  {% endfor %}
+
   {% include "_map.html" %}
   <p class="legend">주황 점이 지금 내 위치, 파란 칸이 찾는 옷이 있는 선반이에요.</p>
 
-  <div class="btns">
-    <button class="btn warn" onclick="report('none')">여기 없어요</button>
-    <button class="btn" onclick="report('call')">직원 호출</button>
-  </div>
+  <button class="helpbtn red" onclick="openHelp()">찾는 게 없나요?</button>
   <p id="msg" class="msg"></p>
   <p class="foot"><a href="/credits">상품 사진 출처</a></p>
 </main>
+
+<!-- '찾는 게 없나요?' 패널 -->
+<div id="help" class="sheet" onclick="if(event.target===this)closeHelp()">
+ <div class="sheet-in">
+  <div class="sh-top"><button class="sh-back" id="shBack" onclick="go('menu')">←</button>
+    <b id="shTitle">어떤 게 안 되나요?</b><button class="sh-x" onclick="closeHelp()">✕</button></div>
+
+  <section data-p="menu">
+    <button class="hopt" onclick="go('color')"><span>🎨</span><div>다른 색을 보고 싶어요<small>다른 색이 어디 있는지 바로 안내해요</small></div></button>
+    <button class="hopt" onclick="go('none')"><span>❌</span><div>여기에 옷이 없어요<small>재고 확인 · 비슷한 옷 · 직원 도움</small></div></button>
+    <button class="hopt" onclick="go('call')"><span>🙋</span><div>직원에게 직접 물어볼게요<small>직원이 이 선반으로 와요</small></div></button>
+  </section>
+
+  <section data-p="color" hidden>
+    {% if other_colors %}
+      <p class="sh-sub">{{color_basis}}의 다른 색 {{other_colors|length}}가지</p>
+      <div class="hlist">{% for o in other_colors %}{{ alt_card(o, True) }}{% endfor %}</div>
+    {% else %}
+      <p class="ans no">매장에 다른 색이 없어요.</p>
+      <button class="btn" onclick="send('call','다른 색 문의')">직원에게 물어보기</button>
+    {% endif %}
+  </section>
+
+  <section data-p="none" hidden>
+    <!-- ① 한 번 더 확인 -->
+    <div id="nCheck">
+      <div class="ncheck">
+        <img src="{{ imgsrc(it) }}" alt="">
+        <div>{% if it.place %}<b>{{it.place.fixture_id}} · {{it.place.fixture_name}}</b><br><span class="lv">{{it.place.level}}</span>{% else %}<b>위치 미등록</b>{% endif %}
+          <small>이렇게 생긴 {{it.color}} {{it.subcat}}이에요</small></div>
+      </div>
+      <p class="tip">💡 접혀 있거나, 다른 사이즈 사이에 끼어 있거나, 행거 뒤편에 있을 수 있어요.</p>
+      <div class="btns">
+        <button class="btn okb" onclick="foundIt()">찾았어요!</button>
+        <button class="btn warn" onclick="notHere()">그래도 없어요</button>
+      </div>
+    </div>
+
+    <!-- ② 재고에 따라 다른 답 -->
+    <div id="nRes" hidden>
+      <p class="ans ok" id="nMsg"></p>
+      {% set instock = hsizes|selectattr('qty')|list %}
+      {% if instock %}
+        <div class="nstock">
+          <b>매장에 이 옷이 {{ instock|sum(attribute='qty') }}벌 있어요.</b> 위치만 바뀐 것 같아요.
+          <p class="sh-q">찾는 사이즈를 고르면 직원이 찾아 드려요</p>
+          <div class="szpick">{% for z in instock %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{{z.qty}}벌</small></button>{% endfor %}</div>
+          <div class="btns">
+            <button class="btn" id="waitBtn" onclick="askStaff()" disabled>직원에게 찾아 달라고 하기</button>
+          </div>
+        </div>
+      {% else %}
+        <p class="ans no"><b>지금 매장에 재고가 없어요.</b><br><small>실서비스에서는 입고 알림·온라인 주문으로 연결해요.</small></p>
+      {% endif %}
+      {% if similar %}
+        <p class="sh-sub">대신 이런 옷은 지금 매장에 있어요</p>
+        <div class="hlist">{% for o in similar %}{{ alt_card(o) }}{% endfor %}</div>
+      {% endif %}
+      <button class="btn ghost wide" onclick="closeHelp()">괜찮아요, 다른 옷 볼게요</button>
+    </div>
+  </section>
+
+  <!-- 직원 호출 진행 상태 (몇 초마다 확인) -->
+  <section data-p="status" hidden>
+    <div class="track">
+      <div class="tstep" data-s="waiting"><i>1</i>직원에게 알림</div>
+      <div class="tstep" data-s="going"><i>2</i>직원이 가는 중</div>
+      <div class="tstep" data-s="served"><i>3</i>도착</div>
+    </div>
+    <p class="ans ok" id="tMsg">직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.</p>
+    <p class="hint" id="tTime"></p>
+  </section>
+
+  <section data-p="call" hidden>
+    <p class="sh-q">무엇이 궁금하세요? <small>(골라 주시면 직원이 미리 알고 와요)</small></p>
+    <div class="reasons">
+      {% for r in ['사이즈·핏 상담', '탈의실 위치', '세탁·소재 문의', '그냥 와 주세요'] %}
+        <button class="rsn" onclick="send('call','{{r}}')">{{r}}</button>{% endfor %}
+    </div>
+  </section>
+
+  <p id="done" class="ans ok" hidden></p>
+ </div>
+</div>
+
+
 <script>
-function report(kind){
-  fetch('/api/report', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({sku:'{{it.sku}}', fixture:'{{ it.place.fixture_id if it.place }}', kind:kind})})
-  .then(r=>r.json()).then(d=>{ document.getElementById('msg').textContent = '✅ ' + d.message; });
+const SKU='{{it.sku}}', FX='{{ it.place.fixture_id if it.place }}';
+const TITLES={menu:'어떤 게 안 되나요?',color:'다른 색 보기',none:'여기에 옷이 없어요',call:'직원에게 물어보기',status:'직원 호출'};
+const $=s=>document.querySelector(s);
+function openHelp(){$('#help').classList.add('on');go('menu');}
+function closeHelp(){$('#help').classList.remove('on');}
+function go(p){
+  document.querySelectorAll('#help section').forEach(s=>s.hidden=s.dataset.p!==p);
+  $('#done').hidden=true; $('#shTitle').textContent=TITLES[p]; $('#shBack').style.visibility=p==='menu'?'hidden':'visible';
+  if(p==='none'){ $('#nCheck').hidden=false; $('#nRes').hidden=true; }
 }
+/* 익명 기기 id: 같은 휴대폰의 중복 신고를 막는 용도 (개인정보 없음) */
+const DEV=(()=>{ try{ let d=localStorage.getItem('ww_dev'); if(!d){ d=Math.random().toString(36).slice(2,10); localStorage.setItem('ww_dev',d);} return d; }catch(e){ return ''; } })();
+let RID=null, WAIT_SZ='', POLL=null;
+function foundIt(){
+  fetch('/api/found',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:SKU,fixture:FX,device:DEV})})
+   .then(r=>r.json()).then(d=>{ showDone('🎉 '+d.message); });
+}
+function notHere(){
+  post('none','').then(d=>{
+    RID=d.id; $('#nCheck').hidden=true; $('#nRes').hidden=false;
+    $('#nMsg').textContent='✅ '+d.message+(d.delisted?' (이 위치는 안내에서 내렸어요)':'');
+    const rec=(loadBody()&&typeof recommend==='function')?recommend(loadBody()).size:null;   // 추천 사이즈가 있으면 미리 선택
+    if(rec && document.querySelector(`.nstock .szb[data-sz="${rec}"]`)) pickWait(rec);
+  });
+}
+function pickWait(sz){ WAIT_SZ=sz; document.querySelectorAll('.nstock .szb').forEach(b=>b.classList.toggle('on',b.dataset.sz===sz)); $('#waitBtn').disabled=false; $('#waitBtn').textContent=`직원에게 ${sz} 찾아 달라고 하기`; }
+function askStaff(){
+  fetch(`/api/report/${RID}/wait`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({size:WAIT_SZ})})
+   .then(r=>r.json()).then(d=>startTrack(d.id));
+}
+const TMSG={waiting:'직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.',going:'🏃 직원이 가고 있어요!',
+  served:'👋 직원이 도착했어요. 이용해 주셔서 고마워요.',nostock:'죄송해요. 확인해 보니 매장에 재고가 없어요. 위의 비슷한 옷을 확인해 보세요.',
+  expired:'직원이 지금 바빠요. 계산대에 말씀해 주시면 바로 도와드려요.'};
+function startTrack(id){
+  RID=id; go('status'); $('#shBack').style.visibility='hidden';
+  const tick=()=>fetch('/api/report/'+id).then(r=>r.json()).then(d=>{
+    const order=['waiting','going','served'], k=order.indexOf(d.state);
+    document.querySelectorAll('.tstep').forEach((e,i)=>{ e.classList.toggle('on', k>=0 ? i<=k : false); });
+    $('#tMsg').textContent=TMSG[d.state]||TMSG.waiting;
+    $('#tMsg').className='ans '+(['nostock','expired'].includes(d.state)?'no':'ok');
+    $('#tTime').textContent=['waiting','going'].includes(d.state)?`${d.minutes<1?"방금 요청":d.minutes+"분째"} · 10분이 지나면 자동으로 취소돼요`:'';
+    if(!['waiting','going'].includes(d.state)) clearInterval(POLL);
+  });
+  tick(); clearInterval(POLL); POLL=setInterval(tick,3000);
+}
+function showDone(m){ document.querySelectorAll('#help section').forEach(s=>s.hidden=true); $('#done').hidden=false; $('#done').textContent=m; $('#msg').textContent=m; }
+function post(kind,detail){
+  return fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({sku:SKU,fixture:FX,kind:kind,detail:detail,device:DEV})}).then(r=>r.json());
+}
+function send(kind,detail){ post(kind,detail).then(d=>startTrack(d.id)); }
+function sendInline(kind,detail){ post(kind,detail).then(d=>{ $('#help').classList.add('on'); startTrack(d.id); }); }
+
+/* ---------- 사이즈: 누르면 품절 대안 / 키·몸무게로 추천 ---------- */
+const ITEM = {cat:'{{it.category}}', fit:'{{it.fit}}', sizes:{{ hsizes|tojson }}};
+function showSize(sz){
+  document.querySelectorAll('.sz').forEach(b=>b.classList.toggle('on', b.dataset.size===sz));
+  document.querySelectorAll('.szres').forEach(x=>x.hidden = x.dataset.size!==sz);
+}
+const ORDER=['XS','S','M','L','XL','XXL'];
+function loadBody(){ try{ return JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){ return null; } }
+function recommend(p){
+  const list = ITEM.sizes.map(s=>s.size);
+  if(list.every(x=>/^\d+$/.test(x))){                         // 신발(mm)
+    if(!p.foot) return {msg:'신발은 <a href="/me?next='+encodeURIComponent(location.pathname+location.search)+'">발 사이즈</a>를 입력하면 추천해요'};
+    const pick = list.map(Number).sort((a,b)=>a-b).find(x=>x>=p.foot) || Math.max(...list.map(Number));
+    return {size:String(pick), why:`발 ${p.foot}mm 기준`};
+  }
+  const ih=[160,168,176,183].filter(t=>p.h>=t).length;        // 키 → XS(0)~XL(4)
+  const iw=[50,60,70,80].filter(t=>p.w>=t).length;            // 몸무게 → XS~XL
+  let idx = ITEM.cat==='하의' ? Math.max(iw, ih-1) : Math.max(ih, iw);
+  let why = `${p.h}cm · ${p.w}kg 기준`;
+  if(ITEM.fit==='오버핏' && p.pref==='tight'){ idx--; why+=' · 오버핏이라 한 치수 작게'; }
+  else if(ITEM.fit==='오버핏'){ why+=' · 오버핏이라 평소 사이즈로도 넉넉해요'; }
+  else if(['슬림핏','크롭'].includes(ITEM.fit) && p.pref==='loose'){ idx++; why+=` · ${ITEM.fit}이라 한 치수 크게`; }
+  else if(ITEM.fit==='레귤러핏' && p.pref==='loose'){ idx++; why+=' · 넉넉하게 입는 걸 좋아해서 한 치수 크게'; }
+  const avail = list.filter(x=>ORDER.includes(x)).sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
+  if(!avail.length) return {msg:''};
+  idx = Math.max(0, Math.min(idx, ORDER.length-1));
+  const pick = avail.find(x=>ORDER.indexOf(x)>=idx) || avail[avail.length-1];
+  return {size:pick, why};
+}
+(function(){
+  const box=$('#rec'), p=loadBody();
+  box.hidden=false;
+  if(!p){ box.innerHTML='👤 <a href="/me?next='+encodeURIComponent(location.pathname+location.search)+'">키·몸무게를 등록</a>하면 이 옷의 추천 사이즈를 알려드려요'; return; }
+  const r=recommend(p);
+  if(!r.size){ box.innerHTML=r.msg||''; box.hidden=!r.msg; return; }
+  const st=ITEM.sizes.find(s=>s.size===r.size), q=st?st.qty:0;
+  document.querySelectorAll('.sz').forEach(b=>b.classList.toggle('mine', b.dataset.size===r.size));
+  box.classList.add(q?'ok':'no');
+  box.innerHTML = `👤 추천 사이즈 <b>${r.size}</b> · ${q?`재고 ${q}개`:'<b>지금 없어요</b>'}<br><small>${r.why} · 참고용 <a href="/me?next=${encodeURIComponent(location.pathname+location.search)}">수정</a></small>`;
+  if(!q) showSize(r.size);
+})();
 </script>
 {% endblock %}

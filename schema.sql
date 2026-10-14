@@ -10,7 +10,11 @@ CREATE TABLE stock  (sku TEXT, size TEXT, qty INT);
 CREATE TABLE placements (                                  -- 위치 기록(계속 바뀜)
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   sku TEXT, fixture_id TEXT, level TEXT,
-  updated_at TEXT, updated_by TEXT, active INT DEFAULT 1);
-CREATE TABLE reports (                                     -- 없어요 / 직원호출
+  updated_at TEXT, updated_by TEXT, active INT DEFAULT 1,
+  confirmed_at TEXT);                                      -- 손님이 '찾았어요' 누른 시각
+CREATE TABLE reports (                       -- none=위치에 없음 / size=사이즈 요청 / call=직원 호출
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sku TEXT, fixture_id TEXT, kind TEXT, created_at TEXT, done INT DEFAULT 0);
+  sku TEXT, fixture_id TEXT, kind TEXT, created_at TEXT, done INT DEFAULT 0,
+  detail TEXT, size TEXT, device TEXT,
+  wait_state TEXT DEFAULT '', wait_at TEXT, served_at TEXT,   -- 손님 대기: waiting/going/served/nostock/expired
+  resolution TEXT, resolved_at TEXT);                         -- 위치 신고 처리 결과

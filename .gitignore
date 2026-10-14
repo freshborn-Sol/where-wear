@@ -13,3 +13,4 @@ __pycache__/
 store.db
 ai_cache.json
 static/uploads/
+.commit_msg.txt

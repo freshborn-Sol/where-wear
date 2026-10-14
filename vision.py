@@ -7,7 +7,7 @@
     2) rank(items, 특징)      : 우리 코드가 DB의 옷들과 특징을 비교해 점수를 매긴다.
                                (AI는 '특징 추출'만, '비교'는 코드가 한다 → 결과가 일정함)
 
-  API 키 : 환경변수 GEMINI_API_KEY  또는  같은 폴더의 gemini_key.txt  (둘 중 하나)
+  API 키 : 같은 폴더의 gemini_key.txt (우선)  또는  환경변수 GEMINI_API_KEY
   모델   : 환경변수 GEMINI_MODEL  (기본 gemini-3.1-flash-lite)
   표준 라이브러리(urllib)만 써서 추가 설치가 필요 없다. 사진 줄이기는 Pillow(이미 설치됨).
 """
@@ -18,7 +18,7 @@ BASE = Path(__file__).parent
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent"
 CACHE_FILE = BASE / "ai_cache.json"        # 같은 사진을 다시 올리면 API를 안 부른다
-TIMEOUT = 20
+TIMEOUT = 25
 
 # ---------- AI가 고를 수 있는 단어 목록 (이 밖의 단어는 못 쓰게 강제) ----------
 CATEGORIES = ["상의", "하의", "아우터", "신발", "기타"]
@@ -64,11 +64,18 @@ class VisionError(Exception):
 
 
 # ---------- API 키 ----------
+def _ok_key(k):
+    """키 모양 검사: 영문·숫자·기호만, 20자 이상 (한글 예시 문구 같은 게 들어가면 무시)"""
+    return len(k) >= 20 and k.isascii() and " " not in k
+
 def api_key():
+    """gemini_key.txt 를 먼저 보고, 없거나 이상하면 환경변수 GEMINI_API_KEY."""
+    f = BASE / "gemini_key.txt"
+    k = f.read_text(encoding="utf-8").strip() if f.exists() else ""
+    if _ok_key(k):
+        return k
     k = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not k and (BASE / "gemini_key.txt").exists():
-        k = (BASE / "gemini_key.txt").read_text(encoding="utf-8").strip()
-    return k
+    return k if _ok_key(k) else ""
 
 
 # ---------- 사진 준비: 회전 보정 + 768px로 줄이기 (토큰·시간 절약) ----------
@@ -107,27 +114,43 @@ def _call_gemini(jpeg_bytes, key):
         "generationConfig": {"responseMimeType": "application/json",
                              "responseSchema": SCHEMA},
     }
-    req = urllib.request.Request(
-        ENDPOINT.format(m=MODEL), data=json.dumps(body).encode(),
-        headers={"Content-Type": "application/json", "x-goog-api-key": key})
-    try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            data = json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors="ignore")[:300]
-        msg = {400: "요청 형식 오류(모델 이름·사진 확인)", 403: "API 키가 잘못됐거나 권한이 없어요",
-               404: f"모델 '{MODEL}'을 찾을 수 없어요", 429: "AI 사용 한도를 잠시 넘었어요",
-               }.get(e.code, f"AI 서버 오류 {e.code}")
-        raise VisionError(msg) from VisionError(detail)
-    except Exception as e:                                # 인터넷 끊김, 시간 초과 등
-        raise VisionError("AI 서버에 연결하지 못했어요") from e
+    payload = json.dumps(body).encode()
+    for attempt in range(3):                 # 일시적 오류(한도·서버 혼잡·시간 초과)는 2초, 4초 쉬고 재시도
+        req = urllib.request.Request(
+            ENDPOINT.format(m=MODEL), data=payload,
+            headers={"Content-Type": "application/json", "x-goog-api-key": key})
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                data = json.loads(r.read().decode())
+            break
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 500, 503, 504) and attempt < 2:
+                print(f"[AI 재시도] HTTP {e.code} → {2 * (attempt + 1)}초 후 다시", flush=True)
+                time.sleep(2 * (attempt + 1)); continue
+            _http_fail(e, key)
+        except Exception as e:
+            if attempt < 2 and "timed out" in str(e).lower():
+                print("[AI 재시도] 시간 초과 → 다시", flush=True); continue
+            print(f"[AI 오류] 연결 실패 {type(e).__name__}: {e}", flush=True)
+            raise VisionError("AI 서버에 연결하지 못했어요") from e
 
     try:
         parts = data["candidates"][0]["content"]["parts"]
         text = next(p["text"] for p in parts if "text" in p and not p.get("thought"))
         return json.loads(text)
     except Exception as e:
+        print(f"[AI 오류] 응답 해석 실패: {str(data)[:300]}", flush=True)
         raise VisionError("AI 응답을 읽지 못했어요") from e
+
+
+def _http_fail(e, key):
+    """HTTP 오류 → 터미널에 원인 출력 + 화면용 한국어 메시지로 바꿔 던진다."""
+    detail = e.read().decode(errors="ignore")[:300]
+    print(f"[AI 오류] HTTP {e.code} {detail.replace(key, '***')}", flush=True)
+    msg = {400: "요청 형식 오류(모델 이름·사진 확인)", 403: "API 키가 잘못됐거나 권한이 없어요",
+           404: f"모델 '{MODEL}'을 찾을 수 없어요", 429: "AI 사용 한도를 넘었어요(1분 뒤 다시)",
+           }.get(e.code, f"AI 서버 오류 {e.code}")
+    raise VisionError(msg) from VisionError(detail)
 
 
 def analyze(image_bytes):

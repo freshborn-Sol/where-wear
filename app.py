@@ -32,6 +32,17 @@ def ensure_schema():
     for col, typ in [("pattern", "TEXT"), ("ai_json", "TEXT"), ("is_demo", "INTEGER DEFAULT 0")]:
         if col not in cols:
             con.execute(f"ALTER TABLE items ADD COLUMN {col} {typ}")
+    rcols = {r[1] for r in con.execute("PRAGMA table_info(reports)")}
+    for col, typ in [("detail", "TEXT"),        # 호출 사유
+                     ("size", "TEXT"),          # 손님이 원하는 사이즈
+                     ("device", "TEXT"),        # 익명 기기 id (중복 신고 방지)
+                     ("wait_state", "TEXT DEFAULT ''"),   # '' / waiting / going / served / nostock / expired
+                     ("wait_at", "TEXT"), ("served_at", "TEXT"),
+                     ("resolution", "TEXT"), ("resolved_at", "TEXT")]:
+        if col not in rcols:
+            con.execute(f"ALTER TABLE reports ADD COLUMN {col} {typ}")
+    if "confirmed_at" not in {r[1] for r in con.execute("PRAGMA table_info(placements)")}:
+        con.execute("ALTER TABLE placements ADD COLUMN confirmed_at TEXT")   # 손님이 '찾았어요' 누른 시각
     con.commit(); con.close()
 ensure_schema()
 
@@ -240,24 +251,158 @@ def item(sku):
     if not it: return "없는 상품", 404
     it = decorate([it])[0]
     fx = it["place"]["fixture_id"] if it["place"] else None
-    return render_template("item.html", at=at, it=it, map=map_data(at, fx))
+    return render_template("item.html", at=at, it=it, map=map_data(at, fx),
+                           flag=loc_flag(it), similar=similar_items(it), **help_data(it))
+
+SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
+
+def sort_sizes(sizes):
+    return sorted(sizes, key=lambda s: (SIZE_ORDER.index(s["size"]) if s["size"] in SIZE_ORDER else 99, s["size"]))
+
+def help_data(it):
+    """'찾는 게 없나요?' 패널에 쓸 값: 같은 옷 다른 색 / 사이즈별 대안"""
+    # 같은 옷(이름이 같은 상품)의 다른 색. 없으면 같은 종류·같은 핏의 다른 색
+    same = rows("SELECT * FROM items WHERE name=? AND sku!=?", (it["name"], it["sku"]))
+    basis = "같은 옷"
+    if not same:
+        same = rows("SELECT * FROM items WHERE subcat=? AND fit=? AND color!=? AND sku!=?",
+                    (it["subcat"], it["fit"], it["color"], it["sku"]))
+        basis = f"같은 종류({it['subcat']}·{it['fit']})"
+    by_color = {}
+    for o in decorate(same):                      # 색마다 1개 (위치 등록된 것 우선)
+        if o["color"] == it["color"]: continue
+        if o["color"] not in by_color or (o["place"] and not by_color[o["color"]]["place"]):
+            by_color[o["color"]] = o
+    other_colors = [by_color[c] for c in COLORS if c in by_color]
+
+    # 사이즈: 재고 0인 사이즈는 '같은 종류·같은 색' 중 그 사이즈가 있는 옷을 최대 3개
+    sizes = sort_sizes(it["sizes"])
+    alts = {}
+    for sz in sizes:
+        if sz["qty"] > 0: continue
+        cand = rows("""SELECT i.* FROM items i JOIN stock s ON s.sku=i.sku
+                       WHERE i.subcat=? AND i.sku!=? AND s.size=? AND s.qty>0
+                       ORDER BY (i.color=?) DESC, (i.fit=?) DESC LIMIT 3""",
+                    (it["subcat"], it["sku"], sz["size"], it["color"], it["fit"]))
+        alts[sz["size"]] = decorate(cand)
+    return {"other_colors": other_colors, "color_basis": basis, "hsizes": sizes, "size_alts": alts}
 
 # ---------- 신고 / 직원 호출 ----------
+WAIT_MIN = 10          # 손님이 기다리는 최대 시간(분). 넘으면 '시간 초과'
+
+def ts(): return now().isoformat(timespec="seconds")
+def mins_since(t):
+    return int(max(0, (now() - datetime.datetime.fromisoformat(t)).total_seconds()) // 60) if t else 0
+
+def stock_total(sku):
+    return one("SELECT COALESCE(SUM(qty),0) n FROM stock WHERE sku=?", (sku,))["n"]
+
+def open_none(sku, fx):
+    """이 자리에 대한 열린 '여기 없어요' 신고 수 (기기 기준 중복 제거)"""
+    return one("""SELECT COUNT(DISTINCT COALESCE(device, 'r'||id)) c FROM reports
+                  WHERE sku=? AND fixture_id=? AND kind='none' AND done=0""", (sku, fx))["c"]
+
+def loc_flag(it):
+    """상품 화면에 띄울 위치 신뢰 표시: 신고 있음 / 손님 확인"""
+    p = it.get("place")
+    if not p: return None
+    n = open_none(it["sku"], p["fixture_id"])
+    if n: return ("warn", "최근 '여기 없어요' 신고가 있었어요. 직원이 확인 중이에요")
+    c = p.get("confirmed_at")
+    if c and c >= (p.get("updated_at") or "") and mins_since(c) < 360:
+        m = mins_since(c)
+        when = "방금" if m < 1 else (f"{m}분 전" if m < 60 else f"{m//60}시간 전")
+        return ("ok", f"{when} 다른 손님이 이 자리에서 찾았어요")
+    return None
+
+def similar_items(it, limit=3):
+    """대안: 같은 종류 · 위치 있음 · 재고 있음. 같은 색 → 같은 핏 순"""
+    cand = rows("""SELECT i.* FROM items i
+                   WHERE i.subcat=? AND i.sku!=?
+                     AND EXISTS (SELECT 1 FROM placements p WHERE p.sku=i.sku AND p.active=1)
+                     AND (SELECT COALESCE(SUM(qty),0) FROM stock s WHERE s.sku=i.sku) > 0
+                   ORDER BY (i.color=?) DESC, (i.fit=?) DESC, i.sku LIMIT ?""",
+                (it["subcat"], it["sku"], it["color"], it["fit"], limit))
+    return decorate(cand)
+
+def expire_waits():
+    """10분 넘게 기다린 호출은 '시간 초과'로"""
+    cut = (now() - datetime.timedelta(minutes=WAIT_MIN)).isoformat(timespec="seconds")
+    db().execute("""UPDATE reports SET wait_state='expired',
+                      done=CASE WHEN kind='none' THEN done ELSE 1 END,
+                      resolution=CASE WHEN kind='none' THEN resolution ELSE '시간 초과' END,
+                      resolved_at=CASE WHEN kind='none' THEN resolved_at ELSE ? END
+                    WHERE wait_state IN ('waiting','going') AND wait_at < ?""", (ts(), cut))
+    db().commit()
+
+def close_loc_reports(sku, fx, resolution):
+    q = "UPDATE reports SET done=1, resolution=?, resolved_at=? WHERE sku=? AND kind='none' AND done=0"
+    args = [resolution, ts(), sku]
+    if fx: q += " AND fixture_id=?"; args.append(fx)
+    db().execute(q, args)
+
+# ---------- 손님: 신고 / 호출 ----------
 @app.route("/api/report", methods=["POST"])
 def report():
     d = request.get_json(force=True)
-    sku, fx, kind = d.get("sku"), d.get("fixture"), d.get("kind", "none")
-    db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at) VALUES (?,?,?,?)",
-                 (sku, fx, kind, now().isoformat(timespec="seconds")))
-    msg = "직원에게 알렸어요"
+    sku, fx, kind = d.get("sku"), d.get("fixture") or None, d.get("kind", "none")
+    detail, size, dev = (d.get("detail") or "")[:40], (d.get("size") or "")[:6], (d.get("device") or "")[:40] or None
+    if kind not in ("none", "size", "call"): kind = "call"
+
     if kind == "none":
-        n = one("SELECT COUNT(*) c FROM reports WHERE sku=? AND fixture_id=? AND kind='none' AND done=0",
-                (sku, fx))["c"]
-        if n >= 2:      # 같은 자리 신고가 2번 쌓이면 그 위치를 자동으로 내린다
+        # 같은 기기가 같은 옷을 이미 신고했으면 새로 만들지 않음
+        old = one("""SELECT id FROM reports WHERE sku=? AND kind='none' AND done=0 AND device=?""", (sku, dev)) if dev else None
+        if old:
+            rid, msg = old["id"], "이미 알려주셨어요. 직원이 확인할게요"
+        else:
+            rid = db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,device) VALUES (?,?,?,?,?)",
+                               (sku, fx, "none", ts(), dev)).lastrowid
+            msg = "알려주셔서 고마워요. 다음 손님은 정확한 위치를 안내받아요"
+        delisted = False
+        if fx and open_none(sku, fx) >= 2:     # 서로 다른 손님 2명이 신고 → 안내에서 내림
             db().execute("UPDATE placements SET active=0 WHERE sku=? AND fixture_id=?", (sku, fx))
-            msg = "신고가 쌓여서 이 위치를 목록에서 내렸어요"
+            delisted = True
+        db().commit()
+        return jsonify(ok=True, id=rid, message=msg, delisted=delisted, stock=stock_total(sku))
+
+    # 호출·사이즈 요청: 손님이 그 자리에서 기다림
+    rid = db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,detail,size,device,wait_state,wait_at)
+                          VALUES (?,?,?,?,?,?,?,'waiting',?)""",
+                       (sku, fx, kind, ts(), detail, size, dev, ts())).lastrowid
     db().commit()
-    return jsonify(ok=True, message=msg)
+    return jsonify(ok=True, id=rid, message="직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요")
+
+@app.route("/api/report/<int:rid>/wait", methods=["POST"])
+def report_wait(rid):
+    """'여기 없어요' 뒤에 '찾아주세요'를 고른 경우: 같은 신고에 대기 표시"""
+    d = request.get_json(force=True)
+    size = (d.get("size") or "")[:6]
+    db().execute("""UPDATE reports SET wait_state='waiting', wait_at=?, size=?,
+                    detail=? WHERE id=?""", (ts(), size, f"위치에 없음{(' · ' + size) if size else ''}", rid))
+    db().commit()
+    return jsonify(ok=True, id=rid, message="직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요")
+
+@app.route("/api/report/<int:rid>")
+def report_status(rid):
+    """손님 화면이 몇 초마다 물어봄: 지금 어디까지 처리됐나"""
+    expire_waits()
+    r = one("SELECT * FROM reports WHERE id=?", (rid,))
+    if not r: return jsonify(state="gone")
+    return jsonify(state=r["wait_state"] or "none", minutes=mins_since(r["wait_at"]), size=r["size"])
+
+@app.route("/api/found", methods=["POST"])
+def found():
+    """손님이 '찾았어요' → 이 위치가 맞다는 확인 + 같은 자리 신고는 취소"""
+    d = request.get_json(force=True)
+    sku, fx = d.get("sku"), d.get("fixture")
+    db().execute("UPDATE placements SET confirmed_at=? WHERE sku=? AND fixture_id=? AND active=1", (ts(), sku, fx))
+    db().execute("""UPDATE reports SET done=1, resolution='손님이 찾음', resolved_at=?
+                    WHERE sku=? AND fixture_id=? AND kind='none' AND done=0 AND wait_state IN ('', 'expired')""",
+                 (ts(), sku, fx))
+    db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,device,done,resolution,resolved_at)
+                    VALUES (?,?,'found',?,?,1,'손님이 찾음',?)""", (sku, fx, ts(), d.get("device"), ts()))   # 점장 요약용 기록
+    db().commit()
+    return jsonify(ok=True, message="고마워요! 덕분에 다음 손님 안내가 더 정확해져요")
 
 # ---------- 직원 화면 ----------
 @app.route("/staff")
@@ -277,7 +422,7 @@ def register():
     db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,))   # 이전 위치는 내림
     db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)"
                  " VALUES (?,?,?,?,?,1)", (sku, fx, lv, now().isoformat(timespec="seconds"), "staff"))
-    db().execute("UPDATE reports SET done=1 WHERE sku=?", (sku,))        # 관련 신고 처리
+    close_loc_reports(sku, None, "재등록")                               # 관련 위치 신고 처리
     db().commit()
     return jsonify(ok=True, message=f"{it['name']} → {fx} {lv}")
 
@@ -352,11 +497,105 @@ def staff_ai_delete(sku):
         db().commit()
     return redirect(url_for("staff_ai"))
 
+@app.route("/me")
+def me():
+    """키·몸무게 입력 (값은 휴대폰 브라우저에만 저장, 서버 저장 없음)"""
+    return render_template("me.html")
+
 @app.route("/staff/reports")
 def staff_reports():
-    rs = rows("""SELECT r.*, i.name FROM reports r LEFT JOIN items i ON i.sku=r.sku
-                 ORDER BY r.done, r.created_at DESC LIMIT 50""")
-    return render_template("reports.html", reports=rs)
+    expire_waits()
+    # ① 손님 대기 중 (지금 가야 함)
+    waiting = rows("""SELECT r.*, i.name, i.color, i.image, i.category, f.name fixture_name, f.zone
+                      FROM reports r LEFT JOIN items i ON i.sku=r.sku LEFT JOIN fixtures f ON f.id=r.fixture_id
+                      WHERE r.wait_state IN ('waiting','going') ORDER BY r.wait_at""")
+    for w in waiting:
+        w["mins"] = mins_since(w["wait_at"])
+        w["label"] = {"none": "❌ 위치에 없음", "size": "📏 사이즈 요청", "call": "🙋 직원 호출"}.get(w["kind"], w["kind"])
+    # ② 위치 고칠 것 (선반별로 묶음)
+    loc = rows("""SELECT r.sku, r.fixture_id, COUNT(DISTINCT COALESCE(r.device,'r'||r.id)) n, MIN(r.created_at) first,
+                         MAX(r.created_at) last, i.name, i.color, i.image, f.name fixture_name, f.zone,
+                         (SELECT p.active FROM placements p WHERE p.sku=r.sku AND p.fixture_id=r.fixture_id
+                          ORDER BY p.updated_at DESC LIMIT 1) active,
+                         (SELECT p.level FROM placements p WHERE p.sku=r.sku AND p.fixture_id=r.fixture_id
+                          ORDER BY p.updated_at DESC LIMIT 1) level
+                  FROM reports r LEFT JOIN items i ON i.sku=r.sku LEFT JOIN fixtures f ON f.id=r.fixture_id
+                  WHERE r.kind='none' AND r.done=0
+                  GROUP BY r.sku, r.fixture_id ORDER BY r.fixture_id, last DESC""")
+    groups = {}
+    for x in loc:
+        x["since"] = mins_since(x["first"])
+        groups.setdefault(x["fixture_id"] or "위치 없음", []).append(x)
+    # ③ 최근 처리 기록
+    history = rows("""SELECT r.*, i.name FROM reports r LEFT JOIN items i ON i.sku=r.sku
+                      WHERE r.done=1 AND r.resolution IS NOT NULL ORDER BY r.resolved_at DESC LIMIT 8""")
+    return render_template("reports.html", waiting=waiting, groups=groups, history=history,
+                           summary=manager_summary(), WAIT_MIN=WAIT_MIN,
+                           fixtures=rows("SELECT * FROM fixtures WHERE id!='ENTRANCE'"))
+
+def manager_summary(days=7):
+    since = (now() - datetime.timedelta(days=days)).isoformat(timespec="seconds")
+    top_fx = rows("""SELECT r.fixture_id, f.name, COUNT(*) n FROM reports r LEFT JOIN fixtures f ON f.id=r.fixture_id
+                     WHERE r.kind='none' AND r.created_at>=? AND r.fixture_id IS NOT NULL
+                     GROUP BY r.fixture_id ORDER BY n DESC LIMIT 3""", (since,))
+    top_items = rows("""SELECT r.sku, i.name, i.color, COUNT(*) n FROM reports r LEFT JOIN items i ON i.sku=r.sku
+                        WHERE r.kind='none' AND r.created_at>=? GROUP BY r.sku ORDER BY n DESC LIMIT 3""", (since,))
+    served = rows("SELECT wait_at, served_at FROM reports WHERE served_at IS NOT NULL AND wait_at>=?", (since,))
+    fixed = rows("""SELECT created_at, resolved_at FROM reports WHERE kind='none' AND done=1
+                    AND resolution IN ('재등록','위치 이동','재고 없음','오신고') AND created_at>=?""", (since,))
+    def avg(pairs):
+        v = [(datetime.datetime.fromisoformat(b) - datetime.datetime.fromisoformat(a)).total_seconds() / 60
+             for a, b in pairs if a and b]
+        return round(sum(v) / len(v), 1) if v else None
+    missed = one("SELECT COUNT(*) n FROM reports WHERE wait_state='expired' AND wait_at>=?", (since,))["n"]
+    found = one("SELECT COUNT(*) n FROM reports WHERE kind='found' AND created_at>=?", (since,))["n"]
+    return {"top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
+            "fix_min": avg([(r["created_at"], r["resolved_at"]) for r in fixed]), "missed": missed, "found": found}
+
+@app.route("/staff/reports/<int:rid>/wait", methods=["POST"])
+def staff_wait_action(rid):
+    """손님 대기 카드: 가는 중 / 전달 완료 / 재고 없음"""
+    act = request.form.get("act")
+    r = one("SELECT * FROM reports WHERE id=?", (rid,))
+    if r:
+        if act == "going":
+            db().execute("UPDATE reports SET wait_state='going' WHERE id=?", (rid,))
+        elif act in ("served", "nostock"):
+            db().execute("UPDATE reports SET wait_state=?, served_at=? WHERE id=?", (act, ts(), rid))
+            if r["kind"] != "none":                       # 호출·사이즈 요청은 여기서 끝
+                db().execute("UPDATE reports SET done=1, resolution=?, resolved_at=? WHERE id=?",
+                             ("전달 완료" if act == "served" else "재고 없음", ts(), rid))
+            if act == "nostock":                           # 그 사이즈(없으면 전체) 재고 0
+                if r["size"]: db().execute("UPDATE stock SET qty=0 WHERE sku=? AND size=?", (r["sku"], r["size"]))
+                else: db().execute("UPDATE stock SET qty=0 WHERE sku=?", (r["sku"],))
+        db().commit()
+    return redirect(url_for("staff_reports"))
+
+@app.route("/staff/reports/fix", methods=["POST"])
+def staff_fix():
+    """위치 고칠 것: 찾아서 재등록 / 다른 곳에 있었음 / 재고 없음 / 그 자리에 있음(오신고)"""
+    f = request.form
+    sku, fx, act = f.get("sku"), f.get("fixture") or None, f.get("act")
+    last = one("SELECT * FROM placements WHERE sku=? AND fixture_id IS ? ORDER BY updated_at DESC LIMIT 1", (sku, fx))
+    level = (last or {}).get("level") or "중단"
+    def place(to_fx, to_lv):
+        db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,))
+        db().execute("""INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)
+                        VALUES (?,?,?,?,'staff',1)""", (sku, to_fx, to_lv, ts()))
+    if act == "reregister" and fx:
+        place(fx, level); res = "재등록"
+    elif act == "move" and f.get("to"):
+        place(f.get("to"), f.get("level") or "중단"); res = "위치 이동"
+    elif act == "nostock":
+        db().execute("UPDATE stock SET qty=0 WHERE sku=?", (sku,))
+        db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,)); res = "재고 없음"
+    elif act == "false" and last:
+        db().execute("UPDATE placements SET active=1, confirmed_at=? WHERE id=?", (ts(), last["id"])); res = "오신고"
+    else:
+        return redirect(url_for("staff_reports"))
+    close_loc_reports(sku, fx, res)
+    db().commit()
+    return redirect(url_for("staff_reports"))
 
 # ---------- 사진 출처 (Pexels API 이용 조건) ----------
 @app.route("/credits")

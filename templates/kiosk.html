@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% block bodyclass %}kiosk{% endblock %}{% block body %}
-<header class="ktop">where:wear · 옷 찾기
+<header class="ktop"><a href="/kiosk"><img class="klogo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"></a><span class="ksub">옷 찾기</span>
   {% if step != 'cat' %}<a class="kback" href="/kiosk">처음으로</a>{% endif %}
 </header>
 <main class="kwrap">

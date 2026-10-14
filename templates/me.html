@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block body %}
+<header class="top"><a class="back" href="javascript:history.back()">←</a><div class="brand">내 사이즈 정보</div></header>
+<main class="wrap">
+  <p class="hint">입력한 정보는 <b>이 휴대폰에만</b> 저장되고 서버로 보내지 않아요. 옷마다 추천 사이즈를 계산할 때만 써요.</p>
+  <form id="f" class="meform" onsubmit="return save()">
+    <label>키 <span><input name="h" type="number" inputmode="numeric" min="120" max="220" required placeholder="172"> cm</span></label>
+    <label>몸무게 <span><input name="w" type="number" inputmode="numeric" min="30" max="150" required placeholder="65"> kg</span></label>
+    <label>발 사이즈 <small>(선택 · 신발 추천용)</small> <span><input name="foot" type="number" inputmode="numeric" min="200" max="320" step="5" placeholder="260"> mm</span></label>
+    <div class="prefq">평소 옷을 어떻게 입나요?</div>
+    <div class="prefs">
+      <label><input type="radio" name="pref" value="tight">딱 맞게</label>
+      <label><input type="radio" name="pref" value="normal" checked>보통</label>
+      <label><input type="radio" name="pref" value="loose">넉넉하게</label>
+    </div>
+    <button class="helpbtn">저장하기</button>
+  </form>
+  <p class="foot"><a href="#" onclick="clearMe();return false">내 정보 지우기</a></p>
+</main>
+<script>
+const f=document.getElementById('f'), next=new URLSearchParams(location.search).get('next')||'/go';
+try{ const p=JSON.parse(localStorage.getItem('ww_body')||'null');
+  if(p){ f.h.value=p.h; f.w.value=p.w; if(p.foot) f.foot.value=p.foot; f.querySelector(`[name=pref][value=${p.pref||'normal'}]`).checked=true; } }catch(e){}
+function save(){
+  const p={h:+f.h.value, w:+f.w.value, foot:+f.foot.value||0, pref:f.pref.value};
+  try{ localStorage.setItem('ww_body', JSON.stringify(p)); }catch(e){}
+  location.href = next.startsWith('/') ? next : '/go'; return false;
+}
+function clearMe(){ try{ localStorage.removeItem('ww_body'); }catch(e){} location.href = next.startsWith('/') ? next : '/go'; }
+</script>
+{% endblock %}

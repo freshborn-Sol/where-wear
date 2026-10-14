@@ -1,9 +1,10 @@
 {% extends "base.html" %}{% block body %}
 <header class="top">
-  <div class="brand">where<span>:</span>wear</div>
+  <a class="brand" href="/go?at={{at}}"><img class="logo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"></a>
   <div class="at">📍 지금 위치 · <b>{{ here.name if here else at }}</b></div>
 </header>
 <main class="wrap">
+  <div id="mebanner" class="mebanner" hidden></div>
   {% set autofocus = False %}{% include "_searchbar.html" %}
   <p class="hint">📷 를 누르면 사진을 찍거나 골라서, AI가 가장 비슷한 옷을 매장에서 찾아줘요</p>
 
@@ -34,6 +35,14 @@
      상품 사진 <a href="/credits">출처</a></p>
 </main>
 <script>
+(function(){                      // 키·몸무게: 없으면 등록 안내, 있으면 요약
+  const b=document.getElementById('mebanner'), nx=encodeURIComponent(location.pathname+location.search);
+  let p=null; try{ p=JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){}
+  b.hidden=false;
+  b.innerHTML = p ? `👤 내 사이즈 정보 <b>${p.h}cm · ${p.w}kg</b> <a href="/me?next=${nx}">수정</a>`
+                  : `<b>👤 키·몸무게를 등록해 두면</b><br>옷마다 추천 사이즈를 바로 알려드려요 <a class="mego" href="/me?next=${nx}">등록하기</a>`;
+  b.classList.toggle('new', !p);
+})();
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.tiles').forEach(p => p.classList.toggle('on', p.dataset.panel === b.dataset.tab));
