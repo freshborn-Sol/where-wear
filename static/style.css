@@ -284,3 +284,9 @@ h2 small{font-weight:400;margin-left:6px}
 .mlists{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;font-size:13px}
 .mlists h3{font-size:13px;margin:4px 0}.mlists ol{padding-left:18px;margin:4px 0}.mlists li b{float:right}
 @media (max-width:420px){.msum{grid-template-columns:repeat(2,1fr)}.mlists{grid-template-columns:1fr}}
+
+/* ---- 지도 밑: 찾았어요! / 찾는 게 없나요? ---- */
+.findbar{display:flex;gap:10px;margin-top:16px}
+.fbtn{flex:1;padding:16px 8px;border:0;border-radius:14px;color:#fff;font-size:17px;font-weight:800;font-family:inherit}
+.fbtn.found{background:var(--ok)}.fbtn.found:disabled{background:#7fb898}
+.fbtn.red{background:#d93025}.fbtn.red:active{background:#b3261e}

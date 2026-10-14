@@ -43,7 +43,10 @@
   {% include "_map.html" %}
   <p class="legend">주황 점이 지금 내 위치, 파란 칸이 찾는 옷이 있는 선반이에요.</p>
 
-  <button class="helpbtn red" onclick="openHelp()">찾는 게 없나요?</button>
+  <div class="findbar">
+    {% if it.place %}<button class="fbtn found" id="foundBtn" onclick="foundIt()">찾았어요!</button>{% endif %}
+    <button class="fbtn red" onclick="openHelp()">찾는 게 없나요?</button>
+  </div>
   <p id="msg" class="msg"></p>
   <p class="foot"><a href="/credits">상품 사진 출처</a></p>
 </main>
@@ -71,23 +74,9 @@
   </section>
 
   <section data-p="none" hidden>
-    <!-- ① 한 번 더 확인 -->
-    <div id="nCheck">
-      <div class="ncheck">
-        <img src="{{ imgsrc(it) }}" alt="">
-        <div>{% if it.place %}<b>{{it.place.fixture_id}} · {{it.place.fixture_name}}</b><br><span class="lv">{{it.place.level}}</span>{% else %}<b>위치 미등록</b>{% endif %}
-          <small>이렇게 생긴 {{it.color}} {{it.subcat}}이에요</small></div>
-      </div>
-      <p class="tip">💡 접혀 있거나, 다른 사이즈 사이에 끼어 있거나, 행거 뒤편에 있을 수 있어요.</p>
-      <div class="btns">
-        <button class="btn okb" onclick="foundIt()">찾았어요!</button>
-        <button class="btn warn" onclick="notHere()">그래도 없어요</button>
-      </div>
-    </div>
-
     <!-- ② 재고에 따라 다른 답 -->
-    <div id="nRes" hidden>
-      <p class="ans ok" id="nMsg"></p>
+    <div id="nRes">
+      <p class="ans ok" id="nMsg">기록 중…</p>
       {% set instock = hsizes|selectattr('qty')|list %}
       {% if instock %}
         <div class="nstock">
@@ -142,18 +131,19 @@ function closeHelp(){$('#help').classList.remove('on');}
 function go(p){
   document.querySelectorAll('#help section').forEach(s=>s.hidden=s.dataset.p!==p);
   $('#done').hidden=true; $('#shTitle').textContent=TITLES[p]; $('#shBack').style.visibility=p==='menu'?'hidden':'visible';
-  if(p==='none'){ $('#nCheck').hidden=false; $('#nRes').hidden=true; }
+  if(p==='none') notHere();
 }
 /* 익명 기기 id: 같은 휴대폰의 중복 신고를 막는 용도 (개인정보 없음) */
 const DEV=(()=>{ try{ let d=localStorage.getItem('ww_dev'); if(!d){ d=Math.random().toString(36).slice(2,10); localStorage.setItem('ww_dev',d);} return d; }catch(e){ return ''; } })();
 let RID=null, WAIT_SZ='', POLL=null;
 function foundIt(){
+  const b=$('#foundBtn'); if(!b||b.disabled) return;
   fetch('/api/found',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:SKU,fixture:FX,device:DEV})})
-   .then(r=>r.json()).then(d=>{ showDone('🎉 '+d.message); });
+   .then(r=>r.json()).then(d=>{ b.disabled=true; b.textContent='🎉 고마워요!'; $('#msg').textContent=d.message; });
 }
 function notHere(){
   post('none','').then(d=>{
-    RID=d.id; $('#nCheck').hidden=true; $('#nRes').hidden=false;
+    RID=d.id;
     $('#nMsg').textContent='✅ '+d.message+(d.delisted?' (이 위치는 안내에서 내렸어요)':'');
     const rec=(loadBody()&&typeof recommend==='function')?recommend(loadBody()).size:null;   // 추천 사이즈가 있으면 미리 선택
     if(rec && document.querySelector(`.nstock .szb[data-sz="${rec}"]`)) pickWait(rec);

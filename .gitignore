@@ -14,3 +14,9 @@ store.db
 ai_cache.json
 static/uploads/
 .commit_msg.txt
+
+# 스크립트로 다시 만드는 생성물
+# - 사진 없는 상품용 색상 그림 (import_catalog.py가 생성)
+static/img/
+# - 선반·상품 QR (python make_qr.py <서버주소> 로 생성)
+qr/

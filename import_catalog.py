@@ -50,8 +50,6 @@ def main():
             warn.append(f"{sku}: '{color}'는 검색 사전에 없는 색이에요 (search.py의 COLOR_WORDS에 추가하세요)")
 
         photo = find_photo(sku)
-        if not photo and (r.get("image_url") or "").startswith("http"):
-            photo = r["image_url"].strip()              # 네이버 API로 받은 이미지 주소
         if not photo:                                   # 사진도 주소도 없으면 색상 그림 생성
             make_image(sku, r["category"].strip(), hexcode, f'{color} {r["subcat"].strip()}')
             photo = f"img/{sku}.svg"

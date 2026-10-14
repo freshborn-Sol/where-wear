@@ -89,12 +89,6 @@ def text_search(items, q, limit=12):
     scored = [(s, it) for s, it in scored if s > 0]
     scored.sort(key=lambda t: -t[0])
     how = "색상·종류를 알아듣고 찾았어요"
-    try:                                               # CLIP이 설치돼 있으면 순위를 다듬는다
-        import clip_search
-        scored = clip_search.rerank(q, scored)
-        how = "AI(CLIP) 유사도까지 반영했어요"
-    except Exception:
-        pass
     return [it for _, it in scored[:limit]], parsed, how
 
 # ---------- 사진 검색 ----------
