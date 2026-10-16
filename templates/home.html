@@ -2,7 +2,7 @@
 {% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
 {% block body %}
 <header class="hd">
-  <a class="brand" href="/go?at={{at}}"><span class="logo">{{ cx.icon('pinfill', 20) }}</span>where:wear</a>
+  <a class="brand" href="/go?at={{at}}"><img class="logo" src="{{ url_for('static', filename='logo/icon.svg') }}" alt="">where:wear</a>
   <span class="here">{{ cx.icon('pin', 14) }}지금 위치 · <b>{{ here.name if here else at }}</b></span>
 </header>
 <main class="page">
