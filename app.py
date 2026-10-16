@@ -21,6 +21,7 @@ from seed import COLORS, CATS
 BASE = Path(__file__).parent
 DBFILE = Path(os.environ.get("WW_DB", BASE / "store.db"))
 UPLOADS = BASE / "static" / "uploads"
+STORE_NAME = os.environ.get("WW_STORE", "유니클로 명동점")   # 고객 화면(안내)에 보이는 매장 이름
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024     # 사진 15MB까지
 
@@ -77,7 +78,8 @@ def helpers():
             if v in (None, ""): a.pop(k, None)
             else: a[k] = v
         return "/search?" + urlencode(a)
-    return dict(imgsrc=imgsrc, with_args=with_args)
+    return dict(imgsrc=imgsrc, with_args=with_args, store_name=STORE_NAME,
+                cx_at=request.args.get("at") or "ENTRANCE")   # 고객 화면 탭바·링크용 현재 QR 위치
 
 # ---------- 위치 + 갱신 시각 ----------
 def placement_of(sku):
@@ -496,6 +498,13 @@ def staff_ai_delete(sku):
         db().execute("DELETE FROM items WHERE sku=?", (sku,))
         db().commit()
     return redirect(url_for("staff_ai"))
+
+@app.route("/info")
+def info():
+    """손님: 안내 (매장 · 설정 · 내 정보 · 도움말 · 사진 출처)"""
+    at = request.args.get("at", "ENTRANCE")
+    here = one("SELECT * FROM fixtures WHERE id=?", (at,))
+    return render_template("info.html", at=at, here=here)
 
 @app.route("/me")
 def me():

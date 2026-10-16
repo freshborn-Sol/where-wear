@@ -1,12 +1,14 @@
-{% extends "base.html" %}{% block body %}
-<header class="top">
-  <a class="brand" href="/go?at={{at}}"><img class="logo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"></a>
-  <div class="at">📍 지금 위치 · <b>{{ here.name if here else at }}</b></div>
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
+{% block body %}
+<header class="hd">
+  <a class="brand" href="/go?at={{at}}"><span class="logo">{{ cx.icon('pinfill', 20) }}</span>where:wear</a>
+  <span class="here">{{ cx.icon('pin', 14) }}지금 위치 · <b>{{ here.name if here else at }}</b></span>
 </header>
-<main class="wrap">
+<main class="page">
   <div id="mebanner" class="mebanner" hidden></div>
   {% set autofocus = False %}{% include "_searchbar.html" %}
-  <p class="hint">📷 를 누르면 사진을 찍거나 골라서, AI가 가장 비슷한 옷을 매장에서 찾아줘요</p>
+  <p class="hint">{{ cx.icon('sparkle', 15) }}<span>카메라를 누르면 사진을 찍거나 골라서, AI가 가장 비슷한 옷을 매장에서 찾아줘요</span></p>
 
   <h2>종류</h2>
   <div class="tabs" role="tablist">
@@ -14,34 +16,33 @@
   </div>
   {% for c in cats %}
   <div class="tiles {{'on' if c == tab}}" data-panel="{{c}}">
-    <a class="tile all" href="/search?at={{at}}&cat={{c}}"><span class="ti">전체</span><b>{{c}} 전체</b>
-      <small>{{ tiles[c]|sum(attribute='n') }}개</small></a>
+    <a class="tile" href="/search?at={{at}}&cat={{c}}"><span class="ti">{{ cx.icon('search', 22) }}전체 보기</span>
+      <span class="tl"><b>{{c}} 전체</b><small>{{ tiles[c]|sum(attribute='n') }}개</small></span></a>
     {% for t in tiles[c] %}
     <a class="tile" href="/search?at={{at}}&cat={{c}}&sub={{t.sub}}">
-      <img src="{{ imgsrc(t.rep) }}" alt="" loading="lazy"><b>{{t.sub}}</b><small>{{t.n}}개</small></a>
+      <img src="{{ imgsrc(t.rep) }}" alt="" loading="lazy"><span class="tl"><b>{{t.sub}}</b><small>{{t.n}}개</small></span></a>
     {% endfor %}
   </div>
   {% endfor %}
 
   <h2>색상</h2>
-  <div class="chips">
+  <div class="hs">
     {% for name, hex in colors.items() %}
-      <a class="chip color" href="/search?at={{at}}&color={{name}}">
-        <i style="background:{{hex}}"></i>{{name}}</a>
+      <a class="cchip" href="/search?at={{at}}&color={{name}}"><i class="sw" style="background:{{hex}}"></i>{{name}}</a>
     {% endfor %}
   </div>
-  <p class="foot">어르신은 매장 입구 키오스크를 이용하세요 · <a href="/kiosk">키오스크 화면 보기</a><br>
-     직원용 <a href="/staff">위치 등록</a> · <a href="/staff/ai">사진으로 상품 등록</a><br>
-     상품 사진 <a href="/credits">출처</a></p>
+  <p class="foot">상품 사진 <a href="/credits?at={{at}}">출처</a></p>
 </main>
+{{ cx.tabbar('find') }}
 <script>
 (function(){                      // 키·몸무게: 없으면 등록 안내, 있으면 요약
   const b=document.getElementById('mebanner'), nx=encodeURIComponent(location.pathname+location.search);
+  const ic='<span class="mi">{{ cx.icon("user", 22)|replace("\n"," ") }}</span>';
   let p=null; try{ p=JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){}
   b.hidden=false;
-  b.innerHTML = p ? `👤 내 사이즈 정보 <b>${p.h}cm · ${p.w}kg</b> <a href="/me?next=${nx}">수정</a>`
-                  : `<b>👤 키·몸무게를 등록해 두면</b><br>옷마다 추천 사이즈를 바로 알려드려요 <a class="mego" href="/me?next=${nx}">등록하기</a>`;
-  b.classList.toggle('new', !p);
+  b.innerHTML = p ? `${ic}<div class="mt"><small>내 사이즈 정보</small><b>${p.h}cm · ${p.w}kg</b></div><a class="mbtn" href="/me?at={{at}}&next=${nx}">수정</a>`
+                  : `${ic}<div class="mt"><b>키·몸무게를 등록해 두면</b><small>옷마다 추천 사이즈를 바로 알려드려요</small></div><a class="mbtn" href="/me?at={{at}}&next=${nx}">등록하기</a>`;
+  b.classList.toggle('saved', !!p);
 })();
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));

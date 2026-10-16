@@ -1,17 +1,33 @@
-{# 검색창 하나로 글자·사진 검색. 📷는 휴대폰에서 '사진 찍기 / 앨범에서 고르기'를 함께 띄운다 #}
-<form id="pf" action="/search/photo" method="post" enctype="multipart/form-data" onsubmit="busy()">
+{# 검색창 하나로 글자·사진 검색. 카메라를 누르면 휴대폰에서 '사진 찍기 / 앨범에서 고르기'가 함께 뜬다 #}
+{% import "_cx.html" as cxs %}
+<form id="pf" action="/search/photo" method="post" enctype="multipart/form-data">
   <input type="hidden" name="at" value="{{at}}"></form>
 <form class="searchbox" action="/search">
   <input type="hidden" name="at" value="{{at}}">
-  <div class="sb">
-    <input name="q" value="{{ q or '' }}" placeholder="예) 파란색 후드티, 오버핏 맨투맨" {{ 'autofocus' if autofocus }}>
-    <label class="cam" title="사진으로 찾기" aria-label="사진으로 찾기">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.2h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>
-      <input type="file" name="photo" accept="image/*" form="pf" onchange="document.getElementById('pf').requestSubmit()">
-    </label>
-  </div>
+  <label class="sb">{{ cxs.icon('search', 20) }}
+    <input name="q" value="{{ q or '' }}" placeholder="예) 파란색 후드티, 오버핏 맨투맨" enterkeyhint="search" {{ 'autofocus' if autofocus }}>
+    <span class="cam" title="사진으로 찾기" aria-label="사진으로 찾기">{{ cxs.icon('camera', 21) }}
+      <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)"></span>
+  </label>
   <button>찾기</button>
 </form>
-<div id="busy" class="busy"><div>🤖 AI가 사진 속 옷을 분석하고 있어요…</div></div>
-<script>function busy(){document.getElementById('busy').style.display='flex'}
-window.addEventListener('pageshow',()=>document.getElementById('busy').style.display='none');</script>
+<div id="busy" class="busy" aria-live="polite">
+  <div class="scan"><img id="busyImg" alt="">
+    <svg class="br" viewBox="0 0 244 310" fill="none" stroke="#3862DA" stroke-width="5" stroke-linecap="round"><path d="M3 30V3h27M214 3h27v27M3 280v27h27M214 307h27v-27"/></svg>
+    <i class="line"></i></div>
+  <h3>{{ cxs.icon('sparkle', 22) }}AI가 사진 속 옷을 분석하고 있어요…</h3>
+  <div class="steps"><div><i class="dotc"></i>옷 종류 · 색 알아보기</div><div><i class="dotc"></i>무늬 · 핏 살펴보기</div><div><i class="dotc"></i>매장 상품과 비교하기</div></div>
+</div>
+<script>
+function photoPicked(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  const b=document.getElementById('busy'), im=document.getElementById('busyImg');
+  try{ im.src=URL.createObjectURL(f); }catch(e){}
+  b.style.display='flex';
+  const st=[...b.querySelectorAll('.steps>div')]; let i=0;
+  const tick=()=>{ st.forEach((d,k)=>d.className=k<i?'done':(k===i?'doing':'')); if(i<st.length-1) i++; };
+  tick(); clearInterval(window._bt); window._bt=setInterval(tick,1300);
+  document.getElementById('pf').submit();
+}
+window.addEventListener('pageshow',()=>{ document.getElementById('busy').style.display='none'; clearInterval(window._bt); });
+</script>

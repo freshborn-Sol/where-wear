@@ -1,66 +1,72 @@
-{% extends "base.html" %}{% block body %}
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
+{% block body %}
+{% set LV = {'상단':'위 칸','중단':'가운데 칸','하단':'아래 칸'} %}
+{% set CHEV = cx.icon('chev', 16) %}
 {% macro alt_card(o, show_color=False) %}
   <a class="hcard" href="/item/{{o.sku}}?at={{at}}">
     <img src="{{ imgsrc(o) }}" alt="">
     <div><div class="nm">{% if show_color %}<i class="sw" style="background:{{o.hex}}"></i>{{o.color}}{% else %}{{o.name}}{% endif %}</div>
       <small>{% if not show_color %}{{o.color}} · {% endif %}{% if o.place %}{{o.place.zone}}구역 · {{o.place.fixture_id}} · {{o.place.level}}{% else %}위치 미등록{% endif %}</small></div>
-    <span class="hgo">›</span>
+    {{ CHEV }}
   </a>
 {% endmacro %}
-<header class="top"><a class="back" href="javascript:history.back()">←</a>
-  <div class="brand">{{it.name}}</div></header>
-<main class="wrap">
+{{ cx.appbar(it.name, 'javascript:history.back()', 'heart') }}
+<main class="page item">
   <div class="detail">
     <img class="hero" src="{{ imgsrc(it) }}" alt="">
-    <div>
+    <div class="dinfo">
       <div class="price">{{ "{:,}".format(it.price) }}원</div>
+      <div class="meta">{{it.color}} · {{it.fit}}</div>
       <div class="sizes">
-        {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')">{{s.size}} <small>{{ s.qty if s.qty else '없음' }}</small></button>{% endfor %}
+        {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')"><b>{{s.size}}</b><small>{{ s.qty if s.qty else '없음' }}</small></button>{% endfor %}
       </div>
       <div id="rec" class="rec" hidden></div>
-      {% if it.place %}
-        <div class="locbox">
-          <div class="loc">{{it.place.zone}}구역 · {{it.place.fixture_name}}<br><b>{{it.place.level}}</b></div>
-          <div class="fr {{it.fresh[1]}}">🕐 {{it.fresh[0]}}
-            {% if it.fresh[1] == 'old' and not flag %}<br><small>위치가 바뀌었을 수 있어요</small>{% endif %}</div>
-          {% if flag %}<div class="lflag {{flag[0]}}">{{ '⚠️' if flag[0]=='warn' else '✅' }} {{flag[1]}}</div>{% endif %}
-        </div>
-      {% else %}<div class="locbox"><div class="loc">아직 위치가 등록되지 않았어요</div></div>{% endif %}
     </div>
   </div>
 
+  {% if it.place %}
+    <div class="locbox"><span class="pc">{{ cx.icon('pinfill', 25) }}</span>
+      <div><b>{{it.place.fixture_name}}</b><span>{{it.place.level}}{% if LV.get(it.place.level) %} · {{ LV[it.place.level] }}{% endif %}</span></div></div>
+    <div class="trust">
+      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}{% if it.fresh[1] == 'old' and not flag %} · 위치가 바뀌었을 수 있어요{% endif %}</div>
+      {% if flag %}<div class="lflag {{flag[0]}}">{{ cx.icon('checkcircle' if flag[0]=='ok' else 'alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
+    </div>
+  {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
+
   {% for s in hsizes if s.qty == 0 %}
   <div class="szres" data-size="{{s.size}}" hidden>
-    <p class="ans no">이 옷은 <b>{{s.size}}</b> 사이즈가 매장에 없어요.</p>
+    <p class="szno">이 옷은 {{s.size}} 사이즈가 매장에 없어요.</p>
     {% if size_alts[s.size] %}
-      <p class="sh-sub">비슷한 옷 중 {{s.size}} 사이즈가 있는 것</p>
+      <p class="szsub">비슷한 옷 중 {{s.size}} 사이즈가 있는 것</p>
       <div class="hlist">{% for o in size_alts[s.size] %}{{ alt_card(o) }}{% endfor %}</div>
     {% endif %}
-    <button class="btn" onclick="sendInline('size','{{s.size}} 입고·창고 문의')">직원에게 창고 재고 확인 요청</button>
+    <button class="btn" onclick="sendInline('size','{{s.size}} 입고·창고 문의')">{{ cx.icon('box', 18) }}직원에게 창고 재고 확인 요청</button>
   </div>
   {% endfor %}
 
-  {% include "_map.html" %}
+  {% include "_cxmap.html" %}
   <p class="legend">주황 점이 지금 내 위치, 파란 칸이 찾는 옷이 있는 선반이에요.</p>
-
-  <div class="findbar">
-    {% if it.place %}<button class="fbtn found" id="foundBtn" onclick="foundIt()">찾았어요!</button>{% endif %}
-    <button class="fbtn red" onclick="openHelp()">찾는 게 없나요?</button>
-  </div>
-  <p id="msg" class="msg"></p>
-  <p class="foot"><a href="/credits">상품 사진 출처</a></p>
+  <p class="foot"><a href="/credits?at={{at}}">상품 사진 출처</a></p>
 </main>
 
-<!-- '찾는 게 없나요?' 패널 -->
+<div class="findbar">
+  {% if it.place %}<button class="fbtn found" id="foundBtn" onclick="foundIt()">{{ cx.icon('check', 20) }}<span>찾았어요!</span></button>{% endif %}
+  <button class="fbtn red" onclick="openHelp()">{{ cx.icon('help', 20) }}<span>찾는 게 없나요?</span></button>
+</div>
+<p id="msg" class="msg"></p>
+
+<!-- '찾는 게 없나요?' 바텀시트 -->
 <div id="help" class="sheet" onclick="if(event.target===this)closeHelp()">
  <div class="sheet-in">
-  <div class="sh-top"><button class="sh-back" id="shBack" onclick="go('menu')">←</button>
-    <b id="shTitle">어떤 게 안 되나요?</b><button class="sh-x" onclick="closeHelp()">✕</button></div>
+  <div class="sh-handle"></div>
+  <div class="sh-top"><button class="sh-back" id="shBack" onclick="go('menu')" aria-label="뒤로">{{ cx.icon('back', 22) }}</button>
+    <b id="shTitle">어떤 게 안 되나요?</b><button class="sh-x" onclick="closeHelp()" aria-label="닫기">{{ cx.icon('close', 20) }}</button></div>
 
   <section data-p="menu">
-    <button class="hopt" onclick="go('color')"><span>🎨</span><div>다른 색을 보고 싶어요<small>다른 색이 어디 있는지 바로 안내해요</small></div></button>
-    <button class="hopt" onclick="go('none')"><span>❌</span><div>여기에 옷이 없어요<small>재고 확인 · 비슷한 옷 · 직원 도움</small></div></button>
-    <button class="hopt" onclick="go('call')"><span>🙋</span><div>직원에게 직접 물어볼게요<small>직원이 이 선반으로 와요</small></div></button>
+    <button class="hopt" onclick="go('color')"><span class="oc c1">{{ cx.icon('palette', 23) }}</span><div><b>다른 색을 보고 싶어요</b><small>다른 색이 어디 있는지 바로 안내해요</small></div>{{ cx.icon('chev', 18) }}</button>
+    <button class="hopt" onclick="go('none')"><span class="oc c2">{{ cx.icon('nobox', 23) }}</span><div><b>여기에 옷이 없어요</b><small>재고 확인 · 비슷한 옷 · 직원 도움</small></div>{{ cx.icon('chev', 18) }}</button>
+    <button class="hopt" onclick="go('call')"><span class="oc c3">{{ cx.icon('chat', 23) }}</span><div><b>직원에게 직접 물어볼게요</b><small>직원이 이 선반으로 와요</small></div>{{ cx.icon('chev', 18) }}</button>
   </section>
 
   <section data-p="color" hidden>
@@ -74,28 +80,23 @@
   </section>
 
   <section data-p="none" hidden>
-    <!-- ② 재고에 따라 다른 답 -->
-    <div id="nRes">
-      <p class="ans ok" id="nMsg">기록 중…</p>
-      {% set instock = hsizes|selectattr('qty')|list %}
-      {% if instock %}
-        <div class="nstock">
-          <b>매장에 이 옷이 {{ instock|sum(attribute='qty') }}벌 있어요.</b> 위치만 바뀐 것 같아요.
-          <p class="sh-q">찾는 사이즈를 고르면 직원이 찾아 드려요</p>
-          <div class="szpick">{% for z in instock %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{{z.qty}}벌</small></button>{% endfor %}</div>
-          <div class="btns">
-            <button class="btn" id="waitBtn" onclick="askStaff()" disabled>직원에게 찾아 달라고 하기</button>
-          </div>
-        </div>
-      {% else %}
-        <p class="ans no"><b>지금 매장에 재고가 없어요.</b><br><small>실서비스에서는 입고 알림·온라인 주문으로 연결해요.</small></p>
-      {% endif %}
-      {% if similar %}
-        <p class="sh-sub">대신 이런 옷은 지금 매장에 있어요</p>
-        <div class="hlist">{% for o in similar %}{{ alt_card(o) }}{% endfor %}</div>
-      {% endif %}
-      <button class="btn ghost wide" onclick="closeHelp()">괜찮아요, 다른 옷 볼게요</button>
-    </div>
+    <p class="ans ok" id="nMsg">기록 중…</p>
+    {% set instock = hsizes|selectattr('qty')|list %}
+    {% if instock %}
+      <div class="nstock">
+        <div><b>매장에 이 옷이 {{ instock|sum(attribute='qty') }}벌 있어요.</b> 위치만 바뀐 것 같아요.</div>
+        <p class="sh-q" style="font-size:13px;font-weight:500;color:var(--g700)">찾는 사이즈를 고르면 직원이 찾아 드려요</p>
+        <div class="szpick">{% for z in instock %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{{z.qty}}벌</small></button>{% endfor %}</div>
+        <button class="btn primary" id="waitBtn" onclick="askStaff()" disabled>직원에게 찾아 달라고 하기</button>
+      </div>
+    {% else %}
+      <p class="ans no"><span><b>지금 매장에 재고가 없어요.</b><br><small>실서비스에서는 입고 알림·온라인 주문으로 연결해요.</small></span></p>
+    {% endif %}
+    {% if similar %}
+      <p class="sh-sub">대신 이런 옷은 지금 매장에 있어요</p>
+      <div class="hlist">{% for o in similar %}{{ alt_card(o) }}{% endfor %}</div>
+    {% endif %}
+    <button class="btn ghost" onclick="closeHelp()">괜찮아요, 다른 옷 볼게요</button>
   </section>
 
   <!-- 직원 호출 진행 상태 (몇 초마다 확인) -->
@@ -106,11 +107,11 @@
       <div class="tstep" data-s="served"><i>3</i>도착</div>
     </div>
     <p class="ans ok" id="tMsg">직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.</p>
-    <p class="hint" id="tTime"></p>
+    <p class="shint" id="tTime"></p>
   </section>
 
   <section data-p="call" hidden>
-    <p class="sh-q">무엇이 궁금하세요? <small>(골라 주시면 직원이 미리 알고 와요)</small></p>
+    <p class="sh-q">무엇이 궁금하세요?<small>골라 주시면 직원이 미리 알고 와요</small></p>
     <div class="reasons">
       {% for r in ['사이즈·핏 상담', '탈의실 위치', '세탁·소재 문의', '그냥 와 주세요'] %}
         <button class="rsn" onclick="send('call','{{r}}')">{{r}}</button>{% endfor %}
@@ -121,10 +122,10 @@
  </div>
 </div>
 
-
 <script>
-const SKU='{{it.sku}}', FX='{{ it.place.fixture_id if it.place }}';
+const SKU='{{it.sku}}', FX='{{ it.place.fixture_id if it.place }}', AT='{{at}}';
 const TITLES={menu:'어떤 게 안 되나요?',color:'다른 색 보기',none:'여기에 옷이 없어요',call:'직원에게 물어보기',status:'직원 호출'};
+const USER_IC='{{ cx.icon("user", 14) }}';
 const $=s=>document.querySelector(s);
 function openHelp(){$('#help').classList.add('on');go('menu');}
 function closeHelp(){$('#help').classList.remove('on');}
@@ -133,18 +134,19 @@ function go(p){
   $('#done').hidden=true; $('#shTitle').textContent=TITLES[p]; $('#shBack').style.visibility=p==='menu'?'hidden':'visible';
   if(p==='none') notHere();
 }
+function toast(m){ const t=$('#msg'); t.textContent=m; t.classList.add('show'); clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),4500); }
 /* 익명 기기 id: 같은 휴대폰의 중복 신고를 막는 용도 (개인정보 없음) */
 const DEV=(()=>{ try{ let d=localStorage.getItem('ww_dev'); if(!d){ d=Math.random().toString(36).slice(2,10); localStorage.setItem('ww_dev',d);} return d; }catch(e){ return ''; } })();
 let RID=null, WAIT_SZ='', POLL=null;
 function foundIt(){
   const b=$('#foundBtn'); if(!b||b.disabled) return;
   fetch('/api/found',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:SKU,fixture:FX,device:DEV})})
-   .then(r=>r.json()).then(d=>{ b.disabled=true; b.textContent='🎉 고마워요!'; $('#msg').textContent=d.message; });
+   .then(r=>r.json()).then(d=>{ b.disabled=true; b.querySelector('span').textContent='고마워요!'; toast(d.message); });
 }
 function notHere(){
   post('none','').then(d=>{
     RID=d.id;
-    $('#nMsg').textContent='✅ '+d.message+(d.delisted?' (이 위치는 안내에서 내렸어요)':'');
+    $('#nMsg').textContent=d.message+(d.delisted?' (이 위치는 안내에서 내렸어요)':'');
     const rec=(loadBody()&&typeof recommend==='function')?recommend(loadBody()).size:null;   // 추천 사이즈가 있으면 미리 선택
     if(rec && document.querySelector(`.nstock .szb[data-sz="${rec}"]`)) pickWait(rec);
   });
@@ -154,8 +156,8 @@ function askStaff(){
   fetch(`/api/report/${RID}/wait`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({size:WAIT_SZ})})
    .then(r=>r.json()).then(d=>startTrack(d.id));
 }
-const TMSG={waiting:'직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.',going:'🏃 직원이 가고 있어요!',
-  served:'👋 직원이 도착했어요. 이용해 주셔서 고마워요.',nostock:'죄송해요. 확인해 보니 매장에 재고가 없어요. 위의 비슷한 옷을 확인해 보세요.',
+const TMSG={waiting:'직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.',going:'직원이 가고 있어요!',
+  served:'직원이 도착했어요. 이용해 주셔서 고마워요.',nostock:'죄송해요. 확인해 보니 매장에 재고가 없어요. 비슷한 옷을 확인해 보세요.',
   expired:'직원이 지금 바빠요. 계산대에 말씀해 주시면 바로 도와드려요.'};
 function startTrack(id){
   RID=id; go('status'); $('#shBack').style.visibility='hidden';
@@ -169,7 +171,7 @@ function startTrack(id){
   });
   tick(); clearInterval(POLL); POLL=setInterval(tick,3000);
 }
-function showDone(m){ document.querySelectorAll('#help section').forEach(s=>s.hidden=true); $('#done').hidden=false; $('#done').textContent=m; $('#msg').textContent=m; }
+function showDone(m){ document.querySelectorAll('#help section').forEach(s=>s.hidden=true); $('#done').hidden=false; $('#done').textContent=m; toast(m); }
 function post(kind,detail){
   return fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({sku:SKU,fixture:FX,kind:kind,detail:detail,device:DEV})}).then(r=>r.json());
@@ -187,8 +189,9 @@ const ORDER=['XS','S','M','L','XL','XXL'];
 function loadBody(){ try{ return JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){ return null; } }
 function recommend(p){
   const list = ITEM.sizes.map(s=>s.size);
+  const meLink='/me?at='+AT+'&next='+encodeURIComponent(location.pathname+location.search);
   if(list.every(x=>/^\d+$/.test(x))){                         // 신발(mm)
-    if(!p.foot) return {msg:'신발은 <a href="/me?next='+encodeURIComponent(location.pathname+location.search)+'">발 사이즈</a>를 입력하면 추천해요'};
+    if(!p.foot) return {msg:'신발은 <a href="'+meLink+'">발 사이즈</a>를 입력하면 추천해요'};
     const pick = list.map(Number).sort((a,b)=>a-b).find(x=>x>=p.foot) || Math.max(...list.map(Number));
     return {size:String(pick), why:`발 ${p.foot}mm 기준`};
   }
@@ -208,14 +211,15 @@ function recommend(p){
 }
 (function(){
   const box=$('#rec'), p=loadBody();
+  const meLink='/me?at='+AT+'&next='+encodeURIComponent(location.pathname+location.search);
   box.hidden=false;
-  if(!p){ box.innerHTML='👤 <a href="/me?next='+encodeURIComponent(location.pathname+location.search)+'">키·몸무게를 등록</a>하면 이 옷의 추천 사이즈를 알려드려요'; return; }
+  if(!p){ box.innerHTML=USER_IC+' <a href="'+meLink+'">키·몸무게를 등록</a>하면 추천 사이즈를 알려드려요'; return; }
   const r=recommend(p);
   if(!r.size){ box.innerHTML=r.msg||''; box.hidden=!r.msg; return; }
   const st=ITEM.sizes.find(s=>s.size===r.size), q=st?st.qty:0;
   document.querySelectorAll('.sz').forEach(b=>b.classList.toggle('mine', b.dataset.size===r.size));
   box.classList.add(q?'ok':'no');
-  box.innerHTML = `👤 추천 사이즈 <b>${r.size}</b> · ${q?`재고 ${q}개`:'<b>지금 없어요</b>'}<br><small>${r.why} · 참고용 <a href="/me?next=${encodeURIComponent(location.pathname+location.search)}">수정</a></small>`;
+  box.innerHTML = `${USER_IC}추천 사이즈 <b>${r.size}</b> · ${q?`재고 ${q}개`:'<b>지금 없어요</b>'}<br><small>${r.why} · 참고용 <a href="${meLink}">수정</a></small>`;
   if(!q) showSize(r.size);
 })();
 </script>

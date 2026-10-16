@@ -1,0 +1,27 @@
+{# 고객 화면용 2D 도면 + 경로 (키오스크는 _map.html 그대로) #}
+<svg class="map" viewBox="88 52 524 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매장 도면과 길 안내">
+  <rect x="96" y="60" width="508" height="414" rx="16" fill="#fff" stroke="#E3E7EE" stroke-width="2"/>
+  {% for lab, x, y in [('A구역',120,92),('B구역',430,92),('C구역',430,288)] %}
+    <text x="{{x}}" y="{{y}}" font-size="15" font-weight="700" fill="#AFB7C6">{{lab}}</text>
+  {% endfor %}
+  {% for f in map.fixtures %}
+    {% set on = (f.id == map.target) %}
+    <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="8"
+          fill="{{ '#3862DA' if on else '#E8EDF4' }}" stroke="{{ '#12508F' if on else '#C6D0DD' }}" stroke-width="1.5"/>
+    <text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 5}}" text-anchor="middle" font-size="15" font-weight="{{ 700 if on else 500 }}"
+          fill="{{ '#fff' if on else '#8A94A5' }}">{{f.id}}</text>
+  {% endfor %}
+  {% if map.path %}
+    <polyline points="{{map.path}}" fill="none" stroke="#3862DA" stroke-width="5" stroke-dasharray="10 9"
+              stroke-linecap="round" stroke-linejoin="round"/>
+  {% endif %}
+  {% for f in map.fixtures if f.id == map.target %}
+    <g transform="translate({{f.x + f.w/2 - 18}},{{f.y - 42}}) scale(1.5)">
+      <path d="M12 22s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" fill="#3862DA" stroke="#fff" stroke-width="1.4"/>
+      <circle cx="12" cy="10.5" r="2.6" fill="#fff"/></g>
+  {% endfor %}
+  {% for f in map.fixtures if f.id == map.at %}
+    <circle cx="{{f.x + f.w/2}}" cy="{{f.y + f.h/2}}" r="19" fill="#E8590C" stroke="#fff" stroke-width="4"/>
+    <text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 6}}" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">나</text>
+  {% endfor %}
+</svg>

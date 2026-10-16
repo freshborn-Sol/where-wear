@@ -1,20 +1,22 @@
-{% extends "base.html" %}{% block body %}
-<header class="top"><a class="back" href="javascript:history.back()">←</a>
-  <div class="brand">상품 사진 출처</div></header>
-<main class="wrap">
-  <p class="note">이 프로토타입의 상품 사진은
-     <a href="https://www.pexels.com">Pexels</a> 에서 제공받았습니다.
-     각 사진의 촬영자는 아래와 같습니다.</p>
-  {% if not rows %}
-    <p class="empty">아직 받아온 사진이 없어요. (색상 그림을 쓰는 중)</p>
-  {% endif %}
-  <ul class="log">
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
+{% block body %}
+{{ cx.appbar('상품 사진 출처') }}
+<main class="page">
+  <p class="note2">{{ cx.icon('image', 18) }}<span>where:wear의 상품 사진은 <a href="https://www.pexels.com" style="color:var(--blue);font-weight:700">Pexels</a>에서 제공받았어요. 각 사진의 촬영자는 아래와 같아요.</span></p>
+  {% if not rows %}<p class="empty">아직 받아온 사진이 없어요. (색상 그림을 쓰는 중)</p>{% endif %}
+  {% if rows %}
+  <div class="gcard">
   {% for r in rows %}
-    <li>{{ r.sku }} ·
-      <a href="{{ r.photographer_url }}">{{ r.photographer }}</a>
-      <small><a href="{{ r.pexels_url }}">Pexels에서 보기</a> · {{ r.query }}</small></li>
+    <a class="crow" href="{{ r.pexels_url }}" target="_blank" rel="noopener">
+      <img src="{{ url_for('static', filename='photos/' ~ r.sku ~ '.jpg') }}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <div><div class="ct"><small>{{ r.sku }}</small><b>{{ r.photographer }}</b></div><small>Pexels에서 보기 · {{ r.query }}</small></div>
+      {{ cx.icon('chev', 16) }}
+    </a>
   {% endfor %}
-  </ul>
+  </div>
+  {% endif %}
   <p class="foot">Photos provided by <a href="https://www.pexels.com">Pexels</a></p>
 </main>
+{{ cx.tabbar('info') }}
 {% endblock %}

@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='logo/icon-64.png') }}">
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo/icon-180.png') }}">
 <meta name="theme-color" content="#12508f">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">{% endblock %}
 </head><body class="{% block bodyclass %}{% endblock %}">
 {% block body %}{% endblock %}
 </body></html>

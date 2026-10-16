@@ -1,14 +1,12 @@
-{% extends "base.html" %}{% block body %}
-<header class="top">
-  <a class="back" href="/go?at={{at}}">←</a>
-  <div class="brand">사진으로 찾기</div>
-</header>
-<main class="wrap">
-
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
+{% block body %}
+{{ cx.appbar('사진으로 찾기', '/go?at=' ~ at) }}
+<main class="page">
   <section class="aiq">
     <img src="{{ url_for('static', filename=qimg) }}" alt="올린 사진">
     <div>
-      <div class="aiq-h">AI가 본 특징
+      <div class="aiq-h">{{ cx.icon('sparkle', 15) }}AI가 본 특징
         <small>{% if q._cached %}· 저장된 결과{% else %}· {{ (q._ms/1000)|round(1) }}초{% endif %}</small></div>
       <div class="tags">
         <span class="tg">{{q.category}}</span><span class="tg">{{q.subcat}}</span>
@@ -30,9 +28,8 @@
       <div class="nm">{{best.name}}{% if best.is_demo %} <span class="demo">전시 실물</span>{% endif %}</div>
       <div class="meter"><i style="width:{{best.score}}%"></i></div>
       <div class="mt">일치도 <b>{{best.score}}%</b> · {{ best.hits|join(' · ') }}</div>
-      <div class="pl">{% if best.place %}📍 {{best.place.fixture_name}} · {{best.place.level}}
-                      {% else %}위치 미등록{% endif %}</div>
-      <div class="fr {{best.fresh[1]}}">🕐 {{best.fresh[0]}}</div>
+      <div class="pl">{{ cx.icon('pin', 13) }}{% if best.place %}{{best.place.fixture_name}} · {{best.place.level}}{% else %}위치 미등록{% endif %}</div>
+      <div class="fr {{best.fresh[1]}}">{{ cx.icon('clock', 13) }}{{best.fresh[0]}}</div>
       <span class="go">길 안내 →</span>
     </div>
   </a>
@@ -46,8 +43,7 @@
       <img src="{{ imgsrc(it) }}" alt="">
       <div class="nm">{{it.name}}{% if it.is_demo %} <span class="demo">실물</span>{% endif %}</div>
       <div class="mt">일치도 {{it.score}}%</div>
-      <div class="pl">{% if it.place %}{{it.place.zone}}구역 · {{it.place.fixture_id}} · {{it.place.level}}
-                      {% else %}위치 미등록{% endif %}</div>
+      <div class="pl">{{ cx.icon('pin', 12) }}{% if it.place %}{{it.place.zone}}구역 · {{it.place.fixture_id}} · {{it.place.level}}{% else %}위치 미등록{% endif %}</div>
     </a>
   {% endfor %}
   </div>
@@ -55,4 +51,5 @@
 
   <p class="foot">원하는 옷이 아닌가요? <a href="/go?at={{at}}">글자·필터로 찾기</a></p>
 </main>
+{{ cx.tabbar('find') }}
 {% endblock %}

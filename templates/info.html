@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx gray{% endblock %}
+{% block body %}
+{% set CHEV = cx.icon('chev', 16) %}
+<header class="ihead">
+  <span class="logo lg">{{ cx.icon('pinfill', 30) }}</span>
+  <div><b class="iname">where:wear</b><small>매장 안 옷 위치 안내 서비스</small></div>
+  <span class="ver">v1.0</span>
+</header>
+<main class="page">
+  <section class="group"><h3>지금 이용 중인 매장</h3><div class="gcard">
+    <div class="row"><span class="l">{{ cx.icon('store', 20) }}매장</span><span class="v">{{ store_name }}</span></div>
+    <div class="row"><span class="l">{{ cx.icon('qr', 20) }}QR 위치</span><span class="v">{{ here.name if here else at }}</span></div>
+  </div></section>
+
+  <section class="group"><h3>설정</h3><div class="gcard">
+    <div class="row"><span class="l">{{ cx.icon('globe', 20) }}언어</span><span class="v">한국어</span></div>
+    <button class="row" type="button" onclick="toggleBig()"><span class="l">{{ cx.icon('textsize', 20) }}글자 크기</span><span class="v"><span id="bigv">보통</span>{{ CHEV }}</span></button>
+  </div></section>
+
+  <section class="group"><h3>내 정보</h3><div class="gcard">
+    <a class="row" href="/me?at={{at}}&next={{ ('/info?at=' ~ at)|urlencode }}"><span class="l">{{ cx.icon('user', 20) }}내 사이즈 정보</span><span class="v"><span id="mev">등록 안 함</span>{{ CHEV }}</span></a>
+  </div></section>
+
+  <section class="group"><h3>도움말</h3><div class="gcard">
+    <details><summary class="row"><span class="l">{{ cx.icon('info', 20) }}이용 방법</span><span class="v">{{ CHEV }}</span></summary>
+      <ol class="howto"><li>찾는 옷을 글자로 검색하거나 사진을 찍어요.</li><li>상품을 누르면 몇 번 행거 · 몇 번째 칸인지와 가는 길이 나와요.</li>
+        <li>찾았으면 <b>찾았어요!</b>, 없으면 <b>찾는 게 없나요?</b>를 눌러 다른 색 · 재고 · 직원 도움을 받아요.</li></ol></details>
+    <a class="row" href="/credits?at={{at}}"><span class="l">{{ cx.icon('image', 20) }}상품 사진 출처</span><span class="v">Pexels{{ CHEV }}</span></a>
+  </div></section>
+
+  <section class="group muted"><h3>시연용 (매장 · 직원 화면)</h3><div class="gcard">
+    <a class="row" href="/kiosk"><span class="l">{{ cx.icon('monitor', 20) }}입구 키오스크 화면</span><span class="v">{{ CHEV }}</span></a>
+    <a class="row" href="/staff"><span class="l">{{ cx.icon('qr', 20) }}직원 · 위치 등록</span><span class="v">{{ CHEV }}</span></a>
+    <a class="row" href="/staff/ai"><span class="l">{{ cx.icon('camera', 20) }}직원 · 사진으로 상품 등록</span><span class="v">{{ CHEV }}</span></a>
+    <a class="row" href="/staff/reports"><span class="l">{{ cx.icon('list', 20) }}직원 · 신고 · 호출 목록</span><span class="v">{{ CHEV }}</span></a>
+  </div></section>
+</main>
+{{ cx.tabbar('info') }}
+<script>
+function bigOn(){ try{ return localStorage.getItem('ww_big')==='1'; }catch(e){ return false; } }
+function paint(){ document.getElementById('bigv').textContent = bigOn() ? '크게' : '보통'; document.documentElement.classList.toggle('big', bigOn()); }
+function toggleBig(){ try{ localStorage.setItem('ww_big', bigOn() ? '0' : '1'); }catch(e){} paint(); }
+paint();
+try{ const p=JSON.parse(localStorage.getItem('ww_body')||'null'); if(p) document.getElementById('mev').textContent=`${p.h}cm · ${p.w}kg`; }catch(e){}
+</script>
+{% endblock %}
