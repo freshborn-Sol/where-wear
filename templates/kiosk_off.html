@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block bodyclass %}kiosk{% endblock %}{% block body %}
+<header class="ktop"><img class="klogo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"><span class="ksub">옷 찾기</span></header>
+<main class="kwrap"><h1>이 매장은 키오스크를 쓰지 않아요</h1>
+  <p class="kempty">옷이 있는 선반의 QR을 휴대폰으로 찍거나, 가까운 직원에게 말씀해 주세요.</p></main>
+{% endblock %}

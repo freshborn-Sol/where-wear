@@ -44,6 +44,28 @@ def ensure_schema():
             con.execute(f"ALTER TABLE reports ADD COLUMN {col} {typ}")
     if "confirmed_at" not in {r[1] for r in con.execute("PRAGMA table_info(placements)")}:
         con.execute("ALTER TABLE placements ADD COLUMN confirmed_at TEXT")   # 손님이 '찾았어요' 누른 시각
+    # ⑧ 창고 재고: stock.qty = 매장 진열, stock.wh = 창고
+    if "wh" not in {r[1] for r in con.execute("PRAGMA table_info(stock)")}:
+        con.execute("ALTER TABLE stock ADD COLUMN wh INTEGER DEFAULT 0")
+    if not con.execute("SELECT COUNT(*) FROM stock WHERE wh>0").fetchone()[0]:   # 시연용: 창고 재고 채우기(항상 같은 값)
+        import zlib
+        for sku, size in con.execute("SELECT sku, size FROM stock").fetchall():
+            con.execute("UPDATE stock SET wh=? WHERE sku=? AND size=?", (zlib.crc32(f"{sku}{size}".encode()) % 4, sku, size))
+    # ① 바코드 ↔ 상품: 같은 상품도 시즌마다 바코드가 달라서, 여러 바코드를 한 상품(sku)에 연결
+    con.execute("CREATE TABLE IF NOT EXISTS barcodes (code TEXT PRIMARY KEY, sku TEXT, season TEXT)")
+    if not con.execute("SELECT COUNT(*) FROM barcodes").fetchone()[0]:
+        import zlib
+        for (sku,) in con.execute("SELECT sku FROM items").fetchall():
+            for season in ("26SS", "26FW"):
+                n = zlib.crc32(f"{sku}{season}".encode()) % 10**9
+                con.execute("INSERT OR IGNORE INTO barcodes VALUES (?,?,?)", (f"880{n:09d}{'1' if season=='26SS' else '2'}", sku, season))
+    # ④⑪ 매장 설정 / ⑦ 진열 점검일
+    con.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
+    for k, v in [("store_type", "대형"), ("staff_count", "4"), ("kiosk", "1"), ("busy", "auto"),
+                 ("last_check", datetime.date.today().isoformat())]:
+        con.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (k, v))
+    # ⑩ 사용률 지표
+    con.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, sku TEXT, src TEXT, ts TEXT)")
     con.commit(); con.close()
 ensure_schema()
 
@@ -65,6 +87,39 @@ def one(sql, args=()):
 
 def now(): return datetime.datetime.now()
 
+# ---------- ④⑪ 매장 설정 ----------
+CHECK_DAYS = 14                     # ⑦ 진열 점검 주기 (인터뷰: 2~3주마다 진열 변경)
+def setting(k, default=""):
+    r = one("SELECT value FROM settings WHERE key=?", (k,))
+    return r["value"] if r else default
+def set_setting(k, v):
+    db().execute("INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (k, str(v)))
+def is_busy():
+    """바쁨 모드: 켜기/끄기, 자동이면 '직원 2명 이하' 또는 '기다리는 손님 수 ≥ 직원 수'"""
+    mode = setting("busy", "auto")
+    if mode in ("on", "off"): return mode == "on"
+    staff = int(setting("staff_count", "4") or 4)
+    waiting = one("SELECT COUNT(*) n FROM reports WHERE wait_state IN ('waiting','going')")["n"]
+    return staff <= 2 or waiting >= staff
+
+# ---------- ⑩ 사용률 기록 ----------
+def log_event(kind, sku=None, src=None):
+    try:
+        db().execute("INSERT INTO events (kind,sku,src,ts) VALUES (?,?,?,?)", (kind, sku, src, now().isoformat(timespec="seconds")))
+        db().commit()
+    except Exception:
+        pass
+
+# ---------- ① 바코드 → 상품 ----------
+def resolve_code(code):
+    """찍은 코드(상품코드 또는 시즌별 바코드)를 상품으로. 바코드가 달라도 같은 상품으로 묶는다."""
+    code = (code or "").strip().upper()
+    it = one("SELECT * FROM items WHERE sku=?", (code,))
+    if it: return it, None
+    b = one("SELECT * FROM barcodes WHERE code=?", (code,))
+    if b: return one("SELECT * FROM items WHERE sku=?", (b["sku"],)), b["season"]
+    return None, None
+
 @app.context_processor
 def helpers():
     """상품 이미지 주소. 로컬 파일이면 static/, http로 시작하면 그대로 사용."""
@@ -78,7 +133,9 @@ def helpers():
             if v in (None, ""): a.pop(k, None)
             else: a[k] = v
         return "/search?" + urlencode(a)
-    return dict(imgsrc=imgsrc, with_args=with_args, store_name=STORE_NAME,
+    try: busy = is_busy()
+    except Exception: busy = False
+    return dict(imgsrc=imgsrc, with_args=with_args, store_name=STORE_NAME, busy=busy,
                 cx_at=request.args.get("at") or "ENTRANCE")   # 고객 화면 탭바·링크용 현재 QR 위치
 
 # ---------- 위치 + 갱신 시각 ----------
@@ -106,7 +163,7 @@ def decorate(items):
         it = dict(it)
         it["place"] = p
         it["fresh"] = freshness(p["updated_at"] if p else None)
-        it["sizes"] = rows("SELECT size, qty FROM stock WHERE sku=? ORDER BY size", (it["sku"],))
+        it["sizes"] = rows("SELECT size, qty, COALESCE(wh,0) wh FROM stock WHERE sku=? ORDER BY size", (it["sku"],))
         out.append(it)
     return out
 
@@ -194,6 +251,7 @@ def search():
     note = ""
     if q:
         base, parsed, note = S.text_search(base, q, limit=999)
+        log_event("search", src=q[:40])
     items = apply_filters(base, sel)
     if not q:
         picked = [v for v in (sel["cat"], sel["sub"], sel["color"], sel["fit"], sel["pattern"]) if v]
@@ -224,6 +282,7 @@ def search_photo():
     if not f:
         return redirect(url_for("go", at=at))
     raw = f.read()
+    log_event("photo")
     try:
         qimg = save_upload(raw, "q")
     except Exception:
@@ -252,8 +311,10 @@ def item(sku):
     it = one("SELECT * FROM items WHERE sku=?", (sku,))
     if not it: return "없는 상품", 404
     it = decorate([it])[0]
+    src = request.args.get("src", "")
+    log_event("tag" if src == "tag" else "view", sku, src or None)     # ⑨ 옷 태그 QR로 들어왔는지
     fx = it["place"]["fixture_id"] if it["place"] else None
-    return render_template("item.html", at=at, it=it, map=map_data(at, fx),
+    return render_template("item.html", src=src, at=at, it=it, map=map_data(at, fx),
                            flag=loc_flag(it), similar=similar_items(it), **help_data(it))
 
 SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
@@ -298,6 +359,8 @@ def mins_since(t):
 
 def stock_total(sku):
     return one("SELECT COALESCE(SUM(qty),0) n FROM stock WHERE sku=?", (sku,))["n"]
+def wh_total(sku):
+    return one("SELECT COALESCE(SUM(wh),0) n FROM stock WHERE sku=?", (sku,))["n"]
 
 def open_none(sku, fx):
     """이 자리에 대한 열린 '여기 없어요' 신고 수 (기기 기준 중복 제거)"""
@@ -365,13 +428,14 @@ def report():
             db().execute("UPDATE placements SET active=0 WHERE sku=? AND fixture_id=?", (sku, fx))
             delisted = True
         db().commit()
-        return jsonify(ok=True, id=rid, message=msg, delisted=delisted, stock=stock_total(sku))
+        return jsonify(ok=True, id=rid, message=msg, delisted=delisted, stock=stock_total(sku), wh=wh_total(sku), busy=is_busy())
 
     # 호출·사이즈 요청: 손님이 그 자리에서 기다림
     rid = db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,detail,size,device,wait_state,wait_at)
                           VALUES (?,?,?,?,?,?,?,'waiting',?)""",
                        (sku, fx, kind, ts(), detail, size, dev, ts())).lastrowid
     db().commit()
+    log_event("call", sku, kind)
     return jsonify(ok=True, id=rid, message="직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요")
 
 @app.route("/api/report/<int:rid>/wait", methods=["POST"])
@@ -382,6 +446,7 @@ def report_wait(rid):
     db().execute("""UPDATE reports SET wait_state='waiting', wait_at=?, size=?,
                     detail=? WHERE id=?""", (ts(), size, f"위치에 없음{(' · ' + size) if size else ''}", rid))
     db().commit()
+    log_event("call", None, "none")
     return jsonify(ok=True, id=rid, message="직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요")
 
 @app.route("/api/report/<int:rid>")
@@ -409,24 +474,75 @@ def found():
 # ---------- 직원 화면 ----------
 @app.route("/staff")
 def staff():
+    last = setting("last_check") or datetime.date.today().isoformat()
+    days = (datetime.date.today() - datetime.date.fromisoformat(last)).days
     return render_template("staff.html",
                            fixtures=rows("SELECT * FROM fixtures WHERE id!='ENTRANCE'"),
-                           items=rows("SELECT sku, name FROM items ORDER BY sku"))
+                           items=rows("SELECT sku, name, color FROM items ORDER BY sku"),
+                           priority=priority_list(), check_days=days, CHECK_DAYS=CHECK_DAYS,
+                           samples=rows("""SELECT b.code, b.season, i.sku, i.name, i.color FROM barcodes b JOIN items i ON i.sku=b.sku
+                                           WHERE i.sku IN ('UQ003','UQ004','UQ073') ORDER BY i.sku, b.season"""))
+
+def priority_list(limit=10):
+    """⑦ 다시 찍을 옷: 자주 찾는데(조회·검색) 위치가 오래됐거나 신고가 있는 옷부터"""
+    since = (now() - datetime.timedelta(days=7)).isoformat(timespec="seconds")
+    out = []
+    for it in rows("SELECT sku, name, color, image FROM items"):
+        p = placement_of(it["sku"])
+        views = one("SELECT COUNT(*) n FROM events WHERE sku=? AND kind IN ('view','tag') AND ts>=?", (it["sku"], since))["n"]
+        reps = one("SELECT COUNT(*) n FROM reports WHERE sku=? AND kind='none' AND done=0", (it["sku"],))["n"]
+        age = (now() - datetime.datetime.fromisoformat(p["updated_at"])).days if p else 99
+        if not p or age >= CHECK_DAYS or reps:
+            why = []
+            if reps: why.append(f"'없어요' {reps}건")
+            if not p: why.append("위치 없음")
+            elif age >= CHECK_DAYS: why.append(f"{age}일 전 등록")
+            if views: why.append(f"최근 7일 조회 {views}회")
+            out.append({**it, "place": p, "age": age, "views": views, "reps": reps, "why": why,
+                        "score": reps * 5 + views * 2 + min(age, 60) / 10 + (3 if not p else 0)})
+    out.sort(key=lambda x: -x["score"])
+    return out[:limit]
+
+@app.route("/staff/confirm/<sku>", methods=["POST"])
+def staff_confirm(sku):
+    """⑦ '그대로 맞아요': 다시 안 찍고 현재 위치의 등록 시각만 새로"""
+    p = placement_of(sku)
+    if p:
+        db().execute("UPDATE placements SET updated_at=?, updated_by='staff-check' WHERE id=?", (ts(), p["id"]))
+        close_loc_reports(sku, p["fixture_id"], "재등록")
+        db().commit()
+    return redirect(url_for("staff") + "#priority")
+
+@app.route("/staff/checked", methods=["POST"])
+def staff_checked():
+    """⑦ 진열 점검 완료 → 다음 알림은 14일 뒤"""
+    set_setting("last_check", datetime.date.today().isoformat()); db().commit()
+    return redirect(url_for("staff"))
 
 @app.route("/api/register", methods=["POST"])
 def register():
+    """① 바코드(시즌별로 달라도) → 상품으로 묶어서 등록
+       ② 한 번 스캔: 사이즈는 원래 한 상품이고, '같은 상품 모든 색'을 켜면 색까지 한 번에"""
     d = request.get_json(force=True)
-    sku, fx, lv = d.get("sku", "").upper(), d.get("fixture"), d.get("level", "중단")
-    it = one("SELECT * FROM items WHERE sku=?", (sku,))
-    if not it: return jsonify(ok=False, message=f"모르는 코드: {sku}"), 400
+    code, fx, lv = d.get("sku", ""), d.get("fixture"), d.get("level", "중단")
+    it, season = resolve_code(code)
+    if not it: return jsonify(ok=False, message=f"모르는 코드: {code}"), 400
     if not one("SELECT 1 FROM fixtures WHERE id=?", (fx,)):
         return jsonify(ok=False, message=f"모르는 선반: {fx}"), 400
-    db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,))   # 이전 위치는 내림
-    db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)"
-                 " VALUES (?,?,?,?,?,1)", (sku, fx, lv, now().isoformat(timespec="seconds"), "staff"))
-    close_loc_reports(sku, None, "재등록")                               # 관련 위치 신고 처리
+    targets = [it]
+    if d.get("all_colors"):
+        targets = rows("SELECT * FROM items WHERE name=? ORDER BY sku", (it["name"],)) or [it]
+    for t in targets:
+        db().execute("UPDATE placements SET active=0 WHERE sku=?", (t["sku"],))   # 이전 위치는 내림
+        db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)"
+                     " VALUES (?,?,?,?,?,1)", (t["sku"], fx, lv, ts(), "staff"))
+        close_loc_reports(t["sku"], None, "재등록")                              # 관련 위치 신고 처리
     db().commit()
-    return jsonify(ok=True, message=f"{it['name']} → {fx} {lv}")
+    sizes = rows("SELECT size FROM stock WHERE sku=?", (it["sku"],))
+    colors = " · ".join(t["color"] for t in targets)
+    note = f" (시즌 바코드 {season} → 같은 상품으로 인식)" if season else ""
+    return jsonify(ok=True, count=len(targets),
+                   message=f"{it['name']} [{colors}] 사이즈 {len(sizes)}종 → {fx} {lv}{note}")
 
 # ---------- 직원: 실물 옷을 사진으로 등록 (전시회용) ----------
 def next_demo_sku():
@@ -479,7 +595,7 @@ def staff_ai_save():
         if ":" in part:
             sz, qty = part.split(":", 1)
             if qty.strip().isdigit():
-                db().execute("INSERT INTO stock VALUES (?,?,?)", (sku, sz.strip().upper(), int(qty)))
+                db().execute("INSERT INTO stock (sku,size,qty) VALUES (?,?,?)", (sku, sz.strip().upper(), int(qty)))
     db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)"
                  " VALUES (?,?,?,?,?,1)",
                  (sku, d.get("fixture"), d.get("level", "중단"),
@@ -539,6 +655,7 @@ def staff_reports():
     history = rows("""SELECT r.*, i.name FROM reports r LEFT JOIN items i ON i.sku=r.sku
                       WHERE r.done=1 AND r.resolution IS NOT NULL ORDER BY r.resolved_at DESC LIMIT 8""")
     return render_template("reports.html", waiting=waiting, groups=groups, history=history,
+                           busy_mode=setting("busy", "auto"), staff_count=setting("staff_count", "4"),
                            summary=manager_summary(), WAIT_MIN=WAIT_MIN,
                            fixtures=rows("SELECT * FROM fixtures WHERE id!='ENTRANCE'"))
 
@@ -558,7 +675,13 @@ def manager_summary(days=7):
         return round(sum(v) / len(v), 1) if v else None
     missed = one("SELECT COUNT(*) n FROM reports WHERE wait_state='expired' AND wait_at>=?", (since,))["n"]
     found = one("SELECT COUNT(*) n FROM reports WHERE kind='found' AND created_at>=?", (since,))["n"]
-    return {"top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
+    ev = {r["kind"]: r["n"] for r in rows("SELECT kind, COUNT(*) n FROM events WHERE ts>=? GROUP BY kind", (since,))}
+    nones = one("SELECT COUNT(*) n FROM reports WHERE kind='none' AND created_at>=?", (since,))["n"]
+    calls = one("SELECT COUNT(*) n FROM reports WHERE wait_at IS NOT NULL AND wait_at>=?", (since,))["n"]
+    usage = {"search": ev.get("search", 0), "photo": ev.get("photo", 0), "tag": ev.get("tag", 0),
+             "view": ev.get("view", 0) + ev.get("tag", 0), "kiosk": ev.get("kiosk", 0), "calls": calls,
+             "found_rate": round(found * 100 / (found + nones)) if (found + nones) else None}
+    return {"usage": usage, "top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
             "fix_min": avg([(r["created_at"], r["resolved_at"]) for r in fixed]), "missed": missed, "found": found}
 
 @app.route("/staff/reports/<int:rid>/wait", methods=["POST"])
@@ -575,8 +698,8 @@ def staff_wait_action(rid):
                 db().execute("UPDATE reports SET done=1, resolution=?, resolved_at=? WHERE id=?",
                              ("전달 완료" if act == "served" else "재고 없음", ts(), rid))
             if act == "nostock":                           # 그 사이즈(없으면 전체) 재고 0
-                if r["size"]: db().execute("UPDATE stock SET qty=0 WHERE sku=? AND size=?", (r["sku"], r["size"]))
-                else: db().execute("UPDATE stock SET qty=0 WHERE sku=?", (r["sku"],))
+                if r["size"]: db().execute("UPDATE stock SET qty=0, wh=0 WHERE sku=? AND size=?", (r["sku"], r["size"]))
+                else: db().execute("UPDATE stock SET qty=0, wh=0 WHERE sku=?", (r["sku"],))
         db().commit()
     return redirect(url_for("staff_reports"))
 
@@ -596,7 +719,7 @@ def staff_fix():
     elif act == "move" and f.get("to"):
         place(f.get("to"), f.get("level") or "중단"); res = "위치 이동"
     elif act == "nostock":
-        db().execute("UPDATE stock SET qty=0 WHERE sku=?", (sku,))
+        db().execute("UPDATE stock SET qty=0, wh=0 WHERE sku=?", (sku,))
         db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,)); res = "재고 없음"
     elif act == "false" and last:
         db().execute("UPDATE placements SET active=1, confirmed_at=? WHERE id=?", (ts(), last["id"])); res = "오신고"
@@ -605,6 +728,29 @@ def staff_fix():
     close_loc_reports(sku, fx, res)
     db().commit()
     return redirect(url_for("staff_reports"))
+
+# ---------- ⑪ 매장 설정 / ④ 바쁨 모드 ----------
+STORE_TYPES = {"대형": "직원보다 손님이 훨씬 많은 대형 매장 (where:wear 효과 가장 큼)",
+               "중형": "일반 매장", "소형": "직원이 바로 보이는 작은 매장 (키오스크·호출은 끄는 걸 권장)"}
+
+@app.route("/staff/settings", methods=["GET", "POST"])
+def staff_settings():
+    if request.method == "POST":
+        f = request.form
+        st = f.get("store_type") if f.get("store_type") in STORE_TYPES else "대형"
+        set_setting("store_type", st)
+        set_setting("staff_count", max(1, int(f.get("staff_count") or 1)))
+        set_setting("kiosk", "1" if f.get("kiosk") else "0")
+        set_setting("busy", f.get("busy") if f.get("busy") in ("auto", "on", "off") else "auto")
+        db().commit()
+        return redirect(url_for("staff_settings", saved=1))
+    return render_template("settings.html", s={k: setting(k) for k in ("store_type", "staff_count", "kiosk", "busy")},
+                           types=STORE_TYPES, busy_now=is_busy(), saved=request.args.get("saved"))
+
+@app.route("/staff/busy", methods=["POST"])
+def staff_busy():
+    set_setting("busy", request.form.get("mode", "auto")); db().commit()
+    return redirect(request.referrer or url_for("staff_reports"))
 
 # ---------- 사진 출처 (Pexels API 이용 조건) ----------
 @app.route("/credits")
@@ -620,6 +766,8 @@ def credits():
 @app.route("/kiosk")
 def kiosk():
     """어르신용: 대분류 → 종류(사진) → 색 → 결과(+선택: 핏·무늬로 더 좁히기). AI 사진검색은 없음."""
+    if setting("kiosk", "1") != "1":                    # ⑪ 이 매장은 키오스크를 쓰지 않음
+        return render_template("kiosk_off.html")
     step = request.args.get("step", "cat")
     cat = request.args.get("cat", "")
     sub = request.args.get("sub", "")
@@ -639,6 +787,7 @@ def kiosk():
         items = decorate(apply_filters(base, sel))
         fc = facet_counts(base, sel)            # 핏·무늬: 지금 조건 안에 실제로 있는 값만 버튼으로
         kf = {k: fc.get(k, []) for k in ("fit", "pattern")}
+        log_event("kiosk", src=f"{cat}/{sub}/{color}")
     return render_template("kiosk.html", step=step, cat=cat, sub=sub, color=color,
                            fit=fit, pattern=pattern, kf=kf,
                            cats=list(CATS), tiles=tiles, kcolors=colors, items=items)
@@ -646,8 +795,18 @@ def kiosk():
 @app.route("/kiosk/item/<sku>")
 def kiosk_item(sku):
     it = decorate([one("SELECT * FROM items WHERE sku=?", (sku,))])[0]
+    it["sizes"] = sort_sizes(it["sizes"])
     fx = it["place"]["fixture_id"] if it["place"] else None
     return render_template("kiosk_item.html", it=it, map=map_data("ENTRANCE", fx))
+
+@app.route("/kiosk/print/<sku>")
+def kiosk_print(sku):
+    """③ 감열식 영수증 프린터(80mm)용 종이 지도. 키오스크에서 눌러 바로 출력."""
+    it = decorate([one("SELECT * FROM items WHERE sku=?", (sku,))])[0]
+    fx = it["place"]["fixture_id"] if it["place"] else None
+    log_event("print", sku)
+    return render_template("kiosk_print.html", it=it, map=map_data("ENTRANCE", fx),
+                           printed=now().strftime("%m/%d %H:%M"))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))     # 맥은 5000번을 AirPlay가 쓰므로 5001

@@ -97,7 +97,7 @@ def main():
                     (sku, name, cat, sub, color, COLORS[color], fit, price,
                      f"img/{sku}.svg"))
                 for s in SIZES:
-                    db.execute("INSERT INTO stock VALUES (?,?,?)",
+                    db.execute("INSERT INTO stock (sku,size,qty) VALUES (?,?,?)",
                                (sku, s, random.choice([0, 0, 1, 2, 3, 5])))
                 # 초기 위치: 카테고리에 맞는 집기에 배치
                 pref = {"상의": ["A-H1", "A-H2"], "하의": ["B-H1", "B-H2"],

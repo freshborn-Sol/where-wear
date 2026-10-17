@@ -60,11 +60,11 @@ for r in db.execute("SELECT * FROM fixtures"):
 # ---------- 옷 태그 QR ----------
 cards = []
 for r in db.execute("SELECT sku, name FROM items ORDER BY sku"):
-    b64 = save(r["sku"], OUT / f"item_{r['sku']}.png", box=6)
+    b64 = save(f"{host}/item/{r['sku']}?src=tag", OUT / f"item_{r['sku']}.png", box=6)   # 손님: 찍으면 재고 확인 / 직원: 등록
     cards.append(f'<div class="card"><img src="data:image/png;base64,{b64}">'
                  f'<div class="id">{r["sku"]}</div><div class="nm">{r["name"]}</div></div>')
 (OUT / "print_items.html").write_text(PAGE.format(
-    title="where:wear 옷 태그 QR", sub="옷에 달아 두고 직원 화면에서 찍으세요",
+    title="where:wear 옷 태그 QR", sub="옷 태그에 붙이세요 · 손님이 찍으면 사이즈별 재고, 직원 화면에서 찍으면 위치 등록",
     cols=4, gap=5, pad=3, qr=38, idsz=11, nmsz=8, cards="".join(cards)), encoding="utf-8")
 
 print(f"QR 생성 완료 → {OUT}")

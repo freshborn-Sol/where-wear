@@ -1,12 +1,21 @@
 {% extends "base.html" %}{% block body %}
 <header class="top"><div class="brand">직원 · 위치 등록</div>
   <a class="back" href="/staff/ai" style="margin-left:auto;font-size:14px">📷 사진 등록</a>
-  <a class="back" href="/staff/reports" style="font-size:14px">신고함</a></header>
+  <a class="back" href="/staff/reports" style="font-size:14px">신고함</a>
+  <a class="back" href="/staff/settings" style="font-size:14px">⚙️ 설정</a></header>
 <main class="wrap">
+  {% if check_days >= CHECK_DAYS %}
+  <form class="checkbar" method="post" action="/staff/checked">
+    <div><b>🔔 진열 점검할 때예요</b><small>마지막 점검 {{check_days}}일 전 · 아래 '다시 찍을 옷'부터 확인하세요</small></div>
+    <button class="btn">점검 완료</button>
+  </form>
+  {% endif %}
+
   <ol class="steps">
     <li><b>1</b> 선반 QR을 찍으세요 <span id="fxnow" class="tag">미선택</span></li>
-    <li><b>2</b> 옷 태그를 계속 찍으세요 (여러 벌 연속)</li>
+    <li><b>2</b> 옷 태그(바코드)를 찍으세요 · <u>같은 상품은 한 번만</u></li>
   </ol>
+  <label class="allc"><input type="checkbox" id="allc" checked> 같은 상품의 <b>다른 색</b>도 이 선반에 함께 등록 <small>(사이즈는 원래 한 번에 등록돼요)</small></label>
 
   <div id="reader"></div>
   <p class="hint">카메라가 안 되면 아래에서 직접 고르세요 (시연·발표용 대비)</p>
@@ -18,29 +27,56 @@
     <label>단
       <select id="lv"><option>상단</option><option selected>중단</option><option>하단</option></select>
     </label>
-    <label>옷(SKU)
-      <select id="sku">{% for i in items %}<option value="{{i.sku}}">{{i.sku}} · {{i.name}}</option>{% endfor %}</select>
+    <label>옷(상품)
+      <select id="sku">{% for i in items %}<option value="{{i.sku}}">{{i.sku}} · {{i.name}} ({{i.color}})</option>{% endfor %}</select>
     </label>
     <button class="btn" onclick="reg(document.getElementById('sku').value)">등록</button>
+  </div>
+  <div class="manual code">
+    <label>바코드 직접 입력 <input id="code" placeholder="8800000000001" inputmode="numeric"></label>
+    <button class="btn" onclick="reg(document.getElementById('code').value)">등록</button>
+    <p class="hint">시즌마다 바코드가 달라도 같은 상품으로 묶여요. 예:
+      {% for b in samples %}<a href="#" onclick="document.getElementById('code').value='{{b.code}}';return false">{{b.code}}</a> <small>({{b.name}} {{b.color}} {{b.season}})</small>{{ ' · ' if not loop.last }}{% endfor %}</p>
   </div>
 
   <h2>최근 등록</h2>
   <ul id="log" class="log"></ul>
+
+  <h2 id="priority">🔁 다시 찍을 옷 <small>자주 찾는데 위치가 오래됐거나 '없어요' 신고가 있는 옷부터</small></h2>
+  {% if not priority %}<p class="empty">지금은 다시 찍을 옷이 없어요.</p>{% endif %}
+  <ul class="prio">
+  {% for p in priority %}
+    <li>
+      <img src="{{ url_for('static', filename=p.image) if p.image else '' }}" alt="">
+      <div class="pb"><b>{{p.name}}</b> <span class="mute">({{p.color}})</span><br>
+        <small>{% if p.place %}지금 안내 위치: {{p.place.fixture_id}} {{p.place.level}}{% else %}위치 없음{% endif %}</small>
+        <div class="why">{% for w in p.why %}<span>{{w}}</span>{% endfor %}</div></div>
+      <div class="pa">
+        {% if p.place %}<form method="post" action="/staff/confirm/{{p.sku}}"><button class="btn small ok">그대로 맞아요</button></form>{% endif %}
+        <button class="btn small" onclick="pick('{{p.sku}}')">다시 찍기</button>
+      </div>
+    </li>
+  {% endfor %}
+  </ul>
 </main>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-// 선반 QR(…/go?at=A-H1)을 찍으면 선반이 정해지고, 그 뒤 찍는 코드는 옷(SKU)으로 본다.
+// 선반 QR(…/go?at=A-H1)을 찍으면 선반이 정해지고, 그 뒤 찍는 코드는 옷으로 본다.
+// 옷 태그 QR(…/item/UQ001?src=tag)이나 시즌 바코드(880…)도 같은 상품으로 인식.
 let fixture = null, last = 0;
 function setFixture(id){
   fixture = id;
   document.getElementById('fxnow').textContent = id;
   document.getElementById('fx').value = id;
 }
-function reg(sku){
+function pick(sku){ document.getElementById('sku').value = sku; window.scrollTo({top:0,behavior:'smooth'}); }
+function reg(code){
+  if(!code) return;
   const fx = fixture || document.getElementById('fx').value;
   fetch('/api/register', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({sku:sku, fixture:fx, level:document.getElementById('lv').value})})
+    body: JSON.stringify({sku:code, fixture:fx, level:document.getElementById('lv').value,
+                          all_colors: document.getElementById('allc').checked})})
    .then(r=>r.json()).then(d=>{
       const li = document.createElement('li');
       li.textContent = (d.ok ? '✅ ' : '⚠️ ') + d.message;
@@ -54,9 +90,9 @@ function onScan(text){
   last = t;
   const m = text.match(/[?&]at=([A-Za-z0-9\-]+)/);
   if (m) { setFixture(m[1]); return; }    // 선반 QR
-  reg(text.trim().toUpperCase());         // 옷 QR / 바코드
+  const it = text.match(/\/item\/([A-Za-z0-9]+)/);
+  reg(it ? it[1] : text.trim().toUpperCase());   // 옷 태그 QR / 바코드
 }
-// html5-qrcode : QR + 주요 바코드(EAN-13 등) 모두 읽음. 아이폰 사파리에서도 동작.
 new Html5Qrcode("reader").start({facingMode:"environment"},
    {fps:10, qrbox:240}, onScan, ()=>{})
    .catch(e => { document.getElementById('reader').innerHTML =

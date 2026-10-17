@@ -2,6 +2,12 @@
 <header class="top"><a class="back" href="/staff">←</a><div class="brand">신고함</div>
   <span class="at" id="live">● 자동 새로고침</span></header>
 <main class="wrap">
+  <div class="busybar {{'on' if busy}}">
+    <span>{{ '🟠 바쁨 모드 켜짐' if busy else '🟢 바쁨 모드 꺼짐' }} · 직원 {{staff_count}}명</span>
+    <form method="post" action="/staff/busy">
+      {% for k, lab in [('auto','자동'),('on','켜기'),('off','끄기')] %}<button name="mode" value="{{k}}" class="{{'sel' if busy_mode==k}}">{{lab}}</button>{% endfor %}
+    </form>
+  </div>
   <div class="rsum">
     <span class="urgent">손님 대기 <b>{{ waiting|length }}</b></span>
     <span class="fix">위치 고칠 것 <b>{{ groups.values()|map('length')|sum }}</b><small> · 선반 {{ groups|length }}곳</small></span>
@@ -63,6 +69,16 @@
     <div class="mtile"><small>위치 수정 평균</small><b>{{ summary.fix_min if summary.fix_min is not none else '-' }}</b><span>분</span></div>
     <div class="mtile"><small>놓친 호출</small><b>{{ summary.missed }}</b><span>건</span></div>
     <div class="mtile"><small>손님 '찾았어요'</small><b>{{ summary.found }}</b><span>건</span></div>
+  </div>
+  <h3 class="uh">사용률 <small>손님이 서비스에 적응했는지 (적응하면 직원 일이 줄어요)</small></h3>
+  <div class="msum usage">
+    {% set u = summary.usage %}
+    <div class="mtile"><small>글자 검색</small><b>{{u.search}}</b><span>회</span></div>
+    <div class="mtile"><small>사진 검색</small><b>{{u.photo}}</b><span>회</span></div>
+    <div class="mtile"><small>옷 태그 QR 재고 확인</small><b>{{u.tag}}</b><span>회</span></div>
+    <div class="mtile"><small>상품 조회</small><b>{{u.view}}</b><span>회</span></div>
+    <div class="mtile"><small>'찾았어요' 비율</small><b>{{ u.found_rate if u.found_rate is not none else '-' }}</b><span>%</span></div>
+    <div class="mtile"><small>직원 호출</small><b>{{u.calls}}</b><span>건</span></div>
   </div>
   <div class="mlists">
     <div><h3>자주 틀리는 선반</h3><ol>{% for f in summary.top_fx %}<li>{{f.fixture_id}} {{f.name or ''}} <b>{{f.n}}</b></li>{% else %}<li class="hint">아직 없어요</li>{% endfor %}</ol>

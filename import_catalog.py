@@ -63,7 +63,7 @@ def main():
         for part in (r.get("sizes") or "").split(","):
             if ":" in part:
                 size, qty = part.split(":")
-                db.execute("INSERT INTO stock VALUES (?,?,?)", (sku, size.strip(), int(qty)))
+                db.execute("INSERT INTO stock (sku,size,qty) VALUES (?,?,?)", (sku, size.strip(), int(qty)))
 
         fx = (r.get("fixture") or "").strip()
         if fx:

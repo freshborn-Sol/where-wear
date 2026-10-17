@@ -13,14 +13,21 @@
 {% endmacro %}
 {{ cx.appbar(it.name, 'javascript:history.back()', 'heart') }}
 <main class="page item">
+  {% set floor_n = hsizes|sum(attribute='qty') %}{% set wh_n = hsizes|sum(attribute='wh') %}
+  <section class="stockcard {{ 'fromtag' if src=='tag' }}" aria-label="사이즈별 재고">
+    <div class="sc-h">{% if src=='tag' %}<span class="sc-tag">{{ cx.icon('qr', 14) }}옷 태그로 확인</span>{% endif %}
+      <b>사이즈별 재고</b><small>매장 {{floor_n}}벌 · 창고 {{wh_n}}벌</small></div>
+    <div class="sizes">
+      {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0 and s.wh==0}} {{'whonly' if s.qty==0 and s.wh>0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')"><b>{{s.size}}</b>
+        <small>{% if s.qty %}매장 {{s.qty}}{% elif s.wh %}창고만{% else %}없음{% endif %}</small>{% if s.wh %}<em>창고 {{s.wh}}</em>{% endif %}</button>{% endfor %}
+    </div>
+    {% if busy %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 매장이 붐벼요. 직원 도움은 계산대에서 받을 수 있어요.</p>{% endif %}
+  </section>
   <div class="detail">
     <img class="hero" src="{{ imgsrc(it) }}" alt="">
     <div class="dinfo">
       <div class="price">{{ "{:,}".format(it.price) }}원</div>
       <div class="meta">{{it.color}} · {{it.fit}}</div>
-      <div class="sizes">
-        {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')"><b>{{s.size}}</b><small>{{ s.qty if s.qty else '없음' }}</small></button>{% endfor %}
-      </div>
       <div id="rec" class="rec" hidden></div>
     </div>
   </div>
@@ -35,13 +42,19 @@
   {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
 
   {% for s in hsizes if s.qty == 0 %}
-  <div class="szres" data-size="{{s.size}}" hidden>
-    <p class="szno">이 옷은 {{s.size}} 사이즈가 매장에 없어요.</p>
-    {% if size_alts[s.size] %}
-      <p class="szsub">비슷한 옷 중 {{s.size}} 사이즈가 있는 것</p>
-      <div class="hlist">{% for o in size_alts[s.size] %}{{ alt_card(o) }}{% endfor %}</div>
+  <div class="szres {{'wh' if s.wh}}" data-size="{{s.size}}" hidden>
+    {% if s.wh %}
+      <p class="szno">{{s.size}} 사이즈는 매장 진열엔 없지만 창고에 {{s.wh}}벌 있어요.</p>
+      {% if busy %}<p class="szsub">지금은 직원이 바빠요. 계산대에 말씀하시면 창고에서 가져다 드려요.</p>
+      {% else %}<button class="btn primary" onclick="sendInline('size','{{s.size}} 창고에서 가져다주세요','{{s.size}}')">{{ cx.icon('box', 18) }}직원이 창고에서 가져다 드려요</button>{% endif %}
+    {% else %}
+      <p class="szno">이 옷은 {{s.size}} 사이즈가 매장에도 창고에도 없어요.</p>
+      {% if size_alts[s.size] %}
+        <p class="szsub">비슷한 옷 중 {{s.size}} 사이즈가 있는 것</p>
+        <div class="hlist">{% for o in size_alts[s.size] %}{{ alt_card(o) }}{% endfor %}</div>
+      {% endif %}
+      {% if not busy %}<button class="btn" onclick="sendInline('size','{{s.size}} 입고 문의','{{s.size}}')">{{ cx.icon('box', 18) }}직원에게 입고 일정 물어보기</button>{% endif %}
     {% endif %}
-    <button class="btn" onclick="sendInline('size','{{s.size}} 입고·창고 문의')">{{ cx.icon('box', 18) }}직원에게 창고 재고 확인 요청</button>
   </div>
   {% endfor %}
 
@@ -66,7 +79,7 @@
   <section data-p="menu">
     <button class="hopt" onclick="go('color')"><span class="oc c1">{{ cx.icon('palette', 23) }}</span><div><b>다른 색을 보고 싶어요</b><small>다른 색이 어디 있는지 바로 안내해요</small></div>{{ cx.icon('chev', 18) }}</button>
     <button class="hopt" onclick="go('none')"><span class="oc c2">{{ cx.icon('nobox', 23) }}</span><div><b>여기에 옷이 없어요</b><small>재고 확인 · 비슷한 옷 · 직원 도움</small></div>{{ cx.icon('chev', 18) }}</button>
-    <button class="hopt" onclick="go('call')"><span class="oc c3">{{ cx.icon('chat', 23) }}</span><div><b>직원에게 직접 물어볼게요</b><small>직원이 이 선반으로 와요</small></div>{{ cx.icon('chev', 18) }}</button>
+    <button class="hopt" onclick="go('call')"><span class="oc c3">{{ cx.icon('chat', 23) }}</span><div><b>직원에게 직접 물어볼게요</b><small>{{ '지금은 계산대에서 도와드려요' if busy else '직원이 이 선반으로 와요' }}</small></div>{{ cx.icon('chev', 18) }}</button>
   </section>
 
   <section data-p="color" hidden>
@@ -75,19 +88,23 @@
       <div class="hlist">{% for o in other_colors %}{{ alt_card(o, True) }}{% endfor %}</div>
     {% else %}
       <p class="ans no">매장에 다른 색이 없어요.</p>
-      <button class="btn" onclick="send('call','다른 색 문의')">직원에게 물어보기</button>
+      {% if not busy %}<button class="btn" onclick="send('call','다른 색 문의')">직원에게 물어보기</button>{% endif %}
     {% endif %}
   </section>
 
   <section data-p="none" hidden>
     <p class="ans ok" id="nMsg">기록 중…</p>
-    {% set instock = hsizes|selectattr('qty')|list %}
-    {% if instock %}
+    {% set instock = hsizes|selectattr('qty')|list %}{% set inwh = hsizes|selectattr('wh')|list %}
+    {% if instock or inwh %}
       <div class="nstock">
-        <div><b>매장에 이 옷이 {{ instock|sum(attribute='qty') }}벌 있어요.</b> 위치만 바뀐 것 같아요.</div>
+        <div><b>매장에 {{ instock|sum(attribute='qty') }}벌{% if wh_n %} · 창고에 {{wh_n}}벌{% endif %} 있어요.</b> {{ '위치만 바뀐 것 같아요.' if instock else '창고에서 꺼내 와야 해요.' }}</div>
+        {% if busy %}
+          <p class="busynote">{{ cx.icon('alert', 15) }}지금은 직원이 바빠서 바로 가기 어려워요. 계산대에 말씀해 주시면 찾아 드려요.</p>
+        {% else %}
         <p class="sh-q" style="font-size:13px;font-weight:500;color:var(--g700)">찾는 사이즈를 고르면 직원이 찾아 드려요</p>
-        <div class="szpick">{% for z in instock %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{{z.qty}}벌</small></button>{% endfor %}</div>
+        <div class="szpick">{% for z in hsizes if z.qty or z.wh %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{% if z.qty %}{{z.qty}}벌{% else %}창고 {{z.wh}}{% endif %}</small></button>{% endfor %}</div>
         <button class="btn primary" id="waitBtn" onclick="askStaff()" disabled>직원에게 찾아 달라고 하기</button>
+        {% endif %}
       </div>
     {% else %}
       <p class="ans no"><span><b>지금 매장에 재고가 없어요.</b><br><small>실서비스에서는 입고 알림·온라인 주문으로 연결해요.</small></span></p>
@@ -111,11 +128,15 @@
   </section>
 
   <section data-p="call" hidden>
+    {% if busy %}
+      <p class="ans no"><span><b>지금 매장이 붐벼서 직원이 바로 가기 어려워요.</b><br><small>계산대에 말씀해 주시면 바로 도와드려요. 재고·다른 색·비슷한 옷은 이 화면에서 바로 볼 수 있어요.</small></span></p>
+    {% else %}
     <p class="sh-q">무엇이 궁금하세요?<small>골라 주시면 직원이 미리 알고 와요</small></p>
     <div class="reasons">
       {% for r in ['사이즈·핏 상담', '탈의실 위치', '세탁·소재 문의', '그냥 와 주세요'] %}
         <button class="rsn" onclick="send('call','{{r}}')">{{r}}</button>{% endfor %}
     </div>
+    {% endif %}
   </section>
 
   <p id="done" class="ans ok" hidden></p>
@@ -151,7 +172,7 @@ function notHere(){
     if(rec && document.querySelector(`.nstock .szb[data-sz="${rec}"]`)) pickWait(rec);
   });
 }
-function pickWait(sz){ WAIT_SZ=sz; document.querySelectorAll('.nstock .szb').forEach(b=>b.classList.toggle('on',b.dataset.sz===sz)); $('#waitBtn').disabled=false; $('#waitBtn').textContent=`직원에게 ${sz} 찾아 달라고 하기`; }
+function pickWait(sz){ if(!$('#waitBtn')) return; WAIT_SZ=sz; document.querySelectorAll('.nstock .szb').forEach(b=>b.classList.toggle('on',b.dataset.sz===sz)); $('#waitBtn').disabled=false; $('#waitBtn').textContent=`직원에게 ${sz} 찾아 달라고 하기`; }
 function askStaff(){
   fetch(`/api/report/${RID}/wait`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({size:WAIT_SZ})})
    .then(r=>r.json()).then(d=>startTrack(d.id));
@@ -172,12 +193,12 @@ function startTrack(id){
   tick(); clearInterval(POLL); POLL=setInterval(tick,3000);
 }
 function showDone(m){ document.querySelectorAll('#help section').forEach(s=>s.hidden=true); $('#done').hidden=false; $('#done').textContent=m; toast(m); }
-function post(kind,detail){
+function post(kind,detail,size){
   return fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({sku:SKU,fixture:FX,kind:kind,detail:detail,device:DEV})}).then(r=>r.json());
+    body:JSON.stringify({sku:SKU,fixture:FX,kind:kind,detail:detail,size:size||'',device:DEV})}).then(r=>r.json());
 }
 function send(kind,detail){ post(kind,detail).then(d=>startTrack(d.id)); }
-function sendInline(kind,detail){ post(kind,detail).then(d=>{ $('#help').classList.add('on'); startTrack(d.id); }); }
+function sendInline(kind,detail,size){ post(kind,detail,size).then(d=>{ $('#help').classList.add('on'); startTrack(d.id); }); }
 
 /* ---------- 사이즈: 누르면 품절 대안 / 키·몸무게로 추천 ---------- */
 const ITEM = {cat:'{{it.category}}', fit:'{{it.fit}}', sizes:{{ hsizes|tojson }}};
@@ -216,10 +237,10 @@ function recommend(p){
   if(!p){ box.innerHTML=USER_IC+' <a href="'+meLink+'">키·몸무게를 등록</a>하면 추천 사이즈를 알려드려요'; return; }
   const r=recommend(p);
   if(!r.size){ box.innerHTML=r.msg||''; box.hidden=!r.msg; return; }
-  const st=ITEM.sizes.find(s=>s.size===r.size), q=st?st.qty:0;
+  const st=ITEM.sizes.find(s=>s.size===r.size), q=st?st.qty:0, w=st?st.wh:0;
   document.querySelectorAll('.sz').forEach(b=>b.classList.toggle('mine', b.dataset.size===r.size));
-  box.classList.add(q?'ok':'no');
-  box.innerHTML = `${USER_IC}추천 사이즈 <b>${r.size}</b> · ${q?`재고 ${q}개`:'<b>지금 없어요</b>'}<br><small>${r.why} · 참고용 <a href="${meLink}">수정</a></small>`;
+  box.classList.add(q?'ok':(w?'wh':'no'));
+  box.innerHTML = `${USER_IC}추천 사이즈 <b>${r.size}</b> · ${q?`매장 ${q}벌`:(w?`<b>창고에 ${w}벌</b>`:'<b>지금 없어요</b>')}<br><small>${r.why} · 참고용 <a href="${meLink}">수정</a></small>`;
   if(!q) showSize(r.size);
 })();
 </script>

@@ -290,3 +290,36 @@ h2 small{font-weight:400;margin-left:6px}
 .fbtn{flex:1;padding:16px 8px;border:0;border-radius:14px;color:#fff;font-size:17px;font-weight:800;font-family:inherit}
 .fbtn.found{background:var(--ok)}.fbtn.found:disabled{background:#7fb898}
 .fbtn.red{background:#d93025}.fbtn.red:active{background:#b3261e}
+
+/* ---- 직원: 진열 점검 · 다시 찍을 옷 · 설정 ---- */
+.checkbar{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:#fff4e0;border:1px solid #f2d9a6;margin-bottom:12px}
+.checkbar div{flex:1}.checkbar small{display:block;color:var(--mute);font-size:12px}.checkbar .btn{flex:0 0 auto;padding:10px 14px}
+.allc{display:block;font-size:14px;margin:4px 0 10px;padding:10px 12px;border-radius:10px;background:#eaf1fa}
+.allc small{color:var(--mute)}
+.manual.code{margin-top:8px}.manual.code input{padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;width:180px}
+.manual.code .hint{width:100%;margin:0}.manual.code a{color:var(--blue)}
+h2 small{font-weight:400;color:var(--mute);font-size:12px}
+.prio{list-style:none;padding:0;margin:0}
+.prio li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.prio img{width:48px;height:48px;object-fit:cover;border-radius:8px;background:var(--surf)}
+.prio .pb{flex:1;font-size:14px}.prio .pb small{color:var(--mute)}.prio .mute{color:var(--mute)}
+.prio .why{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.prio .why span{font-size:11px;padding:2px 7px;border-radius:999px;background:#fff4e0;color:#8a5300}
+.prio .pa{display:flex;flex-direction:column;gap:4px}
+.btn.small{flex:0 0 auto;padding:7px 10px;font-size:12px;border-radius:9px}.btn.small.ok{border-color:var(--ok);color:var(--ok)}
+.setform h2{margin-top:18px}.setform .opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px}
+.setform .opt small,.setform .row small{display:block;color:var(--mute);font-size:12px}
+.setform .row{display:block;font-size:15px}.setform input[type=number]{width:70px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:15px}
+.setform .btn{margin-top:18px;width:100%}.tag.on{background:#fff4e0;border-color:#f2d9a6;color:#8a5300}
+.okmsg{padding:10px;border-radius:10px;background:#eaf6ef;color:var(--ok)}
+.busybar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;margin-bottom:10px;font-size:14px;background:var(--surf)}
+.busybar.on{background:#fff4e0}.busybar form{margin-left:auto;display:flex;gap:4px}
+.busybar button{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:12px}
+.busybar button.sel{border-color:var(--navy);background:var(--navy);color:#fff}
+.usage{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+
+/* ---- 키오스크: 재고 · 종이 지도 출력 ---- */
+.ksizes{display:flex;gap:12px;margin:10px 0 16px;flex-wrap:wrap}
+.ksizes span{display:flex;flex-direction:column;align-items:center;min-width:110px;padding:12px 16px;border:2px solid var(--line);border-radius:14px;font-size:20px;color:var(--ok)}
+.ksizes span b{font-size:30px;color:var(--ink)}.ksizes span.zero{color:var(--warn)}
+.kbtn2.kprint{background:var(--navy);color:#fff;border-color:var(--navy)}
+.uh{font-size:14px;margin:16px 0 0}.uh small{font-weight:400;color:var(--mute);font-size:12px}

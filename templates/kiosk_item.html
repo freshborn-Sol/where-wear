@@ -5,10 +5,15 @@
     <div class="kloc">{{it.place.zone}}구역 · {{it.place.fixture_name}} · <b>{{it.place.level}}</b></div>
     <div class="kfresh {{it.fresh[1]}}">🕐 {{it.fresh[0]}}</div>
   {% else %}<div class="kloc">위치가 등록되지 않았어요</div>{% endif %}
+  <div class="ksizes">{% for s in it.sizes %}<span class="{{'zero' if not s.qty and not s.wh}}"><b>{{s.size}}</b>{% if s.qty %}매장 {{s.qty}}{% elif s.wh %}창고 {{s.wh}}{% else %}없음{% endif %}</span>{% endfor %}</div>
   {% include "_map.html" %}
   <div class="kbtns">
+    <button class="kbtn2 kprint" onclick="window.open('/kiosk/print/{{it.sku}}','print','width=420,height=760')">🖨 종이 지도 받기</button>
     <button class="kbtn2" onclick="report('none')">여기 없어요</button>
-    <button class="kbtn2" onclick="report('call')">직원 불러주세요</button>
+    {% if not busy %}<button class="kbtn2" onclick="report('call')">직원 불러주세요</button>{% endif %}
+  </div>
+  {% if busy %}<p class="kmsg">지금은 직원이 바빠요. 도움이 필요하면 계산대에 말씀해 주세요.</p>{% endif %}
+  <div>
   </div>
   <p id="msg" class="kmsg"></p>
 </main>
