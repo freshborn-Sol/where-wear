@@ -158,6 +158,16 @@ function go(p){
 function toast(m){ const t=$('#msg'); t.textContent=m; t.classList.add('show'); clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),4500); }
 /* 익명 기기 id: 같은 휴대폰의 중복 신고를 막는 용도 (개인정보 없음) */
 const DEV=(()=>{ try{ let d=localStorage.getItem('ww_dev'); if(!d){ d=Math.random().toString(36).slice(2,10); localStorage.setItem('ww_dev',d);} return d; }catch(e){ return ''; } })();
+/* 찜하기 (오른쪽 위 하트) */
+(()=>{ const b=$('#likeBtn'); if(!b) return;
+  const paint=on=>{ b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); b.setAttribute('aria-label',on?'찜 해제':'찜하기'); };
+  paint(wwLikes.get().includes(SKU));
+  b.onclick=()=>{ const on=!b.classList.contains('on'); paint(on);
+    fetch('/api/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:SKU,device:DEV,on:on})})
+     .then(r=>r.json()).then(d=>{ if(!d.ok) return paint(!on); wwLikes.set(d.skus); paint(d.on);
+       toast(d.on?'찜목록에 담았어요 · 첫 화면 아래 ‘찜’ 탭에서 모아 볼 수 있어요':'찜목록에서 뺐어요'); })
+     .catch(()=>paint(!on)); };
+})();
 let RID=null, WAIT_SZ='', POLL=null;
 function foundIt(){
   const b=$('#foundBtn'); if(!b||b.disabled) return;

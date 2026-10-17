@@ -66,6 +66,8 @@ def ensure_schema():
         con.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (k, v))
     # ⑩ 사용률 지표
     con.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, sku TEXT, src TEXT, ts TEXT)")
+    # 찜목록: 로그인 없이 휴대폰별 익명 id(device)로 저장
+    con.execute("CREATE TABLE IF NOT EXISTS likes (device TEXT, sku TEXT, ts TEXT, PRIMARY KEY (device, sku))")
     con.commit(); con.close()
 ensure_schema()
 
@@ -472,6 +474,39 @@ def found():
     return jsonify(ok=True, message="고마워요! 덕분에 다음 손님 안내가 더 정확해져요")
 
 # ---------- 직원 화면 ----------
+# ---------- 찜목록 ----------
+def _dev(v): return (v or "").strip()[:40]
+
+@app.route("/api/like", methods=["POST"])
+def api_like():
+    """하트 누르기: on 값이 없으면 토글"""
+    d = request.get_json(force=True) or {}
+    sku, dev = d.get("sku"), _dev(d.get("device"))
+    if not dev or not one("SELECT sku FROM items WHERE sku=?", (sku,)):
+        return jsonify(ok=False), 400
+    has = one("SELECT 1 x FROM likes WHERE device=? AND sku=?", (dev, sku)) is not None
+    on = (not has) if d.get("on") is None else bool(d.get("on"))
+    if on and not has:
+        db().execute("INSERT INTO likes VALUES (?,?,?)", (dev, sku, ts())); log_event("like", sku)
+    elif not on and has:
+        db().execute("DELETE FROM likes WHERE device=? AND sku=?", (dev, sku))
+    db().commit()
+    skus = [r["sku"] for r in rows("SELECT sku FROM likes WHERE device=? ORDER BY ts DESC", (dev,))]
+    return jsonify(ok=True, on=on, skus=skus,
+                   message="찜목록에 담았어요" if on else "찜목록에서 뺐어요")
+
+@app.route("/likes")
+def likes():
+    """손님: 찜한 옷 모아 보기 — 매장 안에서 돌아보기 좋게 구역·선반 순으로 정렬"""
+    at, dev = request.args.get("at", "ENTRANCE"), _dev(request.args.get("d"))
+    its = rows("""SELECT i.* FROM likes l JOIN items i ON i.sku=l.sku WHERE l.device=? ORDER BY l.ts DESC""", (dev,)) if dev else []
+    its = decorate(its)
+    for it in its:
+        it["sizes"] = sort_sizes(it["sizes"])
+        it["floor"] = sum(s["qty"] for s in it["sizes"]); it["wh"] = sum(s["wh"] for s in it["sizes"])
+    its.sort(key=lambda it: (0, it["place"]["zone"], it["place"]["fixture_id"]) if it["place"] else (1, "", ""))
+    return render_template("likes.html", at=at, items=its, has_dev=bool(dev))
+
 @app.route("/staff")
 def staff():
     last = setting("last_check") or datetime.date.today().isoformat()
@@ -678,10 +713,14 @@ def manager_summary(days=7):
     ev = {r["kind"]: r["n"] for r in rows("SELECT kind, COUNT(*) n FROM events WHERE ts>=? GROUP BY kind", (since,))}
     nones = one("SELECT COUNT(*) n FROM reports WHERE kind='none' AND created_at>=?", (since,))["n"]
     calls = one("SELECT COUNT(*) n FROM reports WHERE wait_at IS NOT NULL AND wait_at>=?", (since,))["n"]
-    usage = {"search": ev.get("search", 0), "photo": ev.get("photo", 0), "tag": ev.get("tag", 0),
+    top_liked = rows("""SELECT l.sku, i.name, i.color, COUNT(*) n,
+                               (SELECT COALESCE(SUM(qty),0) FROM stock WHERE sku=l.sku) floor,
+                               (SELECT COALESCE(SUM(wh),0) FROM stock WHERE sku=l.sku) wh
+                        FROM likes l JOIN items i ON i.sku=l.sku GROUP BY l.sku ORDER BY n DESC, floor ASC LIMIT 5""")
+    usage = {"like": ev.get("like", 0), "search": ev.get("search", 0), "photo": ev.get("photo", 0), "tag": ev.get("tag", 0),
              "view": ev.get("view", 0) + ev.get("tag", 0), "kiosk": ev.get("kiosk", 0), "calls": calls,
              "found_rate": round(found * 100 / (found + nones)) if (found + nones) else None}
-    return {"usage": usage, "top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
+    return {"usage": usage, "top_liked": top_liked, "top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
             "fix_min": avg([(r["created_at"], r["resolved_at"]) for r in fixed]), "missed": missed, "found": found}
 
 @app.route("/staff/reports/<int:rid>/wait", methods=["POST"])

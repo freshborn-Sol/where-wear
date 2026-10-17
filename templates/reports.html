@@ -79,10 +79,13 @@
     <div class="mtile"><small>상품 조회</small><b>{{u.view}}</b><span>회</span></div>
     <div class="mtile"><small>'찾았어요' 비율</small><b>{{ u.found_rate if u.found_rate is not none else '-' }}</b><span>%</span></div>
     <div class="mtile"><small>직원 호출</small><b>{{u.calls}}</b><span>건</span></div>
+    <div class="mtile"><small>찜하기</small><b>{{u.like}}</b><span>회</span></div>
   </div>
   <div class="mlists">
     <div><h3>자주 틀리는 선반</h3><ol>{% for f in summary.top_fx %}<li>{{f.fixture_id}} {{f.name or ''}} <b>{{f.n}}</b></li>{% else %}<li class="hint">아직 없어요</li>{% endfor %}</ol>
       <small class="hint">→ 진열 동선·직원 교육 점검</small></div>
+    <div><h3>♥ 많이 찜한 옷</h3><ol>{% for i in summary.top_liked %}<li>{{i.name}} ({{i.color}}) <b>{{i.n}}</b>{% if i.floor + i.wh <= 3 %} <small class="lowst">재고 {{i.floor}}+창고 {{i.wh}}</small>{% endif %}</li>{% else %}<li class="hint">아직 없어요</li>{% endfor %}</ol>
+      <small class="hint">→ 찜은 많은데 재고가 적으면 진열·발주 우선</small></div>
     <div><h3>'없어요'가 많은 옷</h3><ol>{% for i in summary.top_items %}<li>{{i.name}} ({{i.color}}) <b>{{i.n}}</b></li>{% else %}<li class="hint">아직 없어요</li>{% endfor %}</ol>
       <small class="hint">→ 놓친 매출 · 발주 근거</small></div>
   </div>

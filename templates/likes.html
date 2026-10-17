@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
+{% block body %}
+{{ cx.appbar('찜목록', '/go?at=' ~ at) }}
+{% if not has_dev %}<script>if(window.WWDEV) location.replace('/likes?at={{at}}&d='+WWDEV);</script>{% endif %}
+<main class="page likes">
+  {% if items %}
+  <p class="note">{{ cx.icon('pin', 15) }}<span>매장에서 돌기 좋게 <b>구역 순</b>으로 보여드려요 · <b id="likeCnt">{{items|length}}</b>벌</span></p>
+  {% for it in items %}
+  <div class="lcard" data-sku="{{it.sku}}">
+    <a class="lc-main" href="/item/{{it.sku}}?at={{at}}">
+      <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
+      <div class="lc-info">
+        <div class="nm">{{it.name}}</div>
+        <div class="mt">{{it.color}} · {{ "{:,}".format(it.price) }}원</div>
+        <div class="pl {{'none' if not it.place}}">{{ cx.icon('pinfill', 14) }}{% if it.place %}<b>{{it.place.zone}}구역 · {{it.place.fixture_id}}</b> · {{it.place.level}}{% else %}위치 미등록{% endif %}</div>
+        <div class="lsz">{% for s in it.sizes %}<span class="{{ 'ok' if s.qty else ('wh' if s.wh else 'no') }}">{{s.size}} <small>{% if s.qty %}{{s.qty}}{% elif s.wh %}창고{% else %}없음{% endif %}</small></span>{% endfor %}</div>
+        {% if not it.floor %}<div class="lwarn {{'wh' if it.wh}}">{% if it.wh %}매장 진열엔 없어요 · 창고에 {{it.wh}}벌{% else %}지금은 재고가 없어요{% endif %}</div>{% endif %}
+      </div>
+    </a>
+    <button type="button" class="lc-del" aria-label="찜 해제" onclick="unlike('{{it.sku}}', this)">{{ cx.icon('heartfill', 22) }}</button>
+  </div>
+  {% endfor %}
+  {% endif %}
+  <div class="lempty" id="lempty" {% if items %}hidden{% endif %}>
+    <span class="le-ic">{{ cx.icon('heart', 30) }}</span>
+    <b>아직 찜한 옷이 없어요</b>
+    <small>상품 화면 오른쪽 위 하트를 누르면<br>여기에 모여요. 몇 벌 골라 두고 한 번에 입어 보세요.</small>
+    <a class="btn primary" href="/go?at={{at}}">옷 찾으러 가기</a>
+  </div>
+  <p class="lockhint">{{ cx.icon('lock', 18) }}<span>로그인 없이 <b>이 휴대폰</b>에만 연결돼요. 브라우저 기록을 지우면 찜목록도 사라져요.</span></p>
+</main>
+{{ cx.tabbar('like') }}
+<script>
+wwLikes.set({{ items|map(attribute='sku')|list|tojson }});
+function unlike(sku, btn){
+  const card=btn.closest('.lcard'); card.classList.add('gone');
+  fetch('/api/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:sku,device:WWDEV,on:false})})
+   .then(r=>r.json()).then(d=>{ if(!d.ok){ card.classList.remove('gone'); return; }
+     wwLikes.set(d.skus); card.remove();
+     const left=document.querySelectorAll('.lcard').length, c=document.getElementById('likeCnt');
+     if(c) c.textContent=left;
+     if(!left){ document.getElementById('lempty').hidden=false; const n=document.querySelector('.likes .note'); if(n) n.remove(); } })
+   .catch(()=>card.classList.remove('gone'));
+}
+</script>
+{% endblock %}
