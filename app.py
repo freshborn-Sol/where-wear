@@ -805,40 +805,101 @@ def staff_summary():
     m = map_data("ENTRANCE"); m.update(heat=sm["heat"], heat_max=sm["heat_max"], start=(0, 0))
     return render_template("summary.html", summary=sm, map=m)
 
-def manager_summary(days=7):
-    since = (now() - datetime.timedelta(days=days)).isoformat(timespec="seconds")
-    top_fx = rows("""SELECT r.fixture_id, f.name, COUNT(*) n FROM reports r LEFT JOIN fixtures f ON f.id=r.fixture_id
-                     WHERE r.kind='none' AND r.created_at>=? AND r.fixture_id IS NOT NULL
-                     GROUP BY r.fixture_id ORDER BY n DESC LIMIT 3""", (since,))
-    top_items = rows("""SELECT r.sku, i.name, i.color, COUNT(*) n FROM reports r LEFT JOIN items i ON i.sku=r.sku
-                        WHERE r.kind='none' AND r.created_at>=? GROUP BY r.sku ORDER BY n DESC LIMIT 3""", (since,))
-    served = rows("SELECT wait_at, served_at FROM reports WHERE served_at IS NOT NULL AND wait_at>=?", (since,))
-    fixed = rows("""SELECT created_at, resolved_at FROM reports WHERE kind='none' AND done=1
-                    AND resolution IN ('재등록','위치 이동','재고 없음','오신고') AND created_at>=?""", (since,))
+def _week(since, until):
+    """기간 [since, until) 의 핵심 지표"""
+    w = (since, until)
+    def n(sql): return one(sql, w)["n"]
     def avg(pairs):
         v = [(datetime.datetime.fromisoformat(b) - datetime.datetime.fromisoformat(a)).total_seconds() / 60
              for a, b in pairs if a and b]
         return round(sum(v) / len(v), 1) if v else None
-    missed = one("SELECT COUNT(*) n FROM reports WHERE wait_state='expired' AND wait_at>=?", (since,))["n"]
-    found = one("SELECT COUNT(*) n FROM reports WHERE kind='found' AND created_at>=?", (since,))["n"]
-    ev = {r["kind"]: r["n"] for r in rows("SELECT kind, COUNT(*) n FROM events WHERE ts>=? GROUP BY kind", (since,))}
-    nones = one("SELECT COUNT(*) n FROM reports WHERE kind='none' AND created_at>=?", (since,))["n"]
-    calls = one("SELECT COUNT(*) n FROM reports WHERE wait_at IS NOT NULL AND wait_at>=?", (since,))["n"]
-    top_liked = rows("""SELECT l.sku, i.name, i.color, COUNT(*) n,
+    found = n("SELECT COUNT(*) n FROM reports WHERE kind='found' AND created_at>=? AND created_at<?")
+    nones = n("SELECT COUNT(*) n FROM reports WHERE kind='none' AND created_at>=? AND created_at<?")
+    ev = {r["kind"]: r["n"] for r in rows("SELECT kind, COUNT(*) n FROM events WHERE ts>=? AND ts<? GROUP BY kind", w)}
+    return {
+        "found": found, "nones": nones,
+        "found_rate": round(found * 100 / (found + nones)) if (found + nones) else None,
+        "calls": n("SELECT COUNT(*) n FROM reports WHERE wait_at IS NOT NULL AND wait_at>=? AND wait_at<?"),
+        "missed": n("SELECT COUNT(*) n FROM reports WHERE wait_state='expired' AND wait_at>=? AND wait_at<?"),
+        "serve_min": avg([(r["wait_at"], r["served_at"]) for r in rows(
+            "SELECT wait_at, served_at FROM reports WHERE served_at IS NOT NULL AND wait_at>=? AND wait_at<?", w)]),
+        "fix_min": avg([(r["created_at"], r["resolved_at"]) for r in rows(
+            """SELECT created_at, resolved_at FROM reports WHERE kind='none' AND done=1
+               AND resolution IN ('재등록','위치 이동','재고 없음','오신고') AND created_at>=? AND created_at<?""", w)]),
+        "search": ev.get("search", 0), "photo": ev.get("photo", 0), "tag": ev.get("tag", 0),
+        "view": ev.get("view", 0) + ev.get("tag", 0), "kiosk": ev.get("kiosk", 0), "like": ev.get("like", 0),
+    }
+
+def manager_summary(days=7):
+    t = now()
+    since = (t - datetime.timedelta(days=days)).isoformat(timespec="seconds")
+    prev = (t - datetime.timedelta(days=days * 2)).isoformat(timespec="seconds")
+    cur, last = _week(since, t.isoformat(timespec="seconds")), _week(prev, since)
+    top_fx = rows("""SELECT r.fixture_id, f.name, f.zone, COUNT(*) n FROM reports r LEFT JOIN fixtures f ON f.id=r.fixture_id
+                     WHERE r.kind='none' AND r.created_at>=? AND r.fixture_id IS NOT NULL
+                     GROUP BY r.fixture_id ORDER BY n DESC LIMIT 3""", (since,))
+    top_items = rows("""SELECT r.sku, i.name, i.color, i.image, COUNT(*) n FROM reports r LEFT JOIN items i ON i.sku=r.sku
+                        WHERE r.kind='none' AND r.created_at>=? GROUP BY r.sku ORDER BY n DESC LIMIT 3""", (since,))
+    top_liked = rows("""SELECT l.sku, i.name, i.color, i.image, COUNT(*) n,
                                (SELECT COALESCE(SUM(qty),0) FROM stock WHERE sku=l.sku) floor,
                                (SELECT COALESCE(SUM(wh),0) FROM stock WHERE sku=l.sku) wh
                         FROM likes l JOIN items i ON i.sku=l.sku GROUP BY l.sku ORDER BY n DESC, floor ASC LIMIT 5""")
-    usage = {"like": ev.get("like", 0), "search": ev.get("search", 0), "photo": ev.get("photo", 0), "tag": ev.get("tag", 0),
-             "view": ev.get("view", 0) + ev.get("tag", 0), "kiosk": ev.get("kiosk", 0), "calls": calls,
-             "found_rate": round(found * 100 / (found + nones)) if (found + nones) else None}
     heat = {r["fixture_id"]: r["n"] for r in rows("""SELECT fixture_id, COUNT(*) n FROM reports
                  WHERE kind='none' AND created_at>=? AND fixture_id IS NOT NULL GROUP BY fixture_id""", (since,))}
     zone_n = Counter()
     for f in rows("SELECT id, zone FROM fixtures"):
         if heat.get(f["id"]): zone_n[f["zone"]] += heat[f["id"]]
-    return {"heat": heat, "heat_max": max(heat.values(), default=0), "zone_n": zone_n.most_common(),
-            "usage": usage, "top_liked": top_liked, "top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
-            "fix_min": avg([(r["created_at"], r["resolved_at"]) for r in fixed]), "missed": missed, "found": found}
+    # 하루씩: 손님이 혼자 찾음(found) vs '없어요'(none)
+    WD = "월화수목금토일"
+    daily = []
+    for i in range(days - 1, -1, -1):
+        d0 = (t - datetime.timedelta(days=i)).date()
+        a_, b_ = d0.isoformat(), (d0 + datetime.timedelta(days=1)).isoformat()
+        c = {r["kind"]: r["n"] for r in rows("""SELECT kind, COUNT(*) n FROM reports WHERE kind IN ('found','none')
+                                                AND created_at>=? AND created_at<? GROUP BY kind""", (a_, b_))}
+        daily.append({"label": "오늘" if i == 0 else WD[d0.weekday()], "found": c.get("found", 0), "none": c.get("none", 0)})
+    open_fix = one("SELECT COUNT(DISTINCT fixture_id) n FROM reports WHERE kind='none' AND done=0 AND fixture_id IS NOT NULL")["n"]
+    waiting = one("SELECT COUNT(*) n FROM reports WHERE wait_state IN ('waiting','going')")["n"]
+    # 이번 주 할 일 (중요한 것부터 3개)
+    acts = []
+    if waiting:
+        acts.append({"tone": "r", "icon": "bell", "t": f"지금 기다리는 손님 {waiting}명", "d": "신고함에서 '가는 중'을 눌러 주세요", "href": "/staff/reports#wait", "btn": "신고함"})
+    if open_fix:
+        acts.append({"tone": "a", "icon": "run", "t": f"위치 고칠 선반 {open_fix}곳", "d": "한 번에 도는 길로 돌면서 고쳐요", "href": "/staff/reports#fix", "btn": "동선 보기"})
+    if top_fx:
+        f0 = top_fx[0]
+        acts.append({"tone": "a", "icon": "pin", "t": f"{f0['fixture_id']} 진열·라벨 점검",
+                     "d": f"이번 주 '없어요' {f0['n']}건 · 매장에서 가장 많아요", "href": "#heat", "btn": "지도"})
+    low = [x for x in top_liked if x["floor"] + x["wh"] <= 3]
+    if low:
+        acts.append({"tone": "b", "icon": "box", "t": f"{low[0]['name']} 보충",
+                     "d": f"찜 {low[0]['n']}회인데 재고 {low[0]['floor']}+창고 {low[0]['wh']}벌", "href": "#rank", "btn": "순위"})
+    if cur["missed"]:
+        acts.append({"tone": "r", "icon": "alert", "t": f"놓친 호출 {cur['missed']}건",
+                     "d": "바쁜 시간에 근무 인원이나 바쁨 모드를 확인해요", "href": "/staff/settings", "btn": "설정"})
+    if cur["serve_min"] and cur["serve_min"] > 5:
+        acts.append({"tone": "a", "icon": "clock", "t": f"호출 응답 평균 {cur['serve_min']}분",
+                     "d": "5분 안쪽이 목표예요", "href": "/staff/reports", "btn": "신고함"})
+    fr = cur["found_rate"]
+    grade = (None if fr is None else ("ok", "좋아요", "손님 대부분이 직원 없이 옷을 찾아요") if fr >= 70 else
+             ("a", "보통이에요", "아직 열 명 중 서너 명은 못 찾아요 → 자주 못 찾는 자리부터") if fr >= 50 else
+             ("r", "점검이 필요해요", "손님 절반 이상이 못 찾아요 → 위치 다시 찍기부터"))
+    def delta(k, good_up):
+        a_, b_ = cur.get(k), last.get(k)
+        if a_ is None or b_ is None or b_ == 0 and a_ == 0: return None
+        d = round(a_ - b_, 1)
+        if d == 0: return {"txt": "지난주와 같음", "tone": "n"}
+        better = (d > 0) == good_up
+        unit = "%p" if k == "found_rate" else ("분" if k.endswith("_min") else "")
+        return {"txt": f"지난주보다 {'▲' if d > 0 else '▼'} {abs(d):g}{unit}", "tone": "ok" if better else "r"}
+    deltas = {k: delta(k, up) for k, up in [("found_rate", True), ("serve_min", False), ("fix_min", False),
+                                            ("missed", False), ("calls", False), ("nones", False)]}
+    usage = dict(cur, calls=cur["calls"])
+    return {"cur": cur, "last": last, "deltas": deltas, "grade": grade, "acts": acts[:3], "daily": daily,
+            "daily_max": max([d["found"] + d["none"] for d in daily] + [1]), "open_fix": open_fix, "waiting": waiting,
+            "heat": heat, "heat_max": max(heat.values(), default=0), "zone_n": zone_n.most_common(),
+            "usage": usage, "top_liked": top_liked, "top_fx": top_fx, "top_items": top_items,
+            "serve_min": cur["serve_min"], "fix_min": cur["fix_min"], "missed": cur["missed"], "found": cur["found"]}
 
 # ---------- 발표 시연 모드: 버튼 한 번으로 시연 상황 만들기 / 지우기 ----------
 DEMO_SKU = "UQ127"          # 스카이블루 옥스포드 셔츠 (A-R1) — '여기 없어요' 시연용
@@ -858,31 +919,36 @@ def demo_clear():
     db().commit()
 
 def demo_history():
-    """지난 7일 기록 채우기: 점장 요약 · 지도 히트맵이 비어 보이지 않게 (device='demo')"""
+    """지난 2주 기록 채우기: 점장 요약(지난주와 비교) · 지도 히트맵이 비어 보이지 않게 (device='demo')
+    지난주는 서비스 도입 첫 주라 못 찾는 손님이 많고, 이번 주는 나아진 모습"""
     import random
     rnd, t0 = random.Random(7), now()
-    def back(): return t0 - datetime.timedelta(days=rnd.uniform(0.2, 6.8))
-    for fx, n in DEMO_HOT:
-        items = [r["sku"] for r in rows("SELECT sku FROM placements WHERE fixture_id=? AND active=1", (fx,))] or [None]
-        for _ in range(n):
-            c = back(); r_ = c + datetime.timedelta(minutes=rnd.randint(4, 45))
-            db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,done,device,resolution,resolved_at)
-                            VALUES (?,?,'none',?,1,'demo',?,?)""", (rnd.choice(items), fx, c.isoformat(timespec="seconds"),
-                         rnd.choice(["재등록", "재등록", "위치 이동", "오신고"]), r_.isoformat(timespec="seconds")))
     skus = [r["sku"] for r in rows("SELECT sku FROM placements WHERE active=1")]
-    for _ in range(46):
-        db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,done,device) VALUES (?,?,'found',?,1,'demo')",
-                     (rnd.choice(skus), None, back().isoformat(timespec="seconds")))
-    for i in range(13):
-        w = back(); sv = w + datetime.timedelta(minutes=rnd.uniform(1.5, 7))
-        db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,done,device,wait_state,wait_at,served_at,resolution,resolved_at)
-                        VALUES (?,?,?,?,1,'demo',?,?,?,?,?)""",
-                     (rnd.choice(skus), "ENTRANCE", "size" if i % 2 else "call", w.isoformat(timespec="seconds"),
-                      "expired" if i == 12 else "served", w.isoformat(timespec="seconds"),
-                      None if i == 12 else sv.isoformat(timespec="seconds"), "전달 완료", sv.isoformat(timespec="seconds")))
-    for kind, n in [("search", 64), ("photo", 19), ("tag", 27), ("view", 118), ("kiosk", 41), ("call", 13)]:
-        for _ in range(n):
-            db().execute("INSERT INTO events (kind,sku,src,ts) VALUES (?,?,'demo',?)", (kind, None, back().isoformat(timespec="seconds")))
+    WEEKS = [  # (며칠 전 범위, '없어요' 배수, 혼자 찾음, 호출 수, 놓친 호출, 응답 분, 수정 분, 사용 배수)
+        ((0.2, 6.8), 1.0, 70, 13, 1, (1.5, 7), (4, 45), 1.0),
+        ((7.2, 13.8), 1.5, 36, 21, 3, (3, 11), (15, 90), 0.6)]
+    for (d0, d1), mul, n_found, n_call, n_miss, (s0, s1), (f0, f1), use in WEEKS:
+        def back(): return t0 - datetime.timedelta(days=rnd.uniform(d0, d1))
+        for fx, n in DEMO_HOT:
+            items = [r["sku"] for r in rows("SELECT sku FROM placements WHERE fixture_id=? AND active=1", (fx,))] or [None]
+            for _ in range(round(n * mul)):
+                c = back(); r_ = c + datetime.timedelta(minutes=rnd.randint(f0, f1))
+                db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,done,device,resolution,resolved_at)
+                                VALUES (?,?,'none',?,1,'demo',?,?)""", (rnd.choice(items), fx, c.isoformat(timespec="seconds"),
+                             rnd.choice(["재등록", "재등록", "위치 이동", "오신고"]), r_.isoformat(timespec="seconds")))
+        for _ in range(n_found):
+            db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,done,device) VALUES (?,?,'found',?,1,'demo')",
+                         (rnd.choice(skus), None, back().isoformat(timespec="seconds")))
+        for i in range(n_call):
+            w = back(); sv = w + datetime.timedelta(minutes=rnd.uniform(s0, s1)); miss = i < n_miss
+            db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,done,device,wait_state,wait_at,served_at,resolution,resolved_at)
+                            VALUES (?,?,?,?,1,'demo',?,?,?,?,?)""",
+                         (rnd.choice(skus), "ENTRANCE", "size" if i % 2 else "call", w.isoformat(timespec="seconds"),
+                          "expired" if miss else "served", w.isoformat(timespec="seconds"),
+                          None if miss else sv.isoformat(timespec="seconds"), "전달 완료", sv.isoformat(timespec="seconds")))
+        for kind, n in [("search", 64), ("photo", 19), ("tag", 27), ("view", 118), ("kiosk", 41), ("call", 13)]:
+            for _ in range(round(n * use)):
+                db().execute("INSERT INTO events (kind,sku,src,ts) VALUES (?,?,'demo',?)", (kind, None, back().isoformat(timespec="seconds")))
     db().commit()
 
 def demo_live():
@@ -906,7 +972,7 @@ def demo_live():
 def demo():
     act, msg = request.form.get("act"), None
     if act == "clear":   demo_clear(); msg = "시연 기록을 지웠어요"
-    elif act == "hist":  demo_clear(); demo_history(); msg = "지난 7일 기록을 채웠어요 — 점장 요약을 열어 보세요"
+    elif act == "hist":  demo_clear(); demo_history(); msg = "지난 2주 기록을 채웠어요 — 점장 요약을 열어 보세요"
     elif act == "live":  demo_live(); msg = "손님 신고 5건(선반 4곳) · 창고 사이즈 요청 1건을 만들었어요 — 신고함을 열어 보세요"
     elif act == "all":   demo_clear(); demo_history(); demo_live(); msg = "발표 준비 끝! 아래 순서대로 열어 보세요"
     it = one("SELECT * FROM items WHERE sku=?", (DEMO_SKU,))

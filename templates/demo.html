@@ -15,10 +15,10 @@
   {% if msg %}<p class="okmsg">{{ cx.icon('check', 16) }}{{msg}}</p>{% endif %}
   <div class="sh2">시연 준비</div>
   <p class="ssub">시연용 기록은 따로 표시돼서, 지우기를 누르면 진짜 기록은 그대로 남아요</p>
-  <div class="dstat"><span class="chip">지난 7일 기록 {{cnt.hist}}건</span><span class="chip {{ 'a' if cnt.live }}">지금 신고·요청 {{cnt.live}}건</span></div>
+  <div class="dstat"><span class="chip">쌓인 기록 {{cnt.hist}}건</span><span class="chip {{ 'a' if cnt.live }}">지금 신고·요청 {{cnt.live}}건</span></div>
   <form method="post" class="dbtns">
     <button name="act" value="all" class="sbtn blue all">🎬 한 번에 발표 준비</button>
-    <button name="act" value="hist" class="sbtn line">지난 7일 기록 채우기</button>
+    <button name="act" value="hist" class="sbtn line">지난 2주 기록 채우기</button>
     <button name="act" value="live" class="sbtn line">지금 손님 신고 만들기</button>
     <button name="act" value="clear" class="sbtn red" style="grid-column:span 2">시연 기록 모두 지우기 (원래대로)</button>
   </form>
