@@ -1,5 +1,13 @@
-{% extends "base.html" %}{% block bodyclass %}kiosk{% endblock %}{% block body %}
-<header class="ktop"><img class="klogo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"><span class="ksub">옷 찾기</span></header>
-<main class="kwrap"><h1>이 매장은 키오스크를 쓰지 않아요</h1>
-  <p class="kempty">옷이 있는 선반의 QR을 휴대폰으로 찍거나, 가까운 직원에게 말씀해 주세요.</p></main>
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}kiosk{% endblock %}
+{% block body %}
+<div class="kshell">
+{{ ks.ktop(False) }}
+<main class="kmain"><div class="koff">
+  <div class="bi">{{ cx.icon('qr', 110) }}</div>
+  <h1>이 매장은 키오스크를 쓰지 않아요</h1>
+  <p>옷이 있는 선반의 QR을 휴대폰으로 찍거나,<br>가까운 직원에게 말씀해 주세요.</p>
+</div></main>
+{{ ks.kfoot('선반마다 있는 QR을 휴대폰으로 찍어도 같은 안내를 받을 수 있어요') }}
+</div>
 {% endblock %}

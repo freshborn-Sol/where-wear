@@ -1,59 +1,66 @@
-{% extends "base.html" %}{% block body %}
-<header class="top"><a class="back" href="/staff">←</a><div class="brand">신고함</div>
-  <span class="at" id="live">● 자동 새로고침</span></header>
-<main class="wrap">
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+<div class="sshell">
+{{ ks.sbar('신고함', back='/staff', live=True) }}
+<main class="swrap">
   <div class="busybar {{'on' if busy}}">
-    <span>{{ '🟠 바쁨 모드 켜짐' if busy else '🟢 바쁨 모드 꺼짐' }} · 직원 {{staff_count}}명</span>
+    <div class="bt"><b>{{ '바쁨 모드 켜짐' if busy else '바쁨 모드 꺼짐' }}</b><small>직원 {{staff_count}}명{{ ' · 자동으로 켜졌어요' if busy and busy_mode=='auto' else ' 근무 중' }}</small></div>
     <form method="post" action="/staff/busy">
       {% for k, lab in [('auto','자동'),('on','켜기'),('off','끄기')] %}<button name="mode" value="{{k}}" class="{{'sel' if busy_mode==k}}">{{lab}}</button>{% endfor %}
     </form>
   </div>
+  {% if busy %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>손님 화면은 직원 호출 대신 재고·비슷한 옷을 먼저 보여 주고 '계산대에서 도와드려요'로 안내해요</span></div>{% endif %}
   <div class="rsum">
-    <span class="urgent">손님 대기 <b>{{ waiting|length }}</b></span>
-    <span class="fix">위치 고칠 것 <b>{{ groups.values()|map('length')|sum }}</b><small> · 선반 {{ groups|length }}곳</small></span>
+    <a class="urgent" href="#wait">손님 대기 <b>{{ waiting|length }}</b></a>
+    <a class="fix" href="#fix">위치 고칠 것 <b>{{ groups.values()|map('length')|sum }}</b><small>· 선반 {{ groups|length }}곳</small></a>
   </div>
 
   <!-- ① 지금 가야 할 곳 -->
-  <h2>🔴 손님이 기다리는 중 <small>{{WAIT_MIN}}분 지나면 자동 취소</small></h2>
-  {% if not waiting %}<p class="empty">기다리는 손님이 없어요.</p>{% endif %}
+  <div class="sh2" id="wait"><span class="dot"></span>손님이 기다리는 중<small>{{WAIT_MIN}}분 지나면 자동 취소</small></div>
+  {% if not waiting %}<div class="empty">기다리는 손님이 없어요.</div>{% endif %}
   {% for w in waiting %}
-  <div class="wcard {{ 'late' if w.mins >= 5 }} {{ w.wait_state }}">
+  <div class="wcard {{ 'late' if w.mins >= 5 }}">
     <img src="{{ url_for('static', filename=w.image) if w.image else '' }}" alt="">
     <div class="wbody">
-      <div class="wtop"><b>{{ w.label }}</b><span class="timer">{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</span></div>
-      <div class="wloc">📍 {{ w.zone or '' }}구역 · <b>{{ w.fixture_id or '-' }}</b> {{ w.fixture_name or '' }} 앞</div>
-      <div class="witem">{{ w.name }} ({{ w.color }}){% if w.size %} · <b class="sz2">{{ w.size }}</b>{% endif %}{% if w.detail and w.kind != 'none' %} · {{ w.detail }}{% endif %}</div>
+      <div class="wtop"><b class="{{ 'size' if w.kind == 'size' }}">{{ w.label }}</b><span class="timer">{{ cx.icon('clock', 12) }}{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</span></div>
+      <div class="wloc">{{ cx.icon('pin', 13) }}{{ w.zone or '' }}구역 · {{ w.fixture_id or '-' }} {{ (w.fixture_name or '').split(' ', 1)[1] if ' ' in (w.fixture_name or '') else '' }} 앞</div>
+      <div class="witem">{{ w.name }} ({{ w.color }}){% if w.size %} <span class="chip n">{{ w.size }}</span>{% endif %}{% if w.detail and w.kind != 'none' %} · {{ w.detail }}{% endif %}</div>
       <form method="post" action="/staff/reports/{{w.id}}/wait" class="wact">
-        {% if w.wait_state == 'waiting' %}<button name="act" value="going" class="b-go">가는 중</button>
-        {% else %}<span class="going">🏃 가는 중</span>{% endif %}
-        <button name="act" value="served" class="b-ok">전달 완료</button>
-        {% if w.kind != 'call' %}<button name="act" value="nostock" class="b-no">재고 없음</button>{% endif %}
+        {% if w.wait_state == 'waiting' %}<button name="act" value="going" class="sbtn sm blue">가는 중</button>
+        {% else %}<span class="going">{{ cx.icon('run', 14) }}가는 중</span>{% endif %}
+        <button name="act" value="served" class="sbtn sm ok">전달 완료</button>
+        {% if w.kind != 'call' %}<button name="act" value="nostock" class="sbtn sm red">재고 없음</button>{% endif %}
       </form>
     </div>
   </div>
   {% endfor %}
+  {% if waiting %}<div class="wnote">5분 넘게 기다리면 빨간 테두리 · {{WAIT_MIN}}분이 지나면 자동 취소되고 '놓친 호출'로 남아요</div>{% endif %}
 
   <!-- ② 나중에 고칠 곳 (선반별) -->
-  <h2>🟡 위치 고칠 것 <small>선반에 한 번 가서 한꺼번에</small></h2>
-  {% if not groups %}<p class="empty">고칠 위치가 없어요.</p>{% endif %}
+  <div class="sh2" id="fix"><span class="dot y"></span>위치 고칠 것</div>
+  <p class="ssub">선반에 한 번 가서 한꺼번에 고쳐요</p>
+  {% if not groups %}<div class="empty">고칠 위치가 없어요.</div>{% endif %}
   {% for fx, items in groups.items() %}
   <div class="fgroup">
-    <div class="fhead"><b>{{ fx }}</b> {{ items[0].fixture_name or '' }} <span>{{ items|length }}건</span></div>
+    <div class="fhead"><b>{{ fx }}</b>{{ items[0].fixture_name or '' }}<span class="chip a">{{ items|length }}건</span></div>
     {% for x in items %}
     <div class="fitem">
       <img src="{{ url_for('static', filename=x.image) if x.image else '' }}" alt="">
       <div class="fbody">
-        <div><b>{{ x.name }}</b> ({{ x.color }}) · {{ x.level or '' }}</div>
-        <small>신고 {{ x.n }}명 · 첫 신고 {{ x.since }}분 전 {% if not x.active %}· <em>안내에서 내려감</em>{% endif %}</small>
+        <div class="t">{{ x.name }} ({{ x.color }}) <span>· {{ x.level or '' }}</span></div>
+        <div class="m">신고 {{ x.n }}명 · 첫 신고 {{ x.since }}분 전 {% if not x.active %}<span class="chip r">안내에서 내려감</span>{% endif %}</div>
         <form method="post" action="/staff/reports/fix" class="fact">
           <input type="hidden" name="sku" value="{{x.sku}}"><input type="hidden" name="fixture" value="{{x.fixture_id or ''}}">
-          <button name="act" value="reregister" class="b-ok">찾아서 재등록</button>
-          <button name="act" value="false" class="b-plain">그 자리에 있음</button>
-          <button name="act" value="nostock" class="b-no">재고 없음</button>
-          <details class="mv"><summary>다른 곳에 있었음</summary>
-            <select name="to">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select>
-            <select name="level"><option>상단</option><option selected>중단</option><option>하단</option></select>
-            <button name="act" value="move" class="b-go">이동 등록</button>
+          <div class="sbtns">
+            <button name="act" value="reregister" class="sbtn sm ok">찾아서 재등록</button>
+            <button name="act" value="false" class="sbtn sm line">그 자리에 있음</button>
+            <button name="act" value="nostock" class="sbtn sm red">재고 없음</button>
+          </div>
+          <details class="mv"><summary>{{ cx.icon('move', 14) }}다른 곳에 있었음{{ cx.icon('chevdown', 14) }}</summary>
+            <div class="mvrow"><select name="to">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select>
+              <select name="level"><option>상단</option><option selected>중단</option><option>하단</option></select></div>
+            <button name="act" value="move" class="sbtn sm blue">이동 등록</button>
           </details>
         </form>
       </div>
@@ -62,41 +69,16 @@
   </div>
   {% endfor %}
 
-  <!-- ③ 점장 요약 -->
-  <h2>📊 점장 요약 <small>최근 7일</small></h2>
-  <div class="msum">
-    <div class="mtile"><small>호출 평균 응답</small><b>{{ summary.serve_min if summary.serve_min is not none else '-' }}</b><span>분</span></div>
-    <div class="mtile"><small>위치 수정 평균</small><b>{{ summary.fix_min if summary.fix_min is not none else '-' }}</b><span>분</span></div>
-    <div class="mtile"><small>놓친 호출</small><b>{{ summary.missed }}</b><span>건</span></div>
-    <div class="mtile"><small>손님 '찾았어요'</small><b>{{ summary.found }}</b><span>건</span></div>
-  </div>
-  <h3 class="uh">사용률 <small>손님이 서비스에 적응했는지 (적응하면 직원 일이 줄어요)</small></h3>
-  <div class="msum usage">
-    {% set u = summary.usage %}
-    <div class="mtile"><small>글자 검색</small><b>{{u.search}}</b><span>회</span></div>
-    <div class="mtile"><small>사진 검색</small><b>{{u.photo}}</b><span>회</span></div>
-    <div class="mtile"><small>옷 태그 QR 재고 확인</small><b>{{u.tag}}</b><span>회</span></div>
-    <div class="mtile"><small>상품 조회</small><b>{{u.view}}</b><span>회</span></div>
-    <div class="mtile"><small>'찾았어요' 비율</small><b>{{ u.found_rate if u.found_rate is not none else '-' }}</b><span>%</span></div>
-    <div class="mtile"><small>직원 호출</small><b>{{u.calls}}</b><span>건</span></div>
-    <div class="mtile"><small>찜하기</small><b>{{u.like}}</b><span>회</span></div>
-  </div>
-  <div class="mlists">
-    <div><h3>자주 틀리는 선반</h3><ol>{% for f in summary.top_fx %}<li>{{f.fixture_id}} {{f.name or ''}} <b>{{f.n}}</b></li>{% else %}<li class="hint">아직 없어요</li>{% endfor %}</ol>
-      <small class="hint">→ 진열 동선·직원 교육 점검</small></div>
-    <div><h3>♥ 많이 찜한 옷</h3><ol>{% for i in summary.top_liked %}<li>{{i.name}} ({{i.color}}) <b>{{i.n}}</b>{% if i.floor + i.wh <= 3 %} <small class="lowst">재고 {{i.floor}}+창고 {{i.wh}}</small>{% endif %}</li>{% else %}<li class="hint">아직 없어요</li>{% endfor %}</ol>
-      <small class="hint">→ 찜은 많은데 재고가 적으면 진열·발주 우선</small></div>
-    <div><h3>'없어요'가 많은 옷</h3><ol>{% for i in summary.top_items %}<li>{{i.name}} ({{i.color}}) <b>{{i.n}}</b></li>{% else %}<li class="hint">아직 없어요</li>{% endfor %}</ol>
-      <small class="hint">→ 놓친 매출 · 발주 근거</small></div>
-  </div>
-
-  <h2>처리 기록</h2>
-  <ul class="log">
+  <div class="sh2">처리 기록</div>
+  <ul class="hlog">
   {% for r in history %}
-    <li class="done">{{ r.resolution }} · {{ r.name or r.sku }} · {{ r.fixture_id or '-' }} <small>{{ (r.resolved_at or '')[11:16] }}</small></li>
-  {% else %}<li class="hint">아직 없어요</li>{% endfor %}
+    <li><span class="chip {{ 'r' if r.resolution == '재고 없음' else 'ok' }}">{{ r.resolution }}</span>{{ r.name or r.sku }} · {{ r.fixture_id or '-' }}<span class="sp"></span><small>{{ (r.resolved_at or '')[11:16] }}</small></li>
+  {% else %}<li class="empty-l">아직 없어요</li>{% endfor %}
   </ul>
+  <a class="linkrow" href="/staff/summary">📊 점장 요약 보기 (최근 7일){{ cx.icon('chev', 16) }}</a>
 </main>
+{{ ks.stabs('rep') }}
+</div>
 <script>
 // 시연용: 8초마다 새로고침 (선택창을 열어 둔 동안은 멈춤)
 setInterval(()=>{ const a=document.activeElement; if(!(a && a.tagName==='SELECT') && !document.querySelector('details.mv[open]')) location.reload(); }, 8000);

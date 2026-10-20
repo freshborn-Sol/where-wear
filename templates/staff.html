@@ -1,86 +1,102 @@
-{% extends "base.html" %}{% block body %}
-<header class="top"><div class="brand">직원 · 위치 등록</div>
-  <a class="back" href="/staff/ai" style="margin-left:auto;font-size:14px">📷 사진 등록</a>
-  <a class="back" href="/staff/reports" style="font-size:14px">신고함</a>
-  <a class="back" href="/staff/settings" style="font-size:14px">⚙️ 설정</a></header>
-<main class="wrap">
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+<div class="sshell">
+{{ ks.sbar('위치 등록', right=('<a class="amb" href="#priority">진열 점검 ' ~ check_days ~ '일 전</a>') if check_days >= CHECK_DAYS else None) }}
+<main class="swrap">
   {% if check_days >= CHECK_DAYS %}
   <form class="checkbar" method="post" action="/staff/checked">
-    <div><b>🔔 진열 점검할 때예요</b><small>마지막 점검 {{check_days}}일 전 · 아래 '다시 찍을 옷'부터 확인하세요</small></div>
-    <button class="btn">점검 완료</button>
+    {{ cx.icon('bell', 22) }}<div><b>진열 점검할 때예요</b><small>마지막 점검 {{check_days}}일 전 · 아래 '다시 찍을 옷'부터 확인하세요</small></div>
+    <button class="sbtn sm">점검 완료</button>
   </form>
   {% endif %}
 
-  <ol class="steps">
-    <li><b>1</b> 선반 QR을 찍으세요 <span id="fxnow" class="tag">미선택</span></li>
-    <li><b>2</b> 옷 태그(바코드)를 찍으세요 · <u>같은 상품은 한 번만</u></li>
-  </ol>
-  <label class="allc"><input type="checkbox" id="allc" checked> 같은 상품의 <b>다른 색</b>도 이 선반에 함께 등록 <small>(사이즈는 원래 한 번에 등록돼요)</small></label>
-
-  <div id="reader"></div>
-  <p class="hint">카메라가 안 되면 아래에서 직접 고르세요 (시연·발표용 대비)</p>
-
-  <div class="manual">
-    <label>선반
-      <select id="fx">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select>
-    </label>
-    <label>단
-      <select id="lv"><option>상단</option><option selected>중단</option><option>하단</option></select>
-    </label>
-    <label>옷(상품)
-      <select id="sku">{% for i in items %}<option value="{{i.sku}}">{{i.sku}} · {{i.name}} ({{i.color}})</option>{% endfor %}</select>
-    </label>
-    <button class="btn" onclick="reg(document.getElementById('sku').value)">등록</button>
+  <!-- ① 선반 고르기 전 -->
+  <div class="card" id="stepA">
+    <div class="srow"><span class="num on">1</span><b style="font-size:15px">선반 QR을 찍으세요</b><span class="sp"></span><span class="chip">미선택</span></div>
+    <div class="srow"><span class="num">2</span><span style="font-size:15px;color:var(--g500)">옷 태그(바코드)를 찍으세요 <small style="font-size:12px">· 같은 상품은 한 번만</small></span></div>
   </div>
-  <div class="manual code">
-    <label>바코드 직접 입력 <input id="code" placeholder="8800000000001" inputmode="numeric"></label>
-    <button class="btn" onclick="reg(document.getElementById('code').value)">등록</button>
-    <p class="hint">시즌마다 바코드가 달라도 같은 상품으로 묶여요. 예:
-      {% for b in samples %}<a href="#" onclick="document.getElementById('code').value='{{b.code}}';return false">{{b.code}}</a> <small>({{b.name}} {{b.color}} {{b.season}})</small>{{ ' · ' if not loop.last }}{% endfor %}</p>
+  <!-- ② 선반 고른 뒤 -->
+  <div class="card fxsel" id="stepB" hidden>
+    <div class="srow"><span class="num done">{{ cx.icon('check', 14) }}</span><b id="fxnow">-</b><span id="fxname" style="font-size:14px;font-weight:500"></span><span class="sp"></span>
+      <a href="#" onclick="resetFx();return false" style="font-size:12px;color:var(--g500)">다시 찍기</a></div>
+    <div class="seg" id="lvseg">{% for l in ['상단','중단','하단'] %}<button type="button" class="{{ 'on' if l=='중단' }}" onclick="setLv('{{l}}')">{{l}}</button>{% endfor %}</div>
   </div>
+  <div class="srow" id="step2" hidden style="padding:2px 4px"><span class="num on">2</span><b style="font-size:15px">옷 태그(바코드)를 찍으세요</b><span class="sp"></span><span class="chip b">찍히면 진동</span></div>
 
-  <h2>최근 등록</h2>
-  <ul id="log" class="log"></ul>
+  <div class="cam"><div id="reader"></div><div class="camhint" id="camhint">선반의 QR을 네모 안에 맞춰 주세요</div></div>
 
-  <h2 id="priority">🔁 다시 찍을 옷 <small>자주 찾는데 위치가 오래됐거나 '없어요' 신고가 있는 옷부터</small></h2>
-  {% if not priority %}<p class="empty">지금은 다시 찍을 옷이 없어요.</p>{% endif %}
-  <ul class="prio">
-  {% for p in priority %}
-    <li>
-      <img src="{{ url_for('static', filename=p.image) if p.image else '' }}" alt="">
-      <div class="pb"><b>{{p.name}}</b> <span class="mute">({{p.color}})</span><br>
-        <small>{% if p.place %}지금 안내 위치: {{p.place.fixture_id}} {{p.place.level}}{% else %}위치 없음{% endif %}</small>
-        <div class="why">{% for w in p.why %}<span>{{w}}</span>{% endfor %}</div></div>
-      <div class="pa">
-        {% if p.place %}<form method="post" action="/staff/confirm/{{p.sku}}"><button class="btn small ok">그대로 맞아요</button></form>{% endif %}
-        <button class="btn small" onclick="pick('{{p.sku}}')">다시 찍기</button>
+  <label class="allc"><input type="checkbox" id="allc" checked><div>같은 상품의 다른 색도 이 선반에 함께 등록<small>사이즈는 원래 한 번에 등록돼요</small></div></label>
+
+  <details class="manual-d" id="manual">
+    <summary>{{ cx.icon('camoff', 18) }}카메라가 안 되면 직접 고르기{{ cx.icon('chev', 16) }}</summary>
+    <div class="mbody">
+      <div class="frow">
+        <label class="fld">선반<select id="fx" onchange="setFixture(this.value)">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select></label>
+        <label class="fld lv">단<select id="lv" onchange="setLv(this.value)"><option>상단</option><option selected>중단</option><option>하단</option></select></label>
       </div>
-    </li>
+      <label class="fld">옷(상품)<select id="sku">{% for i in items %}<option value="{{i.sku}}">{{i.sku}} · {{i.name}} ({{i.color}})</option>{% endfor %}</select></label>
+      <button class="sbtn" onclick="reg(document.getElementById('sku').value)">등록</button>
+      <div class="frow"><label class="fld">바코드 직접 입력<input id="code" placeholder="8800000000001" inputmode="numeric"></label>
+        <button class="sbtn" style="height:42px" onclick="reg(document.getElementById('code').value)">등록</button></div>
+      <p class="hintcard" style="margin:0">시즌마다 바코드가 달라도 같은 상품으로 묶여요. 예:
+        {% for b in samples %}<a href="#" onclick="document.getElementById('code').value='{{b.code}}';return false">{{b.code}}</a> ({{b.name}} {{b.color}} {{b.season}}){{ ' · ' if not loop.last }}{% endfor %}</p>
+    </div>
+  </details>
+
+  <div class="sh2">최근 등록</div>
+  <ul id="log" class="slog"><li class="none">아직 등록한 옷이 없어요</li></ul>
+  <div class="hintcard"><b>선반 QR 1번 → 옷 태그를 연속으로</b>진열을 바꿔도 옷을 한 벌씩 찍을 필요 없이, 상품마다 한 번만 찍으면 사이즈가 함께 등록돼요</div>
+
+  <div class="sh2" id="priority">다시 찍을 옷</div>
+  <p class="ssub">자주 찾는데 위치가 오래됐거나 '없어요' 신고가 있는 옷부터</p>
+  {% if not priority %}<div class="empty">지금은 다시 찍을 옷이 없어요.</div>{% endif %}
+  {% for p in priority %}
+    <div class="prio">
+      <img src="{{ url_for('static', filename=p.image) if p.image else '' }}" alt="">
+      <div class="pb">
+        <div class="nm">{{p.name}} <small>({{p.color}})</small></div>
+        <div class="wh {{ 'none' if not p.place }}">{% if p.place %}지금 안내 위치: {{p.place.fixture_id}} {{p.place.level}}{% else %}위치 없음{% endif %}</div>
+        <div class="why">{% for w in p.why if not (w == '위치 없음' and not p.place) %}<span class="chip {{ 'r' if ('없어요' in w or '위치 없음' in w) else ('a' if '등록' in w else '') }}">{{w}}</span>{% endfor %}</div>
+        <div class="pa">
+          {% if p.place %}<form method="post" action="/staff/confirm/{{p.sku}}"><button class="sbtn sm okl">그대로 맞아요</button></form>{% endif %}
+          <button class="sbtn sm" onclick="pick('{{p.sku}}')">{{ cx.icon('scan', 14) }}다시 찍기</button>
+        </div>
+      </div>
+    </div>
   {% endfor %}
-  </ul>
 </main>
+{{ ks.stabs('reg') }}
+</div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 // 선반 QR(…/go?at=A-H1)을 찍으면 선반이 정해지고, 그 뒤 찍는 코드는 옷으로 본다.
 // 옷 태그 QR(…/item/UQ001?src=tag)이나 시즌 바코드(880…)도 같은 상품으로 인식.
+const FXN = {{ fixtures|map(attribute='id')|list|tojson }}, FXNAME = {{ fixtures|map(attribute='name')|list|tojson }};
 let fixture = null, last = 0;
+const $ = id => document.getElementById(id);
 function setFixture(id){
   fixture = id;
-  document.getElementById('fxnow').textContent = id;
-  document.getElementById('fx').value = id;
+  $('fxnow').textContent = id; $('fx').value = id;
+  const i = FXN.indexOf(id); $('fxname').textContent = i >= 0 ? FXNAME[i] : '';
+  $('stepA').hidden = true; $('stepB').hidden = false; $('step2').hidden = false;
+  $('camhint').textContent = '옷 태그 바코드를 가로로 맞춰 주세요';
 }
-function pick(sku){ document.getElementById('sku').value = sku; window.scrollTo({top:0,behavior:'smooth'}); }
+function resetFx(){ fixture = null; $('stepA').hidden = false; $('stepB').hidden = true; $('step2').hidden = true;
+  $('camhint').textContent = '선반의 QR을 네모 안에 맞춰 주세요'; }
+function setLv(l){ $('lv').value = l; document.querySelectorAll('#lvseg button').forEach(b => b.classList.toggle('on', b.textContent === l)); }
+function pick(sku){ $('sku').value = sku; $('manual').open = true; window.scrollTo({top:0,behavior:'smooth'}); }
 function reg(code){
   if(!code) return;
-  const fx = fixture || document.getElementById('fx').value;
+  const fx = fixture || $('fx').value;
   fetch('/api/register', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({sku:code, fixture:fx, level:document.getElementById('lv').value,
-                          all_colors: document.getElementById('allc').checked})})
+    body: JSON.stringify({sku:code, fixture:fx, level:$('lv').value, all_colors: $('allc').checked})})
    .then(r=>r.json()).then(d=>{
-      const li = document.createElement('li');
-      li.textContent = (d.ok ? '✅ ' : '⚠️ ') + d.message;
-      document.getElementById('log').prepend(li);
+      const log = $('log'), e = log.querySelector('.none'); if (e) e.remove();
+      const li = document.createElement('li'); if (!d.ok) li.className = 'bad';
+      li.innerHTML = '<i>' + (d.ok ? '✓' : '!') + '</i><span></span>'; li.querySelector('span').textContent = d.message;
+      log.prepend(li);
       if (d.ok && navigator.vibrate) navigator.vibrate(60);   // 찍혔다는 신호
    });
 }
@@ -94,8 +110,8 @@ function onScan(text){
   reg(it ? it[1] : text.trim().toUpperCase());   // 옷 태그 QR / 바코드
 }
 new Html5Qrcode("reader").start({facingMode:"environment"},
-   {fps:10, qrbox:240}, onScan, ()=>{})
-   .catch(e => { document.getElementById('reader').innerHTML =
-      '<p class="hint">카메라를 쓸 수 없어요 (' + e + '). 아래에서 직접 선택하세요.</p>'; });
+   {fps:10, qrbox:220}, onScan, ()=>{})
+   .catch(e => { $('reader').innerHTML = '<p class="camfail">카메라를 쓸 수 없어요 (' + e + ').<br>아래 \'카메라가 안 되면 직접 고르기\'를 눌러 주세요.</p>';
+                 $('camhint').hidden = true; $('manual').open = true; });
 </script>
 {% endblock %}

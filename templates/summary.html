@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+{% set u = summary.usage %}
+<div class="sshell">
+{{ ks.sbar('점장 요약', back='/staff/reports', right='최근 7일') }}
+<main class="swrap">
+  <div class="sh2">응대</div><p class="ssub">호출과 위치 수정에 걸린 시간</p>
+  <div class="tiles">
+    <div class="tile"><small>호출 평균 응답</small><div><b class="blue">{{ summary.serve_min if summary.serve_min is not none else '-' }}</b><span>분</span></div></div>
+    <div class="tile"><small>위치 수정 평균</small><div><b>{{ summary.fix_min if summary.fix_min is not none else '-' }}</b><span>분</span></div></div>
+    <div class="tile"><small>놓친 호출</small><div><b class="red">{{ summary.missed }}</b><span>건</span></div></div>
+    <div class="tile"><small>손님 '찾았어요'</small><div><b class="ok">{{ summary.found }}</b><span>건</span></div></div>
+  </div>
+  <div class="sh2">사용률</div><p class="ssub">손님이 서비스에 적응했는지 (적응하면 직원 일이 줄어요)</p>
+  <div class="tiles t3">
+    {% for l, v, unit, c in [('글자 검색', u.search, '회', ''), ('사진 검색', u.photo, '회', ''), ('옷 태그 QR 재고', u.tag, '회', ''),
+                              ('상품 조회', u.view, '회', ''), ("'찾았어요' 비율", u.found_rate if u.found_rate is not none else '-', '%', 'ok'),
+                              ('직원 호출', u.calls, '건', ''), ('찜하기', u.like, '회', ''), ('키오스크', u.kiosk, '회', '')] %}
+      <div class="tile"><small>{{l}}</small><div><b class="{{c}}">{{v}}</b><span>{{unit}}</span></div></div>
+    {% endfor %}
+  </div>
+  <div class="insight">{{ cx.icon('chart', 20) }}<span>'찾았어요' 비율이 오르고 직원 호출이 줄면, 손님이 서비스에 적응했다는 뜻이에요</span></div>
+
+  <div class="sh2" id="rank">순위</div>
+  <div class="rank" style="--c:var(--amber)"><h3>{{ cx.icon('pin', 16) }}자주 틀리는 선반</h3><ol>
+    {% for f in summary.top_fx %}<li><i>{{loop.index}}</i>{{f.fixture_id}} {{f.name or ''}}<span class="sp"></span><b>{{f.n}}</b></li>{% else %}<li class="none">아직 없어요</li>{% endfor %}</ol>
+    <small>→ 진열 동선 · 직원 교육 점검</small></div>
+  <div class="rank" style="--c:var(--red)"><h3>{{ cx.icon('heart', 16) }}많이 찜한 옷</h3><ol>
+    {% for i in summary.top_liked %}<li><i>{{loop.index}}</i>{{i.name}} ({{i.color}}){% if i.floor + i.wh <= 3 %}<span class="chip r">재고 {{i.floor}}+창고 {{i.wh}}</span>{% endif %}<span class="sp"></span><b>{{i.n}}</b></li>{% else %}<li class="none">아직 없어요</li>{% endfor %}</ol>
+    <small>→ 찜은 많은데 재고가 적으면 진열 · 발주 우선</small></div>
+  <div class="rank" style="--c:var(--navy)"><h3>{{ cx.icon('alert', 16) }}'없어요'가 많은 옷</h3><ol>
+    {% for i in summary.top_items %}<li><i>{{loop.index}}</i>{{i.name}} ({{i.color}})<span class="sp"></span><b>{{i.n}}</b></li>{% else %}<li class="none">아직 없어요</li>{% endfor %}</ol>
+    <small>→ 놓친 매출 · 발주 근거</small></div>
+</main>
+{{ ks.stabs('rep') }}
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{# 키오스크 · 직원 화면 공통 파츠 (피그마 where:wear_KIOSK / where-wear_STAFF 기준)
+   사용: {% import "_ks.html" as ks with context %}  — 아이콘은 _cx.html 것을 같이 씀 #}
+{% import "_cx.html" as cx with context %}
+
+{% macro styles() -%}
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='ks.css') }}">
+{%- endmacro %}
+
+{# ---------- 키오스크 ---------- #}
+{% macro ktop(back=True) -%}
+<header class="ktop">
+  <a href="/kiosk" class="klogo-a"><img class="klogo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"></a>
+  <span class="ksub">옷 찾기</span>
+  {% if back %}<a class="khome" href="/kiosk">{{ cx.icon('home', 28) }}처음으로</a>{% endif %}
+</header>
+{%- endmacro %}
+
+{% macro kstep(cur) -%}
+<ol class="kstep">
+  {% for l in ['종류', '세부 종류', '색', '위치'] %}
+    <li class="{{ 'on' if loop.index0 == cur else ('done' if loop.index0 < cur) }}"><i>{{ loop.index }}</i>{{ l }}</li>
+  {% endfor %}
+</ol>
+{%- endmacro %}
+
+{% macro kfoot(text) -%}
+<footer class="kfoot">{{ cx.icon('qr', 30) }}<span>{{ text }}</span></footer>
+{%- endmacro %}
+
+{# ---------- 직원 ---------- #}
+{% macro sbar(title, back=None, right=None, live=False) -%}
+<header class="sbar">
+  {% if back %}<a class="sb-back" href="{{ back }}" aria-label="뒤로">{{ cx.icon('back', 24) }}</a>
+  {% else %}<span class="sb-badge">직원</span>{% endif %}
+  <h1>{{ title }}</h1>
+  {% if live %}<span class="sb-live" id="live"><i></i>자동 새로고침</span>
+  {% elif right %}<span class="sb-right">{{ right|safe }}</span>{% endif %}
+</header>
+{%- endmacro %}
+
+{% macro stabs(active) -%}
+<nav class="stabs" aria-label="직원 메뉴">
+  <a class="st {{ 'on' if active == 'reg' }}" href="/staff">{{ cx.icon('scan', 24) }}<span>위치 등록</span></a>
+  <a class="st {{ 'on' if active == 'ai' }}" href="/staff/ai">{{ cx.icon('camera', 24) }}<span>사진 등록</span></a>
+  <a class="st {{ 'on' if active == 'rep' }}" href="/staff/reports"><span class="st-ic">{{ cx.icon('bell', 24) }}{% if staff_badge %}<b>{{ staff_badge }}</b>{% endif %}</span><span>신고함</span></a>
+  <a class="st {{ 'on' if active == 'set' }}" href="/staff/settings">{{ cx.icon('sliders', 24) }}<span>설정</span></a>
+</nav>
+{%- endmacro %}

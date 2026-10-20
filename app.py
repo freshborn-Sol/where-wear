@@ -137,7 +137,11 @@ def helpers():
         return "/search?" + urlencode(a)
     try: busy = is_busy()
     except Exception: busy = False
-    return dict(imgsrc=imgsrc, with_args=with_args, store_name=STORE_NAME, busy=busy,
+    staff_badge = 0
+    if request.path.startswith("/staff"):                 # 직원 탭바 '신고함' 숫자 = 기다리는 손님 수
+        try: staff_badge = one("SELECT COUNT(*) n FROM reports WHERE wait_state IN ('waiting','going')")["n"]
+        except Exception: staff_badge = 0
+    return dict(imgsrc=imgsrc, with_args=with_args, store_name=STORE_NAME, busy=busy, staff_badge=staff_badge,
                 cx_at=request.args.get("at") or "ENTRANCE")   # 고객 화면 탭바·링크용 현재 QR 위치
 
 # ---------- 위치 + 갱신 시각 ----------
@@ -671,7 +675,7 @@ def staff_reports():
                       WHERE r.wait_state IN ('waiting','going') ORDER BY r.wait_at""")
     for w in waiting:
         w["mins"] = mins_since(w["wait_at"])
-        w["label"] = {"none": "❌ 위치에 없음", "size": "📏 사이즈 요청", "call": "🙋 직원 호출"}.get(w["kind"], w["kind"])
+        w["label"] = {"none": "위치에 없음", "size": "사이즈 요청", "call": "직원 호출"}.get(w["kind"], w["kind"])
     # ② 위치 고칠 것 (선반별로 묶음)
     loc = rows("""SELECT r.sku, r.fixture_id, COUNT(DISTINCT COALESCE(r.device,'r'||r.id)) n, MIN(r.created_at) first,
                          MAX(r.created_at) last, i.name, i.color, i.image, f.name fixture_name, f.zone,
@@ -693,6 +697,11 @@ def staff_reports():
                            busy_mode=setting("busy", "auto"), staff_count=setting("staff_count", "4"),
                            summary=manager_summary(), WAIT_MIN=WAIT_MIN,
                            fixtures=rows("SELECT * FROM fixtures WHERE id!='ENTRANCE'"))
+
+@app.route("/staff/summary")
+def staff_summary():
+    """점장 요약: 응대 지표 · 사용률 · 순위 (신고함에서 분리)"""
+    return render_template("summary.html", summary=manager_summary())
 
 def manager_summary(days=7):
     since = (now() - datetime.timedelta(days=days)).isoformat(timespec="seconds")
@@ -827,7 +836,11 @@ def kiosk():
         fc = facet_counts(base, sel)            # 핏·무늬: 지금 조건 안에 실제로 있는 값만 버튼으로
         kf = {k: fc.get(k, []) for k in ("fit", "pattern")}
         log_event("kiosk", src=f"{cat}/{sub}/{color}")
-    return render_template("kiosk.html", step=step, cat=cat, sub=sub, color=color,
+    catinfo = {}
+    if step == "cat":                                    # 첫 화면 타일: 대분류별 상품 수 + 대표 사진
+        for c, ts_ in subcat_tiles().items():
+            if ts_: catinfo[c] = {"n": sum(t["n"] for t in ts_), "rep": ts_[0]["rep"]}
+    return render_template("kiosk.html", step=step, cat=cat, sub=sub, color=color, catinfo=catinfo,
                            fit=fit, pattern=pattern, kf=kf,
                            cats=list(CATS), tiles=tiles, kcolors=colors, items=items)
 
@@ -836,7 +849,7 @@ def kiosk_item(sku):
     it = decorate([one("SELECT * FROM items WHERE sku=?", (sku,))])[0]
     it["sizes"] = sort_sizes(it["sizes"])
     fx = it["place"]["fixture_id"] if it["place"] else None
-    return render_template("kiosk_item.html", it=it, map=map_data("ENTRANCE", fx))
+    return render_template("kiosk_item.html", it=it, map=map_data("ENTRANCE", fx), flag=loc_flag(it))
 
 @app.route("/kiosk/print/<sku>")
 def kiosk_print(sku):

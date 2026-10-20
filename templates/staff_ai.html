@@ -1,80 +1,78 @@
-{% extends "base.html" %}{% block body %}
-<header class="top"><a class="back" href="/staff">←</a>
-  <div class="brand">직원 · 사진으로 상품 등록</div></header>
-<main class="wrap">
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+<div class="sshell">
+{{ ks.sbar('사진으로 상품 등록', back='/staff') }}
+<main class="swrap">
 
-{% if done %}<p class="okmsg">✅ {{done}}</p>{% endif %}
+{% if done %}<p class="okmsg">{{ cx.icon('check', 18) }}{{done}}</p>{% endif %}
 
 {% if step == 'photo' %}
-  <ol class="steps">
-    <li><b>1</b> 걸어둘 선반을 고르고</li>
-    <li><b>2</b> 옷을 정면에서 찍으면 AI가 특징을 채워요</li>
-    <li><b>3</b> 확인·수정 후 저장</li>
+  <ol class="steps3">
+    <li><span class="num on">1</span>걸어둘 선반을 고르고</li>
+    <li><span class="num">2</span>옷을 정면에서 찍으면 AI가 특징을 채워요</li>
+    <li><span class="num">3</span>확인·수정 후 저장</li>
   </ol>
-  <form action="/staff/ai/analyze" method="post" enctype="multipart/form-data" class="aiform" onsubmit="busy()">
-    <div class="manual">
-      <label>선반
-        <select name="fixture">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select>
-      </label>
-      <label>단
-        <select name="level"><option>상단</option><option selected>중단</option><option>하단</option></select>
-      </label>
+  <form action="/staff/ai/analyze" method="post" enctype="multipart/form-data" onsubmit="busy()" style="display:flex;flex-direction:column;gap:12px">
+    <div class="frow">
+      <label class="fld">선반<select name="fixture">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select></label>
+      <label class="fld lv">단<select name="level"><option>상단</option><option selected>중단</option><option>하단</option></select></label>
     </div>
-    <div class="photo2">
-      <label class="filebtn">📷 촬영하기
+    <div class="bigbtns">
+      <label class="bigbtn">{{ cx.icon('camera', 32) }}촬영하기
         <input type="file" name="photo" accept="image/*" capture="environment" onchange="this.form.requestSubmit()"></label>
-      <label class="filebtn ghost">🖼 사진 고르기
+      <label class="bigbtn line">{{ cx.icon('image', 32) }}사진 고르기
         <input type="file" name="photo" accept="image/*" onchange="this.form.requestSubmit()"></label>
     </div>
-    <p class="hint">밝은 곳에서, 옷이 화면을 꽉 채우게 찍으면 정확해져요.</p>
+    <p class="tip">{{ cx.icon('sparkle', 16) }}밝은 곳에서, 옷이 화면을 꽉 채우게 찍으면 정확해져요</p>
   </form>
 
 {% elif step == 'confirm' %}
-  {% if err %}<p class="aiq-w">{{err}}</p>{% endif %}
-  <form action="/staff/ai/save" method="post" class="confirm">
+  <form action="/staff/ai/save" method="post" style="display:flex;flex-direction:column;gap:12px">
     <input type="hidden" name="img" value="{{img}}">
     <input type="hidden" name="fixture" value="{{fx}}">
     <input type="hidden" name="level" value="{{lv}}">
-    <div class="detail">
-      <img class="hero" src="{{ url_for('static', filename=img) }}" alt="">
-      <div class="fields">
-        {% if a.desc %}<p class="aiq-d">AI: “{{a.desc}}”</p>{% endif %}
-        {% set fields = [('category','분류',V.CATEGORIES),('subcat','종류',V.ALL_SUBS),
-                         ('color','색',V.COLORS),('pattern','패턴',V.PATTERNS),('fit','핏',V.FITS)] %}
-        {% for key, label, opts in fields %}
-          <label>{{label}}
-            <select name="{{key}}">{% for o in opts %}<option {{'selected' if a.get(key)==o}}>{{o}}</option>{% endfor %}</select>
-          </label>
-        {% endfor %}
+    <div class="aihero">
+      <img src="{{ url_for('static', filename=img) }}" alt="">
+      <div class="side">
+        {% if err %}<div class="warnmsg"><b>{{ cx.icon('alert', 14) }}AI 분석 실패</b>{{ err.replace('AI 분석 실패: ', '') }}</div>
+        {% elif a.desc %}<div class="aiq"><b>{{ cx.icon('sparkle', 14) }}AI 분석 결과</b>“{{a.desc}}”</div>{% endif %}
+        <small style="font-size:12px;color:var(--g500)">{{ '사진은 저장돼요. 칸을 채우고 저장하면 돼요' if err else '틀린 칸만 고치고 저장하세요' }}</small>
+        <span class="locchip">{{ cx.icon('pin', 13) }}위치: {{fx}} {{lv}}</span>
       </div>
     </div>
-    <div class="manual">
-      <label>상품명 <input name="name" placeholder="{{ (a.color ~ ' ' ~ a.subcat) if a else '예) 검정 오버핏 후드' }}"></label>
-      <label>가격 <input name="price" inputmode="numeric" placeholder="39900"></label>
-      <label>사이즈:수량 <input name="sizes" value="S:1,M:2,L:2,XL:1"></label>
+    <div class="fgrid">
+      {% set fields = [('category','분류',V.CATEGORIES),('subcat','종류',V.ALL_SUBS),
+                       ('color','색',V.COLORS),('pattern','패턴',V.PATTERNS),('fit','핏',V.FITS)] %}
+      {% for key, label, opts in fields %}
+        <label class="fld {{ 'ai' if a.get(key) }}">{{label}}
+          <select name="{{key}}">{% for o in opts %}<option {{'selected' if a.get(key)==o}}>{{o}}</option>{% endfor %}</select></label>
+      {% endfor %}
     </div>
-    <p class="hint">위치: <b>{{fx}} {{lv}}</b></p>
-    <div class="btns">
-      <a class="btn warn" href="/staff/ai">다시 찍기</a>
-      <button class="btn">저장</button>
+    <label class="fld">상품명<input name="name" placeholder="{{ (a.color ~ ' ' ~ a.subcat) if a else '예) 검정 오버핏 후드' }}"></label>
+    <label class="fld">가격<input name="price" inputmode="numeric" placeholder="39900"></label>
+    <label class="fld">사이즈:수량<input name="sizes" value="S:1,M:2,L:2,XL:1"></label>
+    <div class="sbtns" style="flex-wrap:nowrap">
+      <a class="sbtn amb grow" style="height:50px" href="/staff/ai">{{ cx.icon('camera', 18) }}다시 찍기</a>
+      <button class="sbtn grow" style="height:50px">{{ cx.icon('check', 18) }}저장</button>
     </div>
   </form>
 {% endif %}
 
-  <h2>전시 실물 ({{demos|length}})</h2>
-  <ul class="log">
+  <div class="sh2">전시 실물 ({{demos|length}})</div>
+  <div class="card" style="padding:4px 12px;gap:0">
   {% for d in demos %}
-    <li class="demo-row">
+    <div class="demo">
       <img src="{{ imgsrc(d) }}" alt="">
-      <a href="/item/{{d.sku}}">{{d.sku}} · {{d.name}}<br>
-        <small>{{d.subcat}} · {{d.color}} · {% if d.place %}{{d.place.fixture_id}} {{d.place.level}}{% else %}위치 없음{% endif %}</small></a>
-      <form method="post" action="/staff/ai/delete/{{d.sku}}" onsubmit="return confirm('{{d.sku}} 를 삭제할까요?')">
-        <button class="x">삭제</button></form>
-    </li>
-  {% else %}<li class="hint">아직 없어요</li>{% endfor %}
-  </ul>
+      <a href="/item/{{d.sku}}">{{d.sku}} · {{d.name}}<small>{{d.subcat}} · {{d.color}} · {% if d.place %}{{d.place.fixture_id}} {{d.place.level}}{% else %}위치 없음{% endif %}</small></a>
+      <form method="post" action="/staff/ai/delete/{{d.sku}}" onsubmit="return confirm('{{d.sku}} 를 삭제할까요?')"><button class="x">삭제</button></form>
+    </div>
+  {% else %}<p style="font-size:13px;color:var(--g500);margin:10px 0">아직 없어요</p>{% endfor %}
+  </div>
 </main>
-<div id="busy" class="busy"><div>🤖 AI가 옷을 분석하고 있어요…</div></div>
+{{ ks.stabs('ai') }}
+</div>
+<div id="busy" class="sbusy"><div><span class="spin"></span><b>🤖 AI가 옷을 분석하고 있어요…</b><span>종류 · 색 · 무늬 · 핏을 채우는 중이에요</span></div></div>
 <script>function busy(){document.getElementById('busy').style.display='flex'}
 window.addEventListener('pageshow',()=>document.getElementById('busy').style.display='none');</script>
 {% endblock %}

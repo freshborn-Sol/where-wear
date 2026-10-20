@@ -1,58 +1,73 @@
-{% extends "base.html" %}{% block bodyclass %}kiosk{% endblock %}{% block body %}
-<header class="ktop"><a href="/kiosk"><img class="klogo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"></a><span class="ksub">옷 찾기</span>
-  {% if step != 'cat' %}<a class="kback" href="/kiosk">처음으로</a>{% endif %}
-</header>
-<main class="kwrap">
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}kiosk{% endblock %}
+{% block body %}
+<div class="kshell">
+{{ ks.ktop(step != 'cat') }}
+<main class="kmain">
 {% if step == 'cat' %}
-  <h1>무엇을 찾으세요?</h1>
-  <div class="kgrid">
-    {% for c in cats %}<a class="kbtn" href="/kiosk?step=sub&cat={{c}}">{{c}}</a>{% endfor %}
-  </div>
-{% elif step == 'sub' %}
-  <h1>{{cat}} · 어떤 종류인가요?</h1>
-  <div class="kgrid ktiles">
-    {% for t in tiles %}
-      <a class="ktile" href="/kiosk?step=color&cat={{cat}}&sub={{t.sub}}">
-        <img src="{{ imgsrc(t.rep) }}" alt=""><div>{{t.sub}}</div></a>
+  {{ ks.kstep(0) }}
+  <div><h1 class="kh1">무엇을 찾으세요?</h1></div>
+  <p class="klead">종류만 고르면 옷이 있는 자리를 알려드려요</p>
+  <div class="kcats">
+    {% for c in cats if catinfo.get(c) %}{% set ci = catinfo[c] %}
+      <a class="kcat" href="/kiosk?step=sub&cat={{c}}"><div class="t"><b>{{c}}</b><small>옷 {{ci.n}}종</small></div>
+        {% if ci.rep %}<img src="{{ imgsrc(ci.rep) }}" alt="">{% endif %}</a>
     {% endfor %}
-    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><span>전체</span><div>잘 모르겠어요</div></a>
+  </div>
+  <div class="kbanner">{{ cx.icon('printer', 52) }}<div><b>찾은 위치는 종이 지도로 뽑아 갈 수 있어요</b><span>위치를 외우지 않아도 돼요 · 글자를 입력할 필요도 없어요</span></div></div>
+  <div class="knote">{{ cx.icon('help', 44) }}<div><b>찾는 옷이 사진으로만 있나요?</b><span>휴대폰으로 선반 QR을 찍으면 사진으로도 찾을 수 있어요</span></div></div>
+{% elif step == 'sub' %}
+  {{ ks.kstep(1) }}
+  <h1 class="kh1">{{cat}} · 어떤 종류인가요?</h1>
+  <div class="ktiles">
+    {% for t in tiles %}
+      <a class="ktile" href="/kiosk?step=color&cat={{cat}}&sub={{t.sub}}"><img src="{{ imgsrc(t.rep) }}" alt=""><b>{{t.sub}}</b><small>{{t.n}}종</small></a>
+    {% endfor %}
+    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><div class="big"><b>전체</b><span>모든 {{cat}}</span></div><b>잘 모르겠어요</b><small>{{ tiles|sum(attribute='n') }}종</small></a>
   </div>
 {% elif step == 'color' %}
-  <h1>{{ sub or cat }} · 어떤 색인가요?</h1>
-  <div class="kgrid color">
+  {{ ks.kstep(2) }}
+  <div><h1 class="kh1">{{ sub or cat }} · 어떤 색인가요?</h1></div>
+  <p class="klead">색을 모르면 '모든 색 보기'를 누르세요</p>
+  <div class="kcolors">
     {% for name, hex, n in kcolors %}
-      <a class="kbtn" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}&color={{name}}">
-        <i style="background:{{hex}}"></i>{{name}}</a>
+      <a class="kcolor" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}&color={{name}}"><i style="background:{{hex}}"></i><div><b>{{name}}</b><small>{{n}}개</small></div></a>
     {% endfor %}
   </div>
+  <a class="kall" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}"><b>모든 색 보기</b><span>{{ sub or cat }} {{ kcolors|sum(attribute=2) }}개</span></a>
 {% else %}
   {% set base = '/kiosk?step=result&cat=' ~ cat ~ '&sub=' ~ sub ~ '&color=' ~ color %}
-  <h1>{{color}} {{ sub or cat }} <small class="kcount">{{items|length}}개</small></h1>
+  {{ ks.kstep(2) }}
+  <h1 class="kh1">{{color}} {{ sub or cat }}<small>{{items|length}}개</small></h1>
   {% if kf.fit|length > 1 or kf.pattern|length > 1 or fit or pattern %}
   <section class="knarrow">
-    <div class="knh">더 좁히기 <span>(안 눌러도 돼요)</span>
+    <div class="knh"><b>더 좁히기</b><span>(안 눌러도 돼요)</span>
       {% if fit or pattern %}<a class="kclear" href="{{base}}">조건 지우기</a>{% endif %}</div>
     {% for key, label, cur, okey, oval in [('fit','핏',fit,'pattern',pattern), ('pattern','무늬',pattern,'fit',fit)] %}
       {% if kf[key]|length > 1 or cur %}
-      <div class="krow"><div class="kl">{{label}}</div><div class="kchips">
-        {% for v, n in kf[key] %}
-          {% set on = (v == cur) %}
+      <div class="krow"><div class="kl">{{label}}</div>
+        {% for v, n in kf[key] %}{% set on = (v == cur) %}
           <a class="kchip{{ ' on' if on }}" href="{{base}}&{{key}}={{ '' if on else v }}&{{okey}}={{oval}}">{{ '✓ ' if on }}{{v}} <small>{{n}}</small></a>
         {% endfor %}
-      </div></div>
+      </div>
       {% endif %}
     {% endfor %}
   </section>
   {% endif %}
   {% if not items %}<p class="kempty">지금은 해당하는 옷이 없어요.</p>{% endif %}
-  <div class="kgrid">
+  <div class="kresults">
     {% for it in items %}
-      <a class="kcard" href="/kiosk/item/{{it.sku}}">
-        <img src="{{ imgsrc(it) }}" alt="">
-        <div>{{it.name}}</div>
-      </a>
+      <a class="kcard" href="/kiosk/item/{{it.sku}}"><img src="{{ imgsrc(it) }}" alt=""><b>{{it.name}}</b>
+        <span class="pr">{{ "{:,}".format(it.price) }}원</span>
+        {% if it.place %}<span class="lc">{{ cx.icon('pin', 26) }}{{it.place.fixture_name}} · {{it.place.level}}</span>
+        {% else %}<span class="lc none">위치 미등록</span>{% endif %}</a>
     {% endfor %}
   </div>
 {% endif %}
 </main>
+{% if step == 'cat' %}{{ ks.kfoot('선반마다 있는 QR을 휴대폰으로 찍어도 같은 안내를 받을 수 있어요') }}
+{% elif step == 'result' %}{{ ks.kfoot('옷을 누르면 위치와 사이즈별 재고를 보여드려요') }}
+{% else %}{{ ks.kfoot('버튼만 누르면 돼요 · 1분 동안 누르지 않으면 처음 화면으로 돌아가요') }}{% endif %}
+</div>
+{% if step != 'cat' %}<script>setTimeout(()=>location.href='/kiosk', 60000);</script>{% endif %}
 {% endblock %}

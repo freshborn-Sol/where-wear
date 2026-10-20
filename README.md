@@ -42,7 +42,8 @@ macOS에서는 폴더의 `.command` 파일을 더블클릭해도 됩니다.
 | `/kiosk` | 어르신 | 큰 글씨 · 종류(사진) → 색 → 결과, 결과에서 핏·무늬로 더 좁히기 |
 | `/staff` | 직원 | 선반 QR → 옷 태그 연속 스캔으로 위치 등록 |
 | `/staff/ai` | 직원 | 옷 사진 한 장으로 상품 등록 (AI가 종류·색·무늬·핏 채움) |
-| `/staff/reports` | 직원·점장 | 신고함 — 손님 대기 / 위치 고칠 것 / 점장 7일 요약 |
+| `/staff/reports` | 직원·점장 | 신고함 — 손님 대기 / 위치 고칠 것 / 처리 기록 |
+| `/staff/summary` | 점장 | 점장 요약 — 응대 지표 · 사용률 · 순위 (최근 7일) |
 
 ## '찾는 게 없나요?' 흐름
 
@@ -82,7 +83,7 @@ photo_credits.csv 사진 출처 (Pexels 라이선스, /credits 에 표시)
 make_qr.py        선반·상품 QR 생성 → qr/  (python make_qr.py <서버주소>)
 check_ai.py       Gemini 키·모델 연결 점검
 templates/        화면 (손님 · 키오스크 · 직원)
-static/           style.css · logo/ · photos/
+static/           cx.css(고객) · ks.css(키오스크·직원) · style.css · logo/ · photos/
 ```
 
 상품 사진: [Pexels](https://www.pexels.com) (출처는 `photo_credits.csv`, 앱의 `/credits`)
