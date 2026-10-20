@@ -12,26 +12,8 @@ IMG = BASE / "static" / "img"
 random.seed(7)
 
 # ---------- 1. 매장 도면 ----------
-# 집기(선반) : id, 구역, 이름, 종류, 도면 좌표(x,y), 폭/높이
-FIXTURES = [
-    ("A-H1", "A", "A구역 1번 행거", "행거", 120, 110, 150, 40),
-    ("A-H2", "A", "A구역 2번 행거", "행거", 120, 200, 150, 40),
-    ("A-T1", "A", "A구역 매대",     "매대", 120, 290, 150, 50),
-    ("B-H1", "B", "B구역 1번 행거", "행거", 430, 110, 150, 40),
-    ("B-H2", "B", "B구역 2번 행거", "행거", 430, 200, 150, 40),
-    ("C-S1", "C", "C구역 선반",     "선반", 430, 300, 150, 50),
-    ("ENTRANCE", "E", "매장 입구(키오스크)", "입구", 300, 430, 90, 30),
-]
-# 통로 노드 : 집기 앞 지점 + 통로 교차점
-NODES = {
-    "A-H1": (300, 130), "A-H2": (300, 220), "A-T1": (300, 310),
-    "B-H1": (400, 130), "B-H2": (400, 220), "C-S1": (400, 310),
-    "N1": (350, 130), "N2": (350, 220), "N3": (350, 310), "N4": (350, 400),
-    "ENTRANCE": (300, 420),
-}
-EDGES = [("A-H1","N1"),("B-H1","N1"),("A-H2","N2"),("B-H2","N2"),
-         ("A-T1","N3"),("C-S1","N3"),("N1","N2"),("N2","N3"),("N3","N4"),
-         ("N4","ENTRANCE")]
+# 도면(구역·집기·시설·통로)은 store_map.py 한 곳에서 관리한다
+from store_map import FIXTURES, NODES, EDGES, FACILITY_KINDS, write_map
 
 # ---------- 2. 상품 카탈로그 ----------
 CATS = {
@@ -70,16 +52,9 @@ def main():
     db = sqlite3.connect(DB)
     db.executescript((BASE / "schema.sql").read_text(encoding="utf-8"))
 
-    for f in FIXTURES:
-        db.execute("INSERT INTO fixtures VALUES (?,?,?,?,?,?,?,?)", f)
-    for nid, (x, y) in NODES.items():
-        db.execute("INSERT INTO nodes VALUES (?,?,?)", (nid, x, y))
-    for a, b in EDGES:
-        db.execute("INSERT INTO edges VALUES (?,?)", (a, b))
-        db.execute("INSERT INTO edges VALUES (?,?)", (b, a))
+    write_map(db)
 
     # 상품 60개
-    shelf_ids = [f[0] for f in FIXTURES if f[0] != "ENTRANCE"]
     n = 0
     now = datetime.datetime.now()
     for cat, subs in CATS.items():
@@ -100,9 +75,9 @@ def main():
                     db.execute("INSERT INTO stock (sku,size,qty) VALUES (?,?,?)",
                                (sku, s, random.choice([0, 0, 1, 2, 3, 5])))
                 # 초기 위치: 카테고리에 맞는 집기에 배치
-                pref = {"상의": ["A-H1", "A-H2"], "하의": ["B-H1", "B-H2"],
-                        "아우터": ["B-H1", "A-H2"], "신발": ["C-S1"]}[cat]
-                fx = random.choice(pref + ["A-T1"])
+                pref = {"상의": ["A-H1", "A-H2", "A-R1", "A-T1"], "하의": ["B-H1", "B-H2", "B-T1"],
+                        "아우터": ["C-H1", "C-H2", "C-W1"], "신발": ["D-W1", "D-S1"]}[cat]
+                fx = random.choice(pref)
                 lv = random.choice(["상단", "중단", "하단"])
                 ago = random.choice([3, 12, 40, 90, 260, 1500])  # 분 단위
                 ts = (now - datetime.timedelta(minutes=ago)).isoformat(timespec="seconds")

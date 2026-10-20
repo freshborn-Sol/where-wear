@@ -174,30 +174,85 @@ def decorate(items):
     return out
 
 # ---------- 길찾기 (BFS) ----------
+_GRAPH = {}
+
+def _graph():
+    """통로 그래프(점 좌표 + 이웃)를 한 번만 읽어 둔다. 도면이 바뀌면 점 개수로 알아채고 다시 읽음"""
+    n = one("SELECT COUNT(*) n FROM nodes")["n"]
+    if _GRAPH.get("n") != n:
+        pos = {r["id"]: (r["x"], r["y"]) for r in rows("SELECT * FROM nodes")}
+        adj = {}
+        for e in rows("SELECT * FROM edges"):
+            adj.setdefault(e["a"], []).append(e["b"])
+        _GRAPH.update(n=n, pos=pos, adj=adj)
+    return _GRAPH["pos"], _GRAPH["adj"]
+
 def path_between(start, goal):
-    adj = {}
-    for e in rows("SELECT * FROM edges"):
-        adj.setdefault(e["a"], []).append(e["b"])
+    """통로를 따라가는 최단 경로. 같은 길이면 덜 꺾이는 길을 고른다 (꺾일 때마다 벌점)."""
+    import heapq
+    pos, adj = _graph()
     if start not in adj or goal not in adj: return []
-    q, seen = deque([[start]]), {start}
-    while q:
-        p = q.popleft()
-        if p[-1] == goal: return p
-        for nx in adj.get(p[-1], []):
-            if nx not in seen:
-                seen.add(nx); q.append(p + [nx])
+    TURN = 40                                   # 한 번 꺾을 때 더하는 거리 (도면 좌표)
+    def d(a, b): return abs(pos[a][0] - pos[b][0]) + abs(pos[a][1] - pos[b][1])
+    def dirn(a, b):
+        dx, dy = pos[b][0] - pos[a][0], pos[b][1] - pos[a][1]
+        return (dx > 0) - (dx < 0), (dy > 0) - (dy < 0)
+    best = {(start, None): 0}
+    prev = {}
+    pq = [(0, 0, start, None)]
+    k = 0
+    while pq:
+        c, _, u, du = heapq.heappop(pq)
+        if u == goal:
+            out, st = [u], (u, du)
+            while st in prev:
+                st = prev[st]; out.append(st[0])
+            return out[::-1]
+        if c > best.get((u, du), 1e18): continue
+        for v in adj.get(u, []):
+            dv = dirn(u, v)
+            nc = c + d(u, v) + (TURN if du is not None and dv != du else 0)
+            if nc < best.get((v, dv), 1e18):
+                best[(v, dv)] = nc; prev[(v, dv)] = (u, du); k += 1
+                heapq.heappush(pq, (nc, k, v, dv))
     return []
 
+def _simplify(pts):
+    """일직선 위의 중간 점을 빼서 꺾이는 점만 남김"""
+    out = []
+    for p in pts:
+        if len(out) >= 2:
+            (x1, y1), (x2, y2) = out[-2], out[-1]
+            if (x2 - x1) * (p[1] - y2) == (y2 - y1) * (p[0] - x2):
+                out[-1] = p; continue
+        if not out or out[-1] != p: out.append(p)
+    return out
+
 def map_data(at, target_fixture=None):
-    """도면 그리기에 필요한 값 묶음"""
-    nodes = {n["id"]: n for n in rows("SELECT * FROM nodes")}
+    """도면 그리기에 필요한 값 묶음: 구역 · 집기 · 시설 · 경로 · 도면 크기"""
+    pos, _ = _graph()
     pts = []
     if target_fixture:
-        for nid in path_between(at, target_fixture):
-            if nid in nodes: pts.append((nodes[nid]["x"], nodes[nid]["y"]))
-    return {"fixtures": rows("SELECT * FROM fixtures"), "at": at,
-            "target": target_fixture,
-            "path": " ".join(f"{x},{y}" for x, y in pts)}
+        pts = [pos[n] for n in path_between(at, target_fixture) if n in pos]
+        fx = one("SELECT * FROM fixtures WHERE id=?", (target_fixture,))
+        if pts and fx:                              # 마지막: 통로에서 집기 가장자리까지
+            lx, ly = pts[-1]
+            ex = min(max(lx, fx["x"]), fx["x"] + fx["w"]); ey = min(max(ly, fx["y"]), fx["y"] + fx["h"])
+            pts.append((ex + (6 if ex < lx else -6 if ex > lx else 0), ey + (6 if ey < ly else -6 if ey > ly else 0)))
+    try: zones = rows("SELECT * FROM zones")
+    except sqlite3.OperationalError: zones = []
+    fixtures = rows("SELECT * FROM fixtures")
+    W = max([f["x"] + f["w"] for f in fixtures] + [620]) + 20
+    H = max([f["y"] + f["h"] for f in fixtures] + [470])
+    start = pts[0] if pts else (pos.get(at) or (0, 0))   # '나' 표시: 지금 선 자리(통로)
+    return {"fixtures": fixtures, "zones": zones, "at": at, "target": target_fixture, "W": W, "H": H + 20, "start": start,
+            "path": " ".join(f"{x},{y}" for x, y in _simplify(pts))}
+
+FACILITY_KINDS = ("입구", "계산대", "피팅룸", "창고", "기둥")
+
+def shelves():
+    """옷을 둘 수 있는 집기만 (입구·계산대·피팅룸·창고·기둥 제외) — 직원 화면 선반 고르기용"""
+    return rows(f"SELECT * FROM fixtures WHERE kind NOT IN ({','.join('?' * len(FACILITY_KINDS))}) ORDER BY id", FACILITY_KINDS)
 
 # ---------- 필터: 소분류 사진 타일 + 핏·패턴 ----------
 SUB_ORDER = [x for v in V.SUBCATS.values() for x in v]
@@ -516,7 +571,7 @@ def staff():
     last = setting("last_check") or datetime.date.today().isoformat()
     days = (datetime.date.today() - datetime.date.fromisoformat(last)).days
     return render_template("staff.html",
-                           fixtures=rows("SELECT * FROM fixtures WHERE id!='ENTRANCE'"),
+                           fixtures=shelves(),
                            items=rows("SELECT sku, name, color FROM items ORDER BY sku"),
                            priority=priority_list(), check_days=days, CHECK_DAYS=CHECK_DAYS,
                            samples=rows("""SELECT b.code, b.season, i.sku, i.name, i.color FROM barcodes b JOIN items i ON i.sku=b.sku
@@ -590,7 +645,7 @@ def next_demo_sku():
     return f"EX{n+1:03d}"
 
 def staff_ai_ctx(**kw):
-    return dict(fixtures=rows("SELECT * FROM fixtures WHERE id!='ENTRANCE'"),
+    return dict(fixtures=shelves(),
                 demos=decorate(rows("SELECT * FROM items WHERE is_demo=1 ORDER BY sku")),
                 V=V, **kw)
 
@@ -696,7 +751,7 @@ def staff_reports():
     return render_template("reports.html", waiting=waiting, groups=groups, history=history,
                            busy_mode=setting("busy", "auto"), staff_count=setting("staff_count", "4"),
                            summary=manager_summary(), WAIT_MIN=WAIT_MIN,
-                           fixtures=rows("SELECT * FROM fixtures WHERE id!='ENTRANCE'"))
+                           fixtures=shelves())
 
 @app.route("/staff/summary")
 def staff_summary():

@@ -47,7 +47,7 @@ db = sqlite3.connect(BASE / "store.db"); db.row_factory = sqlite3.Row
 
 # ---------- 선반 QR ----------
 cards = []
-for r in db.execute("SELECT * FROM fixtures"):
+for r in db.execute("SELECT * FROM fixtures WHERE kind NOT IN ('계산대','피팅룸','창고','기둥')"):
     b64 = save(f"{host}/go?at={r['id']}", OUT / f"shelf_{r['id']}.png")
     hint = "키오스크 자리" if r["id"] == "ENTRANCE" else "찍으면 옷 위치를 찾을 수 있어요"
     cards.append(f'<div class="card"><img src="data:image/png;base64,{b64}">'

@@ -1,27 +1,94 @@
-{# 고객 화면용 2D 도면 + 경로 (키오스크는 _map.html 그대로) #}
-<svg class="map" viewBox="88 52 524 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매장 도면과 길 안내">
-  <rect x="96" y="60" width="508" height="414" rx="16" fill="#fff" stroke="#E3E7EE" stroke-width="2"/>
-  {% for lab, x, y in [('A구역',120,92),('B구역',430,92),('C구역',430,288)] %}
-    <text x="{{x}}" y="{{y}}" font-size="15" font-weight="700" fill="#AFB7C6">{{lab}}</text>
+{# 매장 2D 도면 + 길 안내 (고객 · 키오스크 · 종이 지도 공통)
+   도면 데이터: store_map.py → zones / fixtures / nodes / edges 표.  mono=True 이면 감열지용 흑백 #}
+{% set M = mono is defined and mono %}
+{% set INK = '#000' if M else '#1B1F2D' %}
+{% set FX_FILL = {'행거':'#E8EDF4','원형행거':'#E8EDF4','벽면':'#DCE3EC','매대':'#F3ECE2','진열대':'#EEF1F5','마네킹':'#FFFFFF'} %}
+{% set FX_LINE = {'행거':'#C3CDDA','원형행거':'#C3CDDA','벽면':'#BCC7D5','매대':'#D8C8B2','진열대':'#C9D1DC','마네킹':'#C3CDDA'} %}
+<svg class="map" viewBox="0 0 {{map.W}} {{map.H}}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매장 도면과 길 안내"
+     font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif">
+  <defs>
+    <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="{{ '#fff' if M else '#EEF0F4' }}"/><line x1="0" y1="0" x2="0" y2="10" stroke="{{ '#000' if M else '#D3D8E0' }}" stroke-width="{{ 1.5 if M else 3 }}"/></pattern>
+  </defs>
+  {# 외벽 #}
+  <rect x="20" y="20" width="{{map.W - 40}}" height="{{map.H - 40}}" rx="14" fill="#fff" stroke="{{ '#000' if M else '#C9D1DC' }}" stroke-width="{{ 4 if M else 5 }}"/>
+  {% for f in map.fixtures if f.kind == '입구' %}
+    <rect x="{{f.x}}" y="{{map.H - 26}}" width="{{f.w}}" height="12" fill="#fff"/>
+    <path d="M{{f.x}} {{map.H - 20}} v-14 M{{f.x + f.w}} {{map.H - 20}} v-14" stroke="{{ '#000' if M else '#C9D1DC' }}" stroke-width="4" stroke-linecap="round"/>
   {% endfor %}
-  {% for f in map.fixtures %}
+
+  {# 구역 바탕 + 이름 #}
+  {% for z in map.zones %}
+    <rect x="{{z.x}}" y="{{z.y}}" width="{{z.w}}" height="{{z.h}}" rx="14"
+          fill="{{ 'none' if M else z.color }}" {% if M %}stroke="#000" stroke-width="1.5" stroke-dasharray="6 6"{% endif %}/>
+  {% endfor %}
+
+  {# 집기 · 시설 #}
+  {% for f in map.fixtures if f.kind != '입구' %}
     {% set on = (f.id == map.target) %}
-    <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="8"
-          fill="{{ '#3862DA' if on else '#E8EDF4' }}" stroke="{{ '#12508F' if on else '#C6D0DD' }}" stroke-width="1.5"/>
-    {% if f.id != map.at %}<text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 5}}" text-anchor="middle" font-size="15" font-weight="{{ 700 if on else 500 }}"
-          fill="{{ '#fff' if on else '#8A94A5' }}">{{f.id}}</text>{% endif %}
+    {% set cx = f.x + f.w/2 %}{% set cy = f.y + f.h/2 %}
+    {% set fill = ('#000' if M else '#3862DA') if on else ('#fff' if M else FX_FILL.get(f.kind, '#E8EDF4')) %}
+    {% set line = ('#000' if M else '#12508F') if on else ('#000' if M else FX_LINE.get(f.kind, '#C3CDDA')) %}
+    {% set tcol = '#fff' if on else ('#000' if M else '#6E7889') %}
+    {% if f.kind == '원형행거' %}
+      <circle cx="{{cx}}" cy="{{cy}}" r="{{f.w/2}}" fill="{{fill}}" stroke="{{line}}" stroke-width="2"/>
+      <circle cx="{{cx}}" cy="{{cy}}" r="{{f.w/2 - 10}}" fill="none" stroke="{{ '#fff' if on else line }}" stroke-width="1.5" stroke-dasharray="4 4" opacity=".8"/>
+      <text x="{{cx}}" y="{{cy + 6}}" text-anchor="middle" font-size="17" font-weight="{{ 800 if on else 600 }}" fill="{{tcol}}">{{f.id}}</text>
+    {% elif f.kind == '마네킹' %}
+      <circle cx="{{cx}}" cy="{{cy}}" r="{{f.w/2}}" fill="{{fill}}" stroke="{{line}}" stroke-width="2" stroke-dasharray="{{ '' if on else '5 4' }}"/>
+      <g fill="{{ '#fff' if on else ('#000' if M else '#AFB7C6') }}"><circle cx="{{cx}}" cy="{{cy - 13}}" r="6"/><path d="M{{cx - 9}} {{cy + 14}} l3 -19 h12 l3 19 z"/></g>
+      <text x="{{cx}}" y="{{f.y + f.h + 18}}" text-anchor="middle" font-size="15" font-weight="{{ 800 if on else 600 }}" fill="{{ ('#000' if M else '#3158D0') if on else tcol }}">{{f.id}}</text>
+    {% elif f.kind == '기둥' %}
+      <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="3" fill="{{ '#000' if M else '#AFB7C6' }}"/>
+    {% elif f.kind == '창고' %}
+      <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="10" fill="url(#hatch)" stroke="{{ '#000' if M else '#C9D1DC' }}" stroke-width="2"/>
+      <rect x="{{cx - 78}}" y="{{cy - 17}}" width="156" height="34" rx="17" fill="#fff"/>
+      <text x="{{cx}}" y="{{cy + 6}}" text-anchor="middle" font-size="17" font-weight="700" fill="{{ '#000' if M else '#8A94A5' }}">창고 · 직원 전용</text>
+    {% elif f.kind == '피팅룸' %}
+      <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="10" fill="{{ '#fff' if M else '#F7F9FC' }}" stroke="{{ '#000' if M else '#C9D1DC' }}" stroke-width="2"/>
+      {% for i in range(1, 5) %}<line x1="{{f.x + f.w*i/5}}" y1="{{f.y}}" x2="{{f.x + f.w*i/5}}" y2="{{f.y + f.h*0.62}}" stroke="{{ '#000' if M else '#D7DCE6' }}" stroke-width="2"/>{% endfor %}
+      <text x="{{cx}}" y="{{f.y + f.h - 14}}" text-anchor="middle" font-size="18" font-weight="700" fill="{{ '#000' if M else '#6E7889' }}">피팅룸</text>
+    {% elif f.kind == '계산대' %}
+      <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="12" fill="{{ '#fff' if M else '#EAF6EF' }}" stroke="{{ '#000' if M else '#A9D3BA' }}" stroke-width="2"/>
+      <rect x="{{f.x + 18}}" y="{{f.y + 20}}" width="{{f.w - 36}}" height="22" rx="6" fill="{{ '#000' if M else '#A9D3BA' }}"/>
+      <text x="{{cx}}" y="{{f.y + f.h - 22}}" text-anchor="middle" font-size="18" font-weight="700" fill="{{ '#000' if M else '#1D7A46' }}">계산대</text>
+    {% else %}
+      <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="{{ 4 if f.kind == '벽면' else 8 }}" fill="{{fill}}" stroke="{{line}}" stroke-width="2"/>
+      {% if f.kind == '행거' %}<line x1="{{f.x + 10}}" y1="{{cy}}" x2="{{f.x + f.w - 10}}" y2="{{cy}}" stroke="{{ '#fff' if on else line }}" stroke-width="2" opacity=".55"/>{% endif %}
+      {% if f.h > f.w * 2 %}
+        <text transform="translate({{cx + 6}},{{cy}}) rotate(-90)" text-anchor="middle" font-size="16" font-weight="{{ 800 if on else 600 }}" fill="{{tcol}}">{{f.id}}</text>
+      {% else %}
+        <text x="{{cx}}" y="{{cy + 6}}" text-anchor="middle" font-size="17" font-weight="{{ 800 if on else 600 }}" fill="{{tcol}}"
+              {% if f.kind == '행거' %}paint-order="stroke" stroke="{{fill}}" stroke-width="6"{% endif %}>{{f.id}}</text>
+      {% endif %}
+    {% endif %}
   {% endfor %}
+
+  {# 구역 이름표 (집기 위에) #}
+  {% for z in map.zones %}
+    <g transform="translate({{ z.lx if z.lx is not none else z.x + 10 }},{{ z.ly if z.ly is not none else z.y + 10 }})">
+      {% if not M %}<rect width="{{ 26 + z.name|length * 15 }}" height="28" rx="14" fill="#fff" opacity=".92"/>{% endif %}
+      <text x="12" y="20" font-size="16" font-weight="800" fill="{{ '#000' if M else '#485366' }}"><tspan fill="{{ '#000' if M else '#3862DA' }}">{{z.id}}</tspan> {{z.name}}</text>
+    </g>
+  {% endfor %}
+
+  {# 길 안내 #}
   {% if map.path %}
-    <polyline points="{{map.path}}" fill="none" stroke="#3862DA" stroke-width="5" stroke-dasharray="10 9"
+    <polyline points="{{map.path}}" fill="none" stroke="#fff" stroke-width="{{ 13 if M else 11 }}" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+    <polyline points="{{map.path}}" fill="none" stroke="{{ '#000' if M else '#3862DA' }}" stroke-width="{{ 7 if M else 6 }}" stroke-dasharray="{{ '14 9' if M else '12 10' }}"
               stroke-linecap="round" stroke-linejoin="round"/>
   {% endif %}
-  {% for f in map.fixtures if f.id == map.target %}
-    <g transform="translate({{f.x + f.w/2 - 18}},{{f.y - 42}}) scale(1.5)">
+  {% for f in map.fixtures if f.id == map.target and not M %}
+    <g transform="translate({{f.x + f.w/2 - 21}},{{ f.y - 50 if f.y > 70 else f.y + f.h - 6 }}) scale(1.75)">
       <path d="M12 22s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" fill="#3862DA" stroke="#fff" stroke-width="1.4"/>
       <circle cx="12" cy="10.5" r="2.6" fill="#fff"/></g>
   {% endfor %}
-  {% for f in map.fixtures if f.id == map.at %}
-    <circle cx="{{f.x + f.w/2}}" cy="{{f.y + f.h/2}}" r="19" fill="#E8590C" stroke="#fff" stroke-width="4"/>
-    <text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 6}}" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">나</text>
+  {% set sx, sy = map.start %}
+  {% if sx or sy %}
+    <circle cx="{{sx}}" cy="{{sy}}" r="21" fill="{{ '#000' if M else '#E8590C' }}" stroke="#fff" stroke-width="5"/>
+    <text x="{{sx}}" y="{{sy + 7}}" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">나</text>
+  {% endif %}
+  {% for f in map.fixtures if f.kind == '입구' %}
+    <text x="{{f.x + f.w/2}}" y="{{map.H - 4}}" text-anchor="middle" font-size="14" font-weight="700" fill="{{ '#000' if M else '#8A94A5' }}">입구</text>
   {% endfor %}
 </svg>

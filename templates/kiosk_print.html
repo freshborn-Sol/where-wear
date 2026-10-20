@@ -23,17 +23,8 @@ svg{width:100%;height:auto}svg text{font-family:inherit}
 <div class="c loc">{{it.place.zone}}구역 · {{it.place.fixture_id}}</div>
 <div class="c lv">{{it.place.fixture_name}} · {{it.place.level}}</div>
 {% else %}<div class="c lv">위치 미등록 · 직원에게 문의</div>{% endif %}
-<svg viewBox="0 0 620 470" xmlns="http://www.w3.org/2000/svg">
-  <rect x="8" y="8" width="604" height="454" rx="10" fill="#fff" stroke="#000" stroke-width="3"/>
-  {% for z, lab, x, y in [('A','A구역',120,70),('B','B구역',430,70),('C','C구역',430,265)] %}<text x="{{x}}" y="{{y}}" font-size="26" font-weight="700">{{lab}}</text>{% endfor %}
-  {% for f in map.fixtures %}{% set on = (f.id == map.target) %}
-    <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="5" fill="{{ '#000' if on else '#fff' }}" stroke="#000" stroke-width="2"/>
-    <text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 8}}" font-size="22" font-weight="700" text-anchor="middle" fill="{{ '#fff' if on else '#000' }}">{{f.id}}</text>
-  {% endfor %}
-  {% if map.path %}<polyline points="{{map.path}}" fill="none" stroke="#000" stroke-width="7" stroke-dasharray="14 9" stroke-linecap="round"/>{% endif %}
-  {% for f in map.fixtures if f.id == map.at %}<circle cx="{{f.x + f.w/2}}" cy="{{f.y + f.h/2}}" r="16" fill="#000"/><text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 8}}" font-size="20" font-weight="900" text-anchor="middle" fill="#fff">나</text>{% endfor %}
-</svg>
-<div class="c small">● 지금 위치(키오스크) → 검은 칸이 옷이 있는 선반</div>
+{% set mono = True %}{% include "_cxmap.html" %}
+<div class="c small">● 나 = 지금 위치(입구 키오스크) · 검은 칸 = 옷이 있는 집기</div>
 <div class="hr"></div>
 <div class="c small">사이즈별 재고 (매장/창고)</div>
 <div class="sz">{% for s in it.sizes %}<span>{{s.size}} {{s.qty}}/{{s.wh}}</span>{% endfor %}</div>

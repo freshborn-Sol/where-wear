@@ -1,6 +1,7 @@
 CREATE TABLE fixtures (          -- 집기(선반). QR이 붙는 고정 지점
   id TEXT PRIMARY KEY, zone TEXT, name TEXT, kind TEXT,
   x INT, y INT, w INT, h INT);
+CREATE TABLE zones (id TEXT PRIMARY KEY, name TEXT, x INT, y INT, w INT, h INT, color TEXT, lx INT, ly INT);  -- 매장 구역 (도면 바탕)
 CREATE TABLE nodes  (id TEXT PRIMARY KEY, x INT, y INT);   -- 길찾기용 점
 CREATE TABLE edges  (a TEXT, b TEXT);                      -- 점과 점 사이 길
 CREATE TABLE items  (                                      -- 상품 카탈로그(SKU)

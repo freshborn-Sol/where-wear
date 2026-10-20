@@ -11,7 +11,8 @@
 """
 import csv, sqlite3, datetime
 from pathlib import Path
-from seed import COLORS, FIXTURES, NODES, EDGES, make_image
+from seed import COLORS, make_image
+from store_map import write_map
 
 BASE = Path(__file__).parent
 DB = BASE / "store.db"
@@ -34,11 +35,7 @@ def main():
     for col, typ in [("pattern", "TEXT"), ("ai_json", "TEXT"), ("is_demo", "INTEGER DEFAULT 0")]:
         if col not in {r[1] for r in db.execute("PRAGMA table_info(items)")}:
             db.execute(f"ALTER TABLE items ADD COLUMN {col} {typ}")
-    for f in FIXTURES:  db.execute("INSERT INTO fixtures VALUES (?,?,?,?,?,?,?,?)", f)
-    for nid, (x, y) in NODES.items(): db.execute("INSERT INTO nodes VALUES (?,?,?)", (nid, x, y))
-    for a, b in EDGES:
-        db.execute("INSERT INTO edges VALUES (?,?)", (a, b))
-        db.execute("INSERT INTO edges VALUES (?,?)", (b, a))
+    write_map(db)                       # 매장 도면 (store_map.py)
 
     now = datetime.datetime.now()
     warn = []
