@@ -849,15 +849,6 @@ def manager_summary(days=7):
     zone_n = Counter()
     for f in rows("SELECT id, zone FROM fixtures"):
         if heat.get(f["id"]): zone_n[f["zone"]] += heat[f["id"]]
-    # 하루씩: 손님이 혼자 찾음(found) vs '없어요'(none)
-    WD = "월화수목금토일"
-    daily = []
-    for i in range(days - 1, -1, -1):
-        d0 = (t - datetime.timedelta(days=i)).date()
-        a_, b_ = d0.isoformat(), (d0 + datetime.timedelta(days=1)).isoformat()
-        c = {r["kind"]: r["n"] for r in rows("""SELECT kind, COUNT(*) n FROM reports WHERE kind IN ('found','none')
-                                                AND created_at>=? AND created_at<? GROUP BY kind""", (a_, b_))}
-        daily.append({"label": "오늘" if i == 0 else WD[d0.weekday()], "found": c.get("found", 0), "none": c.get("none", 0)})
     open_fix = one("SELECT COUNT(DISTINCT fixture_id) n FROM reports WHERE kind='none' AND done=0 AND fixture_id IS NOT NULL")["n"]
     waiting = one("SELECT COUNT(*) n FROM reports WHERE wait_state IN ('waiting','going')")["n"]
     # 이번 주 할 일 (중요한 것부터 3개)
@@ -895,8 +886,7 @@ def manager_summary(days=7):
     deltas = {k: delta(k, up) for k, up in [("found_rate", True), ("serve_min", False), ("fix_min", False),
                                             ("missed", False), ("calls", False), ("nones", False)]}
     usage = dict(cur, calls=cur["calls"])
-    return {"cur": cur, "last": last, "deltas": deltas, "grade": grade, "acts": acts[:3], "daily": daily,
-            "daily_max": max([d["found"] + d["none"] for d in daily] + [1]), "open_fix": open_fix, "waiting": waiting,
+    return {"cur": cur, "last": last, "deltas": deltas, "grade": grade, "acts": acts[:3], "open_fix": open_fix, "waiting": waiting,
             "heat": heat, "heat_max": max(heat.values(), default=0), "zone_n": zone_n.most_common(),
             "usage": usage, "top_liked": top_liked, "top_fx": top_fx, "top_items": top_items,
             "serve_min": cur["serve_min"], "fix_min": cur["fix_min"], "missed": cur["missed"], "found": cur["found"]}

@@ -30,14 +30,6 @@
 .kpi small{display:block;font-size:12.5px;color:var(--g700);font-weight:600}
 .kpi .v{display:flex;align-items:baseline;gap:3px;margin:4px 0 0}.kpi .v b{font-size:26px;font-weight:900}.kpi .v span{font-size:13px;color:var(--g500);font-weight:700}
 .kpi .hint{display:block;font-size:11px;color:var(--g500);margin-top:2px}
-/* ④ 요일별 */
-.bars{display:flex;align-items:flex-end;gap:8px;height:140px;padding:0 2px}
-.bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
-.bar .stk{width:100%;max-width:30px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:7px;overflow:hidden;background:var(--g100)}
-.bar .f{background:#3BAA6B}.bar .x{background:#E5484D}.bar small{font-size:11.5px;color:var(--g700);font-weight:700}.bar.today small{color:var(--navy)}
-.bar .pc{font-size:10.5px;font-weight:800;color:var(--ok)}
-.leg{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--g700);margin-top:10px}.leg span{display:flex;align-items:center;gap:5px}
-.leg i{width:11px;height:11px;border-radius:3px;display:inline-block}
 /* ⑤ 지도 */
 .hmap svg{display:block;width:100%;height:auto}
 .hleg{display:flex;gap:12px;justify-content:center;padding-top:8px;font-size:12px;color:var(--g700)}
@@ -101,21 +93,6 @@
       {{ dl('calls') }}<span class="hint">줄면 손님이 혼자 잘 찾는다는 뜻</span></div>
     <div class="kpi"><small>놓친 호출 (10분 넘김)</small><div class="v"><b style="color:{{ 'var(--red)' if c.missed else 'inherit' }}">{{ c.missed }}</b><span>건</span></div>
       {{ dl('missed') }}<span class="hint">0건이 목표</span></div>
-  </div>
-
-  {# ④ 요일별 #}
-  <div class="h3"><b>요일별로 보기</b><small>혼자 찾음 vs '없어요'</small></div>
-  <div class="card">
-    <div class="bars">
-      {% for d in summary.daily %}{% set tot = d.found + d.none %}
-      <div class="bar {{ 'today' if loop.last }}">
-        {% if tot %}<span class="pc">{{ (d.found * 100 / tot)|round|int }}%</span>{% endif %}
-        <div class="stk" style="height:{{ (tot * 82 / summary.daily_max)|round(1) }}%">
-          <div class="x" style="flex:{{d.none}}"></div><div class="f" style="flex:{{d.found}}"></div></div>
-        <small>{{d.label}}</small></div>
-      {% endfor %}
-    </div>
-    <div class="leg"><span><i style="background:#3BAA6B"></i>혼자 찾음</span><span><i style="background:#E5484D"></i>'없어요'</span><span>위 숫자 = 혼자 찾은 비율</span></div>
   </div>
 
   {# ⑤ 자주 못 찾는 자리 #}
