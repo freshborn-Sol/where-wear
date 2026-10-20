@@ -248,6 +248,45 @@ def map_data(at, target_fixture=None):
     return {"fixtures": fixtures, "zones": zones, "at": at, "target": target_fixture, "W": W, "H": H + 20, "start": start,
             "path": " ".join(f"{x},{y}" for x, y in _simplify(pts))}
 
+def _plen(path):
+    """경로 길이 (통로 좌표 기준)"""
+    pos, _ = _graph()
+    return sum(abs(pos[a][0] - pos[b][0]) + abs(pos[a][1] - pos[b][1]) for a, b in zip(path, path[1:]))
+
+def fix_route(start, stops):
+    """직원 동선: start 에서 출발해 고칠 집기를 모두 들르는 가장 짧은 순서 (7곳 이하는 전부 비교, 넘으면 가까운 곳부터)"""
+    from itertools import permutations
+    stops = [s for s in dict.fromkeys(stops) if s and s != start]
+    if not stops: return [], []
+    pts = [start] + stops
+    cost, seg = {}, {}
+    for a_ in pts:
+        for b_ in pts:
+            if a_ != b_:
+                pth = path_between(a_, b_); seg[a_, b_] = pth
+                cost[a_, b_] = _plen(pth) if pth else 1e9
+    if len(stops) <= 7:
+        order = min(permutations(stops), key=lambda o: sum(cost[x, y] for x, y in zip((start,) + o, o)))
+    else:
+        order, cur, left = [], start, set(stops)
+        while left:
+            nxt = min(left, key=lambda z: cost[cur, z]); order.append(nxt); left.discard(nxt); cur = nxt
+    nodes = []
+    for x, y in zip([start] + list(order), order):
+        nodes += seg[x, y][1:] if nodes else seg[x, y]
+    return list(order), nodes
+
+def fix_map(start, groups):
+    """신고함 위 '고칠 곳 돌기' 지도: 고칠 집기에 순서 번호 + 한 번에 도는 길"""
+    fxs = [k for k in groups if k and k != "위치 없음"]
+    order, nodes = fix_route(start, fxs)
+    pos, _ = _graph()
+    m = map_data(start)
+    pts = [pos[n] for n in nodes if n in pos]
+    m.update(path=" ".join(f"{x},{y}" for x, y in _simplify(pts)), start=(pts[0] if pts else m["start"]),
+             stops={fx: {"no": i + 1, "n": len(groups.get(fx, []))} for i, fx in enumerate(order)})
+    return m, order, round(_plen(nodes) / 50) if nodes else 0     # 도면 50 ≈ 1m (대략)
+
 FACILITY_KINDS = ("입구", "계산대", "피팅룸", "창고", "기둥")
 
 def shelves():
@@ -748,7 +787,13 @@ def staff_reports():
     # ③ 최근 처리 기록
     history = rows("""SELECT r.*, i.name FROM reports r LEFT JOIN items i ON i.sku=r.sku
                       WHERE r.done=1 AND r.resolution IS NOT NULL ORDER BY r.resolved_at DESC LIMIT 8""")
+    start = request.args.get("from") or "COUNTER"
+    if not one("SELECT 1 x FROM fixtures WHERE id=?", (start,)): start = "COUNTER"
+    fmap, order, meters = fix_map(start, groups)
+    groups = {k: groups[k] for k in order + [k for k in groups if k not in order]}   # 도는 순서대로
     return render_template("reports.html", waiting=waiting, groups=groups, history=history,
+                           map=fmap, route=order, meters=meters, start=start,
+                           starts=[("COUNTER", "계산대"), ("ENTRANCE", "입구")] + [(f["id"], f["id"]) for f in shelves()],
                            busy_mode=setting("busy", "auto"), staff_count=setting("staff_count", "4"),
                            summary=manager_summary(), WAIT_MIN=WAIT_MIN,
                            fixtures=shelves())
@@ -848,6 +893,10 @@ def demo_live():
         db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,device) VALUES (?,?,'none',?,?)",
                      (DEMO_SKU, fx, (now() - datetime.timedelta(minutes=mins)).isoformat(timespec="seconds"), f"demo-{i}"))
     db().execute("UPDATE placements SET active=0 WHERE sku=? AND fixture_id=?", (DEMO_SKU, fx))
+    for j, ofx in enumerate(["B-T1", "D-S2", "C-H1"]):      # 다른 선반에도 1건씩 → 신고함 '한 번에 도는 길'
+        o = one("SELECT sku FROM placements WHERE fixture_id=? AND active=1 ORDER BY sku LIMIT 1", (ofx,))
+        if o: db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,device) VALUES (?,?,'none',?,?)",
+                           (o["sku"], ofx, (now() - datetime.timedelta(minutes=6 + j * 4)).isoformat(timespec="seconds"), f"demo-f{j}"))
     db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,detail,size,device,wait_state,wait_at)
                     VALUES (?,'ENTRANCE','size',?,'260 창고에서 가져다주세요 (키오스크)','260','demo-k','waiting',?)""",
                  (DEMO_WH_SKU, ts(), ts()))
@@ -858,7 +907,7 @@ def demo():
     act, msg = request.form.get("act"), None
     if act == "clear":   demo_clear(); msg = "시연 기록을 지웠어요"
     elif act == "hist":  demo_clear(); demo_history(); msg = "지난 7일 기록을 채웠어요 — 점장 요약을 열어 보세요"
-    elif act == "live":  demo_live(); msg = "손님 신고 2건 · 창고 사이즈 요청 1건을 만들었어요 — 신고함을 열어 보세요"
+    elif act == "live":  demo_live(); msg = "손님 신고 5건(선반 4곳) · 창고 사이즈 요청 1건을 만들었어요 — 신고함을 열어 보세요"
     elif act == "all":   demo_clear(); demo_history(); demo_live(); msg = "발표 준비 끝! 아래 순서대로 열어 보세요"
     it = one("SELECT * FROM items WHERE sku=?", (DEMO_SKU,))
     p = one("SELECT fixture_id FROM placements WHERE sku=? ORDER BY active DESC, id DESC LIMIT 1", (DEMO_SKU,))

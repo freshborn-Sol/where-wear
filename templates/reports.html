@@ -1,5 +1,13 @@
 {% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
-{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block styles %}{{ ks.styles() }}<style>
+.froute{background:#fff;border:1px solid var(--g200);border-radius:16px;padding:12px;margin:6px 0 12px;display:flex;flex-direction:column;gap:8px}
+.froute .frow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}.froute .frow b{display:flex;align-items:center;gap:4px}
+.froute select{font:inherit;font-size:13px;padding:5px 8px;border-radius:8px;border:1px solid var(--g300);background:#fff;margin-left:4px}
+.fmap svg{display:block;width:100%;height:auto}.froute small{color:var(--g700);font-size:12px}
+.forder{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:13px;font-weight:700}
+.forder span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;background:#FDE2E1;color:#B4232A}.forder span.fst{background:var(--g100);color:var(--g700)}
+.forder em,.fno{font-style:normal;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:9px;background:#E5484D;color:#fff;font-size:11px}
+.forder i{font-style:normal;color:var(--g500)}.fno{margin-right:6px;vertical-align:middle}</style>{% endblock %}{% block bodyclass %}staff{% endblock %}
 {% block body %}
 <div class="sshell">
 {{ ks.sbar('신고함', back='/staff', live=True) }}
@@ -41,9 +49,18 @@
   <div class="sh2" id="fix"><span class="dot y"></span>위치 고칠 것</div>
   <p class="ssub">선반에 한 번 가서 한꺼번에 고쳐요</p>
   {% if not groups %}<div class="empty">고칠 위치가 없어요.</div>{% endif %}
+  {% if route %}
+  <div class="froute">
+    <form method="get" class="frow"><b>{{ cx.icon('run', 16) }}한 번에 도는 길</b>
+      <label>출발 <select name="from" onchange="this.form.submit()">{% for k, lab in starts %}<option value="{{k}}" {{'selected' if k==start}}>{{lab}}</option>{% endfor %}</select></label></form>
+    <div class="fmap">{% include "_cxmap.html" %}</div>
+    <div class="forder"><span class="fst">{{ dict(starts).get(start, start) }}</span>{% for fx in route %}<i>→</i><span><em>{{loop.index}}</em>{{fx}}</span>{% endfor %}</div>
+    <small>{{route|length}}곳 · 약 {{meters}}m · 가장 적게 걷는 순서예요 (아래 목록도 이 순서)</small>
+  </div>
+  {% endif %}
   {% for fx, items in groups.items() %}
   <div class="fgroup">
-    <div class="fhead"><b>{{ fx }}</b>{{ items[0].fixture_name or '' }}<span class="chip a">{{ items|length }}건</span></div>
+    <div class="fhead">{% if fx in route %}<em class="fno">{{ route.index(fx) + 1 }}</em>{% endif %}<b>{{ fx }}</b>{{ items[0].fixture_name or '' }}<span class="chip a">{{ items|length }}건</span></div>
     {% for x in items %}
     <div class="fitem">
       <img src="{{ url_for('static', filename=x.image) if x.image else '' }}" alt="">

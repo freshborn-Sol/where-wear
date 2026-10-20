@@ -4,6 +4,7 @@
 {% set INK = '#000' if M else '#1B1F2D' %}
 {% set FX_FILL = {'행거':'#E8EDF4','원형행거':'#E8EDF4','벽면':'#DCE3EC','매대':'#F3ECE2','진열대':'#EEF1F5','마네킹':'#FFFFFF'} %}
 {% set HEAT = map.heat if map.heat is defined else none %}{# 점장 요약: 집기별 '없어요' 신고 수 → 색 #}
+{% set STOPS = map.stops if map.stops is defined else none %}{# 직원 신고함: 고칠 집기 → 순서 번호 #}
 {% set FX_LINE = {'행거':'#C3CDDA','원형행거':'#C3CDDA','벽면':'#BCC7D5','매대':'#D8C8B2','진열대':'#C9D1DC','마네킹':'#C3CDDA'} %}
 <svg class="map" viewBox="0 0 {{map.W}} {{map.H}}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매장 도면과 길 안내"
      font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif">
@@ -31,6 +32,9 @@
     {% set fill = ('#000' if M else '#3862DA') if on else ('#fff' if M else FX_FILL.get(f.kind, '#E8EDF4')) %}
     {% set line = ('#000' if M else '#12508F') if on else ('#000' if M else FX_LINE.get(f.kind, '#C3CDDA')) %}
     {% set tcol = '#fff' if on else ('#000' if M else '#6E7889') %}
+    {% if STOPS is not none and STOPS.get(f.id) %}
+      {% set fill = '#FDE2E1' %}{% set line = '#E5484D' %}{% set tcol = '#B4232A' %}
+    {% endif %}
     {% if HEAT is not none and f.kind not in ('기둥','창고','피팅룸','계산대') %}
       {% set hn = HEAT.get(f.id, 0) %}{% set hr = hn / (map.heat_max or 1) %}
       {% set fill = '#FFFFFF' if not hn else ('#FDE7C2' if hr < 0.34 else ('#F9A66C' if hr < 0.67 else '#E5484D')) %}
@@ -89,6 +93,10 @@
     <polyline points="{{map.path}}" fill="none" stroke="{{ '#000' if M else '#3862DA' }}" stroke-width="{{ 7 if M else 6 }}" stroke-dasharray="{{ '14 9' if M else '12 10' }}"
               stroke-linecap="round" stroke-linejoin="round"/>
   {% endif %}
+  {% if STOPS is not none %}{% for f in map.fixtures if STOPS.get(f.id) %}
+    <g transform="translate({{f.x + 2}},{{f.y + 2}})"><circle r="17" fill="#E5484D" stroke="#fff" stroke-width="4"/>
+      <text y="7" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">{{STOPS[f.id].no}}</text></g>
+  {% endfor %}{% endif %}
   {% for f in map.fixtures if f.id == map.target and not M %}
     <g transform="translate({{f.x + f.w/2 - 21}},{{ f.y - 50 if f.y > 70 else f.y + f.h - 6 }}) scale(1.75)">
       <path d="M12 22s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" fill="#3862DA" stroke="#fff" stroke-width="1.4"/>
