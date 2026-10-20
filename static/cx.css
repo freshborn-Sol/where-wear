@@ -303,3 +303,20 @@ details[open] .row .v .ic{transform:rotate(90deg)}
 .lempty .le-ic{width:64px;height:64px;border-radius:50%;background:var(--red50);color:var(--red);display:grid;place-items:center;margin-bottom:4px}
 .lempty b{font-size:17px}.lempty small{font-size:13.5px;color:var(--g500);line-height:1.6;font-weight:500}
 .lempty .btn{margin-top:10px;min-width:180px}
+
+/* ---------- 20·30대 QR 보완: 최근·인기 검색, 가까운 순, 딱 맞는/비슷한 옷 ---------- */
+.qchips{display:flex;flex-direction:column;gap:8px}
+.qh{display:flex;align-items:center;justify-content:space-between}.qh b{font-size:13px;color:var(--g700)}
+.qh button{border:0;background:none;font-size:12px;color:var(--g500);padding:4px;font-family:inherit}
+.qrow{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-right:-20px;padding-right:20px}.qrow::-webkit-scrollbar{display:none}
+.qc{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:18px;background:var(--g100);color:var(--ink)!important;font-size:13.5px;font-weight:600;white-space:nowrap}
+.qc.hot{background:#fff;border:1px solid var(--g200)}.qc em{font-style:normal;font-weight:900;color:var(--blue);font-size:12.5px}
+.card .wk{display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:var(--ok)}
+.note .sort{margin-left:auto;display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:12px;background:var(--ok50);color:var(--ok);font-size:12px;font-weight:700}
+.gh{display:flex;align-items:baseline;gap:8px;margin:2px 2px -2px}.gh b{font-size:15px}.gh small{font-size:12px;color:var(--g500)}
+.gh.more{margin-top:10px;padding-top:14px;border-top:8px solid var(--g50)}
+.moremore summary{list-style:none;cursor:pointer;margin:6px 0 10px;padding:12px;border-radius:12px;background:var(--g50);text-align:center;font-size:14px;font-weight:700;color:var(--g700)}
+.moremore summary::-webkit-details-marker{display:none}
+.empty{display:flex;flex-direction:column;gap:8px}.empty b{font-size:15px}.empty span{font-size:13px;color:var(--g500)}
+.walkline{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;font-weight:700;color:#fff;opacity:.95}
+.walkline i{font-style:normal;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.2)}

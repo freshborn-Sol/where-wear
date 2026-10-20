@@ -2,7 +2,7 @@
 {% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}kiosk{% endblock %}
 {% block body %}
 <div class="kshell">
-{{ ks.ktop(step != 'cat') }}
+{{ ks.ktop(False) }}
 <main class="kmain">
 {% if step == 'cat' %}
   {{ ks.kstep(0) }}
@@ -28,17 +28,18 @@
 {% elif step == 'color' %}
   {{ ks.kstep(2) }}
   <div><h1 class="kh1">{{ sub or cat }} · 어떤 색인가요?</h1></div>
-  <p class="klead">색을 모르면 '모든 색 보기'를 누르세요</p>
+  <p class="klead">색이 기억나지 않으면 맨 위 파란 버튼을 누르세요</p>
+  <a class="kall top" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}">{{ cx.icon('palette', 56) }}<div><b>색 상관없이 모두 보기</b><span>{{ sub or cat }} {{ kcolors|sum(attribute=2) }}개</span></div></a>
   <div class="kcolors">
     {% for name, hex, n in kcolors %}
       <a class="kcolor" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}&color={{name}}"><i style="background:{{hex}}"></i><div><b>{{name}}</b><small>{{n}}개</small></div></a>
     {% endfor %}
   </div>
-  <a class="kall" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}"><b>모든 색 보기</b><span>{{ sub or cat }} {{ kcolors|sum(attribute=2) }}개</span></a>
 {% else %}
   {% set base = '/kiosk?step=result&cat=' ~ cat ~ '&sub=' ~ sub ~ '&color=' ~ color %}
   {{ ks.kstep(2) }}
-  <h1 class="kh1">{{color}} {{ sub or cat }}<small>{{items|length}}개</small></h1>
+  <h1 class="kh1">{{ color or '모든 색' }} {{ sub or cat }}<small>{{items|length}}개</small></h1>
+  <p class="klead">옷 사진을 누르면 있는 곳을 크게 보여드려요</p>
   {% if kf.fit|length > 1 or kf.pattern|length > 1 or fit or pattern %}
   <section class="knarrow">
     <div class="knh"><b>더 좁히기</b><span>(안 눌러도 돼요)</span>
@@ -59,15 +60,17 @@
     {% for it in items %}
       <a class="kcard" href="/kiosk/item/{{it.sku}}"><img src="{{ imgsrc(it) }}" alt=""><b>{{it.name}}</b>
         <span class="pr">{{ "{:,}".format(it.price) }}원</span>
-        {% if it.place %}<span class="lc">{{ cx.icon('pin', 26) }}{{it.place.fixture_name}} · {{it.place.level}}</span>
-        {% else %}<span class="lc none">위치 미등록</span>{% endif %}</a>
+        {% if it.place %}<span class="lc">{{ cx.icon('pin', 30) }}{{it.place.zone}}구역 · {{ it.place.fixture_name.split(' ', 1)[1] if ' ' in it.place.fixture_name else it.place.fixture_name }}</span>
+        {% else %}<span class="lc none">위치 미등록</span>{% endif %}
+        <span class="go">위치 보기 {{ cx.icon('chev', 30) }}</span></a>
     {% endfor %}
   </div>
 {% endif %}
 </main>
 {% if step == 'cat' %}{{ ks.kfoot('선반마다 있는 QR을 휴대폰으로 찍어도 같은 안내를 받을 수 있어요') }}
-{% elif step == 'result' %}{{ ks.kfoot('옷을 누르면 위치와 사이즈별 재고를 보여드려요') }}
-{% else %}{{ ks.kfoot('버튼만 누르면 돼요 · 1분 동안 누르지 않으면 처음 화면으로 돌아가요') }}{% endif %}
+{% elif step == 'sub' %}{{ ks.knav('/kiosk', '종류 다시 고르기') }}
+{% elif step == 'color' %}{{ ks.knav('/kiosk?step=sub&cat=' ~ cat, '세부 종류 다시') }}
+{% else %}{{ ks.knav('/kiosk?step=color&cat=' ~ cat ~ '&sub=' ~ sub, '색 다시 고르기') }}{% endif %}
 </div>
-{% if step != 'cat' %}<script>setTimeout(()=>location.href='/kiosk', 60000);</script>{% endif %}
+{% if step != 'cat' %}{{ ks.kidle(90) }}{% endif %}
 {% endblock %}

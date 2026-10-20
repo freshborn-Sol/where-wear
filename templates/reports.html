@@ -19,6 +19,8 @@
     </form>
   </div>
   {% if busy %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>손님 화면은 직원 호출 대신 재고·비슷한 옷을 먼저 보여 주고 '계산대에서 도와드려요'로 안내해요</span></div>{% endif %}
+  <div class="newreq" id="newreq" hidden>{{ cx.icon('bell', 20) }}<b>새 손님 요청이 들어왔어요</b><span>아래 빨간 카드부터 확인하세요</span></div>
+  <button type="button" class="sndbtn" id="sndbtn" onclick="toggleSound()">{{ cx.icon('bell', 15) }}<span>새 요청 알림 소리 켜기</span></button>
   <div class="rsum">
     <a class="urgent" href="#wait">손님 대기 <b>{{ waiting|length }}</b></a>
     <a class="fix" href="#fix">위치 고칠 것 <b>{{ groups.values()|map('length')|sum }}</b><small>· 선반 {{ groups|length }}곳</small></a>
@@ -28,15 +30,15 @@
   <div class="sh2" id="wait"><span class="dot"></span>손님이 기다리는 중<small>{{WAIT_MIN}}분 지나면 자동 취소</small></div>
   {% if not waiting %}<div class="empty">기다리는 손님이 없어요.</div>{% endif %}
   {% for w in waiting %}
-  <div class="wcard {{ 'late' if w.mins >= 5 }}">
+  <div class="wcard {{ 'late' if w.mins >= 5 }}" data-id="{{w.id}}">
     <img src="{{ url_for('static', filename=w.image) if w.image else '' }}" alt="">
     <div class="wbody">
-      <div class="wtop"><b class="{{ 'size' if w.kind == 'size' }}">{{ w.label }}</b><span class="timer">{{ cx.icon('clock', 12) }}{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</span></div>
+      <div class="wtop"><b class="{{ 'size' if w.kind == 'size' }}">{{ w.label }}</b><span class="timer" data-at="{{w.wait_at}}">{{ cx.icon('clock', 12) }}<em>{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</em></span></div>
       <div class="wloc">{{ cx.icon('pin', 13) }}{% if w.fixture_id == 'ENTRANCE' %}매장 입구 · 키오스크 앞{% else %}{{ w.zone or '' }}구역 · {{ w.fixture_id or '-' }} {{ (w.fixture_name or '').split(' ', 1)[1] if ' ' in (w.fixture_name or '') else '' }} 앞{% endif %}</div>
       <div class="witem">{{ w.name }} ({{ w.color }}){% if w.size %} <span class="chip n">{{ w.size }}</span>{% endif %}{% if w.detail and w.kind != 'none' %} · {{ w.detail }}{% endif %}</div>
       <form method="post" action="/staff/reports/{{w.id}}/wait" class="wact">
         {% if w.wait_state == 'waiting' %}<button name="act" value="going" class="sbtn sm blue">가는 중</button>
-        {% else %}<span class="going">{{ cx.icon('run', 14) }}가는 중</span>{% endif %}
+        {% else %}<span class="going">{{ cx.icon('run', 14) }}가는 중 · 손님 화면에도 떠요</span>{% endif %}
         <button name="act" value="served" class="sbtn sm ok">전달 완료</button>
         {% if w.kind != 'call' %}<button name="act" value="nostock" class="sbtn sm red">재고 없음</button>{% endif %}
       </form>
@@ -98,6 +100,32 @@
 </div>
 <script>
 // 시연용: 8초마다 새로고침 (선택창을 열어 둔 동안은 멈춤)
+// 새 요청 알림: 지난번에 본 요청 id 와 비교 → 배너 + 소리 + 진동, 새 카드는 깜빡임
+(function(){
+  let seen = []; try{ seen = JSON.parse(localStorage.getItem('ww_seen') || '[]'); }catch(e){}
+  const ids = [...document.querySelectorAll('.wcard[data-id]')].map(c => c.dataset.id);
+  const fresh = ids.filter(i => !seen.includes(i));
+  if (fresh.length && seen.length !== 0 || (fresh.length && localStorage.getItem('ww_seen_init'))) {
+    document.getElementById('newreq').hidden = false;
+    fresh.forEach(i => document.querySelector('.wcard[data-id="'+i+'"]').classList.add('new'));
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (localStorage.getItem('ww_sound') === '1') ding();
+    document.title = '🔔 새 요청 · 신고함';
+  }
+  try{ localStorage.setItem('ww_seen', JSON.stringify(ids)); localStorage.setItem('ww_seen_init', '1'); }catch(e){}
+  sndLabel();
+})();
+function ding(){ try{ const A = new (window.AudioContext || window.webkitAudioContext)();
+  [880, 1175].forEach((f, k) => { const o = A.createOscillator(), g = A.createGain(); o.frequency.value = f; g.gain.value = .12;
+    o.connect(g); g.connect(A.destination); o.start(A.currentTime + k * .18); o.stop(A.currentTime + k * .18 + .16); }); }catch(e){} }
+function sndLabel(){ const on = localStorage.getItem('ww_sound') === '1', b = document.getElementById('sndbtn');
+  b.classList.toggle('on', on); b.querySelector('span').textContent = on ? '새 요청 알림 소리 켜짐' : '새 요청 알림 소리 켜기'; }
+function toggleSound(){ const on = localStorage.getItem('ww_sound') === '1'; localStorage.setItem('ww_sound', on ? '0' : '1'); if (!on) ding(); sndLabel(); }
+// 기다린 시간: 1초마다 갱신, 5분 넘으면 빨간 테두리
+setInterval(() => document.querySelectorAll('.timer[data-at]').forEach(t => {
+  const s = Math.max(0, (Date.now() - new Date(t.dataset.at)) / 1000), m = Math.floor(s / 60);
+  t.querySelector('em').textContent = m ? m + '분 ' + String(Math.floor(s % 60)).padStart(2, '0') + '초째' : Math.floor(s) + '초째';
+  t.closest('.wcard').classList.toggle('late', m >= 5); }), 1000);
 setInterval(()=>{ const a=document.activeElement; if(!(a && a.tagName==='SELECT') && !document.querySelector('details.mv[open]')) location.reload(); }, 8000);
 </script>
 {% endblock %}

@@ -362,3 +362,49 @@ details.mv select:first-child{flex:1;min-width:0}
 
 /* 인쇄 */
 @media print{.stabs,.sbar{display:none}}
+
+/* ---------- 40대 이상 키오스크 보완: 아래 큰 이동 버튼 · 가는 길 문장 · 계속 보기 ---------- */
+.knav{position:sticky;bottom:0;display:flex;gap:20px;padding:22px 48px 30px;background:linear-gradient(to top,#fff 82%,rgba(255,255,255,0));z-index:5}
+.kn{flex:1;display:flex;align-items:center;justify-content:center;gap:14px;height:120px;border-radius:30px;font-size:38px;font-weight:900}
+.kn.back{background:var(--g100);color:var(--ink);border:3px solid var(--g300)}
+.kn.home{flex:0 0 300px;background:#fff;color:var(--g700);border:3px solid var(--g300)}
+.kn:only-child{flex:1}
+.kall.top{height:200px;gap:26px;background:var(--blue);border-color:var(--blue);color:#fff}
+.kall.top b{display:block;color:#fff;font-size:48px}.kall.top span{color:#fff;opacity:.9;font-size:30px}.kall.top .ic{color:#fff}
+.kcard .lc{font-size:30px!important;font-weight:900!important;padding:14px 20px!important}
+.kcard .go{margin:4px 26px 0;display:flex;align-items:center;justify-content:center;gap:6px;height:84px;border-radius:20px;background:var(--navy);color:#fff;font-size:32px;font-weight:900}
+.kdir{display:flex;align-items:center;gap:24px;padding:28px 32px;border-radius:28px;background:var(--amb50);border:3px solid #F2C27B}
+.kdir .ic{color:var(--amber)}
+.kdir small{display:block;font-size:26px;font-weight:700;color:var(--amber)}
+.kdir b{display:block;font-size:44px;font-weight:900;line-height:1.25}.kdir span{display:block;margin-top:4px;font-size:30px;font-weight:700;color:var(--g700)}
+.kmap .map{max-height:560px}
+.kdim#kIdle .kmodal p b{font-size:1.4em;color:var(--red)}
+
+/* ---------- 직원: 등록 결과를 크게 · 되돌리기 · 이름으로 찾기 ---------- */
+.fxcount{margin-top:8px;padding:8px 12px;border-radius:10px;background:var(--ok50);color:var(--ok);font-size:13px;font-weight:700}
+.regres{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;border:2px solid var(--g200);background:#fff;animation:rrin .25s ease}
+@keyframes rrin{from{transform:scale(.96);opacity:.4}to{transform:none;opacity:1}}
+.regres.ok{border-color:#3BAA6B;background:var(--ok50)}
+.regres.bad{flex-direction:column;align-items:flex-start;gap:4px;border-color:var(--red);background:var(--red50);animation:rrshake .35s}
+@keyframes rrshake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.regres.undo{flex-direction:column;align-items:flex-start;gap:2px;background:var(--g50)}
+.regres img{width:64px;height:76px;border-radius:10px;object-fit:cover;background:var(--g100);flex:none}
+.regres .rr-b{flex:1;min-width:0}.rr-t{font-size:15px;font-weight:900}.regres.ok .rr-t{color:var(--ok)}.regres.bad .rr-t{color:var(--red)}
+.rr-n{display:block;font-size:14px;margin-top:2px}.rr-to{font-size:16px;font-weight:900;color:var(--navy);margin-top:2px}
+.regres small{font-size:12px;color:var(--g700)}.rr-m{font-size:13px;font-weight:700}
+.rr-u em{font-style:normal;font-size:11px;color:var(--g500);margin-left:2px}
+.slog li.undone{opacity:.45;text-decoration:line-through}
+.ipick{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ipick li.none{font-size:12.5px;color:var(--g500);padding:4px 2px}
+.ipick button{width:100%;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--g200);background:#fff;text-align:left;font-size:14px}
+.ipick button b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ipick button small{color:var(--g500);font-size:12px}
+.ipick button span{flex:none;padding:5px 10px;border-radius:8px;background:var(--navy);color:#fff;font-size:12px;font-weight:700}
+/* ---------- 직원: 새 요청 알림 · 실시간 대기 시간 ---------- */
+.newreq{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--red);color:#fff;animation:nrq 1s ease-in-out 3}
+.newreq b{font-size:15px}.newreq span{font-size:12.5px;opacity:.9}
+@keyframes nrq{50%{transform:scale(1.02);box-shadow:0 0 0 6px rgba(217,48,37,.2)}}
+.wcard.new{animation:wnew 1.2s ease-in-out 4;border:2px solid var(--red)}
+@keyframes wnew{50%{background:var(--red50)}}
+.sndbtn{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:16px;border:1px solid var(--g300);background:#fff;font-size:12.5px;font-weight:700;color:var(--g700)}
+.sndbtn.on{background:var(--ok50);border-color:#A9D3BA;color:var(--ok)}
+.timer em{font-style:normal}

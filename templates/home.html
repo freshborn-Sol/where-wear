@@ -6,9 +6,13 @@
   <span class="here">{{ cx.icon('pin', 14) }}지금 위치 · <b>{{ here.name if here else at }}</b></span>
 </header>
 <main class="page">
-  <div id="mebanner" class="mebanner" hidden></div>
   {% set autofocus = False %}{% include "_searchbar.html" %}
-  <p class="hint">{{ cx.icon('sparkle', 15) }}<span>카메라를 누르면 사진을 찍거나 골라서, AI가 가장 비슷한 옷을 매장에서 찾아줘요</span></p>
+  <div class="qchips" id="recentBox" hidden><div class="qh"><b>최근 검색</b><button type="button" onclick="clearRecent()">지우기</button></div><div class="qrow" id="recent"></div></div>
+  <div class="qchips"><div class="qh"><b>지금 많이 찾는</b></div><div class="qrow">
+    {% for w in popular %}<a class="qc hot" href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em>{{w}}</a>{% endfor %}</div></div>
+  <p class="hint">{{ cx.icon('camera', 15) }}<span>옷 사진만 있어도 돼요 · 카메라를 눌러 찍거나 앨범에서 고르면 AI가 비슷한 옷을 찾아줘요</span></p>
+
+  <div id="mebanner" class="mebanner" hidden></div>
 
   <h2>종류</h2>
   <div class="tabs" role="tablist">
@@ -44,6 +48,11 @@
                   : `${ic}<div class="mt"><b>키·몸무게를 등록해 두면</b><small>옷마다 추천 사이즈를 바로 알려드려요</small></div><a class="mbtn" href="/me?at={{at}}&next=${nx}">등록하기</a>`;
   b.classList.toggle('saved', !!p);
 })();
+(function(){ let r=[]; try{ r=JSON.parse(localStorage.getItem('ww_recent')||'[]'); }catch(e){}
+  if(!r.length) return; const box=document.getElementById('recent'); document.getElementById('recentBox').hidden=false;
+  r.forEach(q=>{ const a=document.createElement('a'); a.className='qc'; a.textContent=q;
+    a.href='/search?at={{at}}&q='+encodeURIComponent(q); box.appendChild(a); }); })();
+function clearRecent(){ try{ localStorage.removeItem('ww_recent'); }catch(e){} document.getElementById('recentBox').hidden=true; }
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.tiles').forEach(p => p.classList.toggle('on', p.dataset.panel === b.dataset.tab));

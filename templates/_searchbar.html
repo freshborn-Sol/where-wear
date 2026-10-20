@@ -2,7 +2,7 @@
 {% import "_cx.html" as cxs %}
 <form id="pf" action="/search/photo" method="post" enctype="multipart/form-data">
   <input type="hidden" name="at" value="{{at}}"></form>
-<form class="searchbox" action="/search">
+<form class="searchbox" action="/search" onsubmit="saveRecent(this.q.value)">
   <input type="hidden" name="at" value="{{at}}">
   <label class="sb">{{ cxs.icon('search', 20) }}
     <input name="q" value="{{ q or '' }}" placeholder="예) 파란색 후드티, 오버핏 맨투맨" enterkeyhint="search" {{ 'autofocus' if autofocus }}>
@@ -19,6 +19,9 @@
   <div class="steps"><div><i class="dotc"></i>옷 종류 · 색 알아보기</div><div><i class="dotc"></i>무늬 · 핏 살펴보기</div><div><i class="dotc"></i>매장 상품과 비교하기</div></div>
 </div>
 <script>
+function saveRecent(q){ q=(q||'').trim(); if(!q) return;
+  try{ let r=JSON.parse(localStorage.getItem('ww_recent')||'[]').filter(x=>x!==q); r.unshift(q);
+       localStorage.setItem('ww_recent', JSON.stringify(r.slice(0,8))); }catch(e){} }
 function photoPicked(inp){
   const f=inp.files&&inp.files[0]; if(!f) return;
   const b=document.getElementById('busy'), im=document.getElementById('busyImg');

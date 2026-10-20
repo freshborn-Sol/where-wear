@@ -29,6 +29,32 @@
 <footer class="kfoot">{{ cx.icon('qr', 30) }}<span>{{ text }}</span></footer>
 {%- endmacro %}
 
+{# 40대 이상: 화면 아래 큰 '이전 / 처음으로' — 어디서든 같은 자리 #}
+{% macro knav(back=None, back_label='이전 단계로') -%}
+<nav class="knav">
+  {% if back %}<a class="kn back" href="{{ back }}">{{ cx.icon('back', 40) }}{{ back_label }}</a>{% endif %}
+  <a class="kn home" href="/kiosk">{{ cx.icon('home', 38) }}처음으로</a>
+</nav>
+{%- endmacro %}
+
+{# 오래 안 누르면 처음으로 — 15초 전에 '계속 보기'를 크게 물어본다 #}
+{% macro kidle(sec=90) -%}
+<div class="kdim" id="kIdle"><div class="kmodal">
+  <div class="bi">{{ cx.icon('clock', 76) }}</div>
+  <h3>계속 보시겠어요?</h3><p><b id="kIdleN">15</b>초 뒤에 처음 화면으로 돌아가요</p>
+  <div class="kbtns"><button class="kbtn navy" onclick="kIdleReset()">계속 볼게요</button></div>
+</div></div>
+<script>
+(function(){ let t0=Date.now(), shown=false; const LIM={{sec}}*1000, WARN=15000, box=document.getElementById('kIdle'), n=document.getElementById('kIdleN');
+  window.kIdleReset=()=>{ t0=Date.now(); shown=false; box.classList.remove('on'); };
+  ['pointerdown','touchstart','scroll','keydown'].forEach(e=>addEventListener(e,()=>{ if(!shown) t0=Date.now(); },{passive:true}));
+  setInterval(()=>{ const left=LIM-(Date.now()-t0);
+    if(left<=0) location.href='/kiosk';
+    else if(left<=WARN){ if(!shown){ shown=true; document.querySelectorAll('.kdim.on').forEach(d=>d.classList.remove('on')); box.classList.add('on'); } n.textContent=Math.ceil(left/1000); } },250);
+})();
+</script>
+{%- endmacro %}
+
 {# ---------- 직원 ---------- #}
 {% macro sbar(title, back=None, right=None, live=False) -%}
 <header class="sbar">

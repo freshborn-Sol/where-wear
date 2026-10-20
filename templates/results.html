@@ -33,19 +33,28 @@
     {% endif %}
   {% endfor %}
 
-  <p class="note">{% if swatch %}<i class="sw" style="background:{{swatch}}"></i>{% endif %}<span>{{note}}</span> · <b>{{items|length}}개</b></p>
-  {% if not items %}<p class="empty">조건에 맞는 옷이 없어요. 위에서 조건을 하나 빼보세요.</p>{% endif %}
-  <div class="grid">
-  {% for it in items %}
+  {% macro card(it) %}
     <a class="card" href="/item/{{it.sku}}?at={{at}}">
       <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
       <div class="nm">{{it.name}}{% if it.is_demo %} <span class="demo">전시 실물</span>{% endif %}</div>
-      <div class="mt">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %}{% if it.pattern and it.pattern != '무지' %} · {{it.pattern}}{% endif %}</div>
+      <div class="mt">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %}{% if it.pattern and it.pattern != '무지' %} · {{it.pattern}}{% endif %} · {{ "{:,}".format(it.price) }}원</div>
       <div class="pl">{{ cx.icon('pin', 12) }}{% if it.place %}{{it.place.zone}}구역 · {{it.place.fixture_id}} · {{it.place.level}}{% else %}위치 미등록{% endif %}</div>
-      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 12) }}{{it.fresh[0]}}</div>
+      {% if it.walk %}<div class="wk">{{ cx.icon('run', 12) }}{% if it.walk.m <= 8 %}바로 이 근처{% else %}여기서 {{it.walk.m}}m{% endif %}</div>
+      {% else %}<div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 12) }}{{it.fresh[0]}}</div>{% endif %}
     </a>
-  {% endfor %}
-  </div>
+  {% endmacro %}
+  <p class="note">{% if swatch %}<i class="sw" style="background:{{swatch}}"></i>{% endif %}<span>{{note}}</span> · <b>{{items|length}}개</b>
+    {% if items and items[0].walk %}<span class="sort">{{ cx.icon('run', 13) }}가까운 순</span>{% endif %}</p>
+  {% if not items %}<div class="empty"><b>조건에 맞는 옷이 없어요</b><span>위에서 조건을 하나 빼거나, 이렇게 찾아보세요</span>
+    <div class="qrow">{% for w in ['검정 후드티','와이드 청바지','오버핏 맨투맨','볼캡'] %}<a class="qc" href="/search?at={{at}}&q={{ w|urlencode }}">{{w}}</a>{% endfor %}</div></div>{% endif %}
+  {% if more %}<div class="gh"><b>딱 맞는 옷</b><small>'{{q}}' 조건을 모두 만족 · 가까운 순</small></div>{% endif %}
+  <div class="grid">{% for it in items %}{{ card(it) }}{% endfor %}</div>
+  {% if more %}
+  <div class="gh more"><b>비슷한 옷 {{more|length}}개</b><small>색이나 종류가 조금 달라요</small></div>
+  <div class="grid">{% for it in more[:12] %}{{ card(it) }}{% endfor %}</div>
+  {% if more|length > 12 %}<details class="moremore"><summary>비슷한 옷 {{ more|length - 12 }}개 더 보기</summary>
+    <div class="grid">{% for it in more[12:] %}{{ card(it) }}{% endfor %}</div></details>{% endif %}
+  {% endif %}
 </main>
 {{ cx.tabbar('find') }}
 {% endblock %}

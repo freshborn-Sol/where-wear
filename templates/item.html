@@ -13,6 +13,7 @@
 {% endmacro %}
 {{ cx.appbar(it.name, 'javascript:history.back()', 'heart') }}
 <main class="page item">
+  {% if src == 'tag' %}
   {% set floor_n = hsizes|sum(attribute='qty') %}{% set wh_n = hsizes|sum(attribute='wh') %}
   <section class="stockcard {{ 'fromtag' if src=='tag' }}" aria-label="사이즈별 재고">
     <div class="sc-h">{% if src=='tag' %}<span class="sc-tag">{{ cx.icon('qr', 14) }}옷 태그로 확인</span>{% endif %}
@@ -23,24 +24,6 @@
     </div>
     {% if busy %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 매장이 붐벼요. 직원 도움은 계산대에서 받을 수 있어요.</p>{% endif %}
   </section>
-  <div class="detail">
-    <img class="hero" src="{{ imgsrc(it) }}" alt="">
-    <div class="dinfo">
-      <div class="price">{{ "{:,}".format(it.price) }}원</div>
-      <div class="meta">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %}</div>
-      <div id="rec" class="rec" hidden></div>
-    </div>
-  </div>
-
-  {% if it.place %}
-    <div class="locbox"><span class="pc">{{ cx.icon('pinfill', 25) }}</span>
-      <div><b>{{it.place.fixture_name}}</b><span>{{it.place.level}}{% if LV.get(it.place.level) %} · {{ LV[it.place.level] }}{% endif %}</span></div></div>
-    <div class="trust">
-      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}{% if it.fresh[1] == 'old' and not flag %} · 위치가 바뀌었을 수 있어요{% endif %}</div>
-      {% if flag %}<div class="lflag {{flag[0]}}">{{ cx.icon('checkcircle' if flag[0]=='ok' else 'alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
-    </div>
-  {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
-
   {% for s in hsizes if s.qty == 0 %}
   <div class="szres {{'wh' if s.wh}}" data-size="{{s.size}}" hidden>
     {% if s.wh %}
@@ -58,8 +41,77 @@
   </div>
   {% endfor %}
 
+  <div class="detail">
+    <img class="hero" src="{{ imgsrc(it) }}" alt="">
+    <div class="dinfo">
+      <div class="price">{{ "{:,}".format(it.price) }}원</div>
+      <div class="meta">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %}</div>
+      <div id="rec" class="rec" hidden></div>
+    </div>
+  </div>
+
+  {% if it.place %}
+    <div class="locbox"><span class="pc">{{ cx.icon('pinfill', 25) }}</span>
+      <div><b>{{it.place.fixture_name}}</b><span>{{it.place.level}}{% if LV.get(it.place.level) %} · {{ LV[it.place.level] }}{% endif %}</span>
+        {% if walk %}<div class="walkline">{{ cx.icon('run', 15) }}<i>{% if walk.m <= 8 %}바로 근처예요{% else %}여기서 {{walk.m}}m · 걸어서 약 {{walk.sec}}초{% endif %}</i></div>{% endif %}</div></div>
+    <div class="trust">
+      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}{% if it.fresh[1] == 'old' and not flag %} · 위치가 바뀌었을 수 있어요{% endif %}</div>
+      {% if flag %}<div class="lflag {{flag[0]}}">{{ cx.icon('checkcircle' if flag[0]=='ok' else 'alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
+    </div>
+  {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
+
   {% include "_cxmap.html" %}
-  <p class="legend">주황 점이 지금 내 위치, 파란 칸이 찾는 옷이 있는 선반이에요.</p>
+  <p class="legend">주황 점 = 지금 내 위치 · 파란 칸 = 찾는 옷이 있는 선반 · 점선을 따라가세요</p>
+  {% else %}
+  <div class="detail">
+    <img class="hero" src="{{ imgsrc(it) }}" alt="">
+    <div class="dinfo">
+      <div class="price">{{ "{:,}".format(it.price) }}원</div>
+      <div class="meta">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %}</div>
+      <div id="rec" class="rec" hidden></div>
+    </div>
+  </div>
+
+  {% if it.place %}
+    <div class="locbox"><span class="pc">{{ cx.icon('pinfill', 25) }}</span>
+      <div><b>{{it.place.fixture_name}}</b><span>{{it.place.level}}{% if LV.get(it.place.level) %} · {{ LV[it.place.level] }}{% endif %}</span>
+        {% if walk %}<div class="walkline">{{ cx.icon('run', 15) }}<i>{% if walk.m <= 8 %}바로 근처예요{% else %}여기서 {{walk.m}}m · 걸어서 약 {{walk.sec}}초{% endif %}</i></div>{% endif %}</div></div>
+    <div class="trust">
+      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}{% if it.fresh[1] == 'old' and not flag %} · 위치가 바뀌었을 수 있어요{% endif %}</div>
+      {% if flag %}<div class="lflag {{flag[0]}}">{{ cx.icon('checkcircle' if flag[0]=='ok' else 'alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
+    </div>
+  {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
+
+  {% include "_cxmap.html" %}
+  <p class="legend">주황 점 = 지금 내 위치 · 파란 칸 = 찾는 옷이 있는 선반 · 점선을 따라가세요</p>
+  {% set floor_n = hsizes|sum(attribute='qty') %}{% set wh_n = hsizes|sum(attribute='wh') %}
+  <section class="stockcard {{ 'fromtag' if src=='tag' }}" aria-label="사이즈별 재고">
+    <div class="sc-h">{% if src=='tag' %}<span class="sc-tag">{{ cx.icon('qr', 14) }}옷 태그로 확인</span>{% endif %}
+      <b>사이즈별 재고</b><small>매장 {{floor_n}}벌 · 창고 {{wh_n}}벌</small></div>
+    <div class="sizes">
+      {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0 and s.wh==0}} {{'whonly' if s.qty==0 and s.wh>0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')"><b>{{s.size}}</b>
+        <small>{% if s.qty %}매장 {{s.qty}}{% elif s.wh %}창고만{% else %}없음{% endif %}</small>{% if s.wh %}<em>창고 {{s.wh}}</em>{% endif %}</button>{% endfor %}
+    </div>
+    {% if busy %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 매장이 붐벼요. 직원 도움은 계산대에서 받을 수 있어요.</p>{% endif %}
+  </section>
+  {% for s in hsizes if s.qty == 0 %}
+  <div class="szres {{'wh' if s.wh}}" data-size="{{s.size}}" hidden>
+    {% if s.wh %}
+      <p class="szno">{{s.size}} 사이즈는 매장 진열엔 없지만 창고에 {{s.wh}}벌 있어요.</p>
+      {% if busy %}<p class="szsub">지금은 직원이 바빠요. 계산대에 말씀하시면 창고에서 가져다 드려요.</p>
+      {% else %}<button class="btn primary" onclick="sendInline('size','{{s.size}} 창고에서 가져다주세요','{{s.size}}')">{{ cx.icon('box', 18) }}직원이 창고에서 가져다 드려요</button>{% endif %}
+    {% else %}
+      <p class="szno">이 옷은 {{s.size}} 사이즈가 매장에도 창고에도 없어요.</p>
+      {% if size_alts[s.size] %}
+        <p class="szsub">비슷한 옷 중 {{s.size}} 사이즈가 있는 것</p>
+        <div class="hlist">{% for o in size_alts[s.size] %}{{ alt_card(o) }}{% endfor %}</div>
+      {% endif %}
+      {% if not busy %}<button class="btn" onclick="sendInline('size','{{s.size}} 입고 문의','{{s.size}}')">{{ cx.icon('box', 18) }}직원에게 입고 일정 물어보기</button>{% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% endif %}
   <p class="foot"><a href="/credits?at={{at}}">상품 사진 출처</a></p>
 </main>
 

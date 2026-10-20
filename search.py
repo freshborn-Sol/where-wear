@@ -86,6 +86,13 @@ SIMILAR = {"블루": ["네이비", "스카이블루"], "네이비": ["블루"], 
 def _similar_color(color, wanted):
     return any(color in SIMILAR.get(w, []) for w in wanted)
 
+def is_exact(it, parsed):
+    """검색어로 알아들은 조건(색·종류·대분류·핏)을 모두 만족하는 옷인가"""
+    return ((not parsed["colors"] or it["color"] in parsed["colors"]) and
+            (not parsed["subs"] or it["subcat"] in parsed["subs"]) and
+            (not parsed["cats"] or it["category"] in parsed["cats"]) and
+            (not parsed["fits"] or it["fit"] in parsed["fits"]) and any(parsed.values()))
+
 def text_search(items, q, limit=12):
     parsed = parse_query(q)
     if not any(parsed.values()):                       # 아는 단어가 하나도 없을 때

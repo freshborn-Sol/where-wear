@@ -161,13 +161,14 @@ def freshness(ts):
     if m < 60*24:return (f"{int(m//60)}시간 전 등록", "old")
     return (f"{int(m//60//24)}일 전 등록", "old")
 
-def decorate(items):
-    """상품 목록에 위치·신선도·재고를 붙인다."""
+def decorate(items, at=None):
+    """상품 목록에 위치·신선도·재고를 붙인다. at 을 주면 거기서 걷는 거리도"""
     out = []
     for it in items:
         p = placement_of(it["sku"])
         it = dict(it)
         it["place"] = p
+        it["walk"] = walk(at, p["fixture_id"]) if (at and p) else None
         it["fresh"] = freshness(p["updated_at"] if p else None)
         it["sizes"] = rows("SELECT size, qty, COALESCE(wh,0) wh FROM stock WHERE sku=? ORDER BY size", (it["sku"],))
         out.append(it)
@@ -285,7 +286,30 @@ def fix_map(start, groups):
     pts = [pos[n] for n in nodes if n in pos]
     m.update(path=" ".join(f"{x},{y}" for x, y in _simplify(pts)), start=(pts[0] if pts else m["start"]),
              stops={fx: {"no": i + 1, "n": len(groups.get(fx, []))} for i, fx in enumerate(order)})
-    return m, order, round(_plen(nodes) / 50) if nodes else 0     # 도면 50 ≈ 1m (대략)
+    return m, order, round(_plen(nodes) / PX_PER_M) if nodes else 0
+
+PX_PER_M = 20          # 도면 20 ≈ 1m (매장 가로 860 ≈ 43m)
+_WALK = {}
+def walk(at, fx):
+    """at → fx 걷는 거리(m)·시간(초). 같은 (출발, 도착)은 기억해 둔다"""
+    if not at or not fx: return None
+    key = (_GRAPH.get("n"), at, fx)
+    if key not in _WALK:
+        pth = path_between(at, fx)
+        m = round(_plen(pth) / PX_PER_M) if pth else None
+        _WALK[key] = {"m": max(m, 1), "sec": max(5, round(m / 1.1 / 5) * 5)} if m is not None else None
+    return _WALK[key]
+
+def direction_text(fx_id):
+    """입구에서 본 방향을 쉬운 말로 (키오스크 · 종이 지도용): '들어와서 오른쪽 가운데'"""
+    f = one("SELECT * FROM fixtures WHERE id=?", (fx_id,))
+    e = one("SELECT * FROM fixtures WHERE id='ENTRANCE'")
+    if not f or not e: return ""
+    cx, cy = f["x"] + f["w"] / 2, f["y"] + f["h"] / 2
+    ex = e["x"] + e["w"] / 2
+    side = "왼쪽" if cx < ex - 120 else ("오른쪽" if cx > ex + 120 else "정면")
+    depth = "바로 앞" if cy > 580 else ("가운데" if cy > 270 else "가장 안쪽")
+    return f"입구로 들어와서 {side} {depth}" if side != "정면" else f"입구로 들어와서 정면 {depth}"
 
 FACILITY_KINDS = ("입구", "계산대", "피팅룸", "창고", "기둥")
 
@@ -339,7 +363,13 @@ def root(): return redirect(url_for("go", at="ENTRANCE"))
 def go():
     at = request.args.get("at", "ENTRANCE")
     here = one("SELECT * FROM fixtures WHERE id=?", (at,))
-    return render_template("home.html", at=at, here=here, tiles=subcat_tiles(),
+    popular = [r["src"] for r in rows("""SELECT src, COUNT(*) n FROM events WHERE kind='search' AND src IS NOT NULL AND src!=''
+                                            AND src!='demo' AND ts>=? GROUP BY src ORDER BY n DESC LIMIT 20""",
+                                         ((now() - datetime.timedelta(days=14)).isoformat(timespec="seconds"),))
+               if any(S.parse_query(r["src"]).values())][:6]      # 알아듣는 검색어만 (오타·장난 입력 제외)
+    if len(popular) < 4:                                    # 기록이 적을 때 기본 추천어
+        popular += [w for w in ["검정 후드티", "와이드 청바지", "오버핏 맨투맨", "숏 패딩", "볼캡", "흰 운동화"] if w not in popular][:6 - len(popular)]
+    return render_template("home.html", popular=popular, at=at, here=here, tiles=subcat_tiles(),
                            tab=request.args.get("tab", "상의"), cats=list(CATS), colors=COLORS)
 
 @app.route("/search")
@@ -349,14 +379,22 @@ def search():
     sel = {k: request.args.get(k, "").strip() for k in FACET_COL}
     base = rows("SELECT * FROM items")
     note = ""
+    exact_ids = None
     if q:
         base, parsed, note = S.text_search(base, q, limit=999)
+        exact_ids = {it["sku"] for it in base if S.is_exact(it, parsed)}
         log_event("search", src=q[:40])
-    items = apply_filters(base, sel)
+    items = decorate(apply_filters(base, sel), at)
     if not q:
         picked = [v for v in (sel["cat"], sel["sub"], sel["color"], sel["fit"], sel["pattern"]) if v]
         note = " · ".join(picked) if picked else "전체 상품"
-    return render_template("results.html", at=at, items=decorate(items), q=q, sel=sel,
+    near = lambda it: (it["place"] is None, (it["walk"] or {}).get("m", 999))
+    if exact_ids is not None and exact_ids and len(exact_ids) < len(items):
+        more = [it for it in items if it["sku"] not in exact_ids]
+        items = sorted([it for it in items if it["sku"] in exact_ids], key=near)
+    else:
+        more, items = [], sorted(items, key=near)
+    return render_template("results.html", at=at, items=items, more=more, q=q, sel=sel,
                            facets=facet_counts(base, sel), note=note,
                            cat=sel["cat"], color=sel["color"], cats=list(CATS), colors=COLORS)
 
@@ -414,7 +452,7 @@ def item(sku):
     src = request.args.get("src", "")
     log_event("tag" if src == "tag" else "view", sku, src or None)     # ⑨ 옷 태그 QR로 들어왔는지
     fx = it["place"]["fixture_id"] if it["place"] else None
-    return render_template("item.html", src=src, at=at, it=it, map=map_data(at, fx),
+    return render_template("item.html", src=src, at=at, it=it, map=map_data(at, fx), walk=walk(at, fx),
                            flag=loc_flag(it), similar=similar_items(it), **help_data(it))
 
 SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
@@ -611,7 +649,7 @@ def staff():
     days = (datetime.date.today() - datetime.date.fromisoformat(last)).days
     return render_template("staff.html",
                            fixtures=shelves(),
-                           items=rows("SELECT sku, name, color FROM items ORDER BY sku"),
+                           items=rows("SELECT sku, name, color, subcat FROM items ORDER BY name, color"),
                            priority=priority_list(), check_days=days, CHECK_DAYS=CHECK_DAYS,
                            samples=rows("""SELECT b.code, b.season, i.sku, i.name, i.color FROM barcodes b JOIN items i ON i.sku=b.sku
                                            WHERE i.sku IN ('UQ003','UQ004','UQ073') ORDER BY i.sku, b.season"""))
@@ -665,17 +703,38 @@ def register():
     targets = [it]
     if d.get("all_colors"):
         targets = rows("SELECT * FROM items WHERE name=? ORDER BY sku", (it["name"],)) or [it]
+    undo, prev_fx = [], None
     for t in targets:
+        old = one("SELECT id, fixture_id, level FROM placements WHERE sku=? AND active=1 ORDER BY id DESC LIMIT 1", (t["sku"],))
+        if t["sku"] == it["sku"] and old: prev_fx = f"{old['fixture_id']} {old['level']}"
         db().execute("UPDATE placements SET active=0 WHERE sku=?", (t["sku"],))   # 이전 위치는 내림
-        db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)"
-                     " VALUES (?,?,?,?,?,1)", (t["sku"], fx, lv, ts(), "staff"))
+        nid = db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)"
+                           " VALUES (?,?,?,?,?,1)", (t["sku"], fx, lv, ts(), "staff")).lastrowid
         close_loc_reports(t["sku"], None, "재등록")                              # 관련 위치 신고 처리
+        undo.append([nid, old["id"] if old else None])
     db().commit()
     sizes = rows("SELECT size FROM stock WHERE sku=?", (it["sku"],))
     colors = " · ".join(t["color"] for t in targets)
     note = f" (시즌 바코드 {season} → 같은 상품으로 인식)" if season else ""
-    return jsonify(ok=True, count=len(targets),
+    fxr = one("SELECT name FROM fixtures WHERE id=?", (fx,))
+    return jsonify(ok=True, count=len(targets), undo=undo, name=it["name"], colors=colors, sizes=len(sizes),
+                   fixture=fx, fixture_name=fxr["name"] if fxr else fx, level=lv, prev=prev_fx, season=season,
+                   image=url_for("static", filename=it["image"]) if it.get("image") else "",
                    message=f"{it['name']} [{colors}] 사이즈 {len(sizes)}종 → {fx} {lv}{note}")
+
+@app.route("/api/register/undo", methods=["POST"])
+def register_undo():
+    """방금 등록 되돌리기: 새 위치를 지우고 예전 위치를 다시 안내"""
+    pairs = (request.get_json(force=True) or {}).get("undo") or []
+    n = 0
+    for new_id, old_id in pairs:
+        r = one("SELECT sku FROM placements WHERE id=?", (new_id,))
+        if not r: continue
+        db().execute("DELETE FROM placements WHERE id=?", (new_id,))
+        if old_id: db().execute("UPDATE placements SET active=1 WHERE id=?", (old_id,))
+        n += 1
+    db().commit()
+    return jsonify(ok=True, count=n, message=f"{n}건 되돌렸어요")
 
 # ---------- 직원: 실물 옷을 사진으로 등록 (전시회용) ----------
 def next_demo_sku():
@@ -1089,7 +1148,8 @@ def kiosk_item(sku):
     it = decorate([one("SELECT * FROM items WHERE sku=?", (sku,))])[0]
     it["sizes"] = sort_sizes(it["sizes"])
     fx = it["place"]["fixture_id"] if it["place"] else None
-    return render_template("kiosk_item.html", it=it, map=map_data("ENTRANCE", fx), flag=loc_flag(it))
+    return render_template("kiosk_item.html", it=it, map=map_data("ENTRANCE", fx), flag=loc_flag(it),
+                           dirtext=direction_text(fx) if fx else "", walk=walk("ENTRANCE", fx))
 
 @app.route("/kiosk/print/<sku>")
 def kiosk_print(sku):
@@ -1099,7 +1159,7 @@ def kiosk_print(sku):
     log_event("print", sku)
     # 종이 지도에 '이 옷' QR: 행거 앞에서 찍으면 그 옷 화면이 열려 '찾는 게 없나요?'(신고·재고·직원)를 바로 쓸 수 있다
     link = f"{public_base()}/item/{sku}?at={fx or 'ENTRANCE'}&src=paper"
-    return render_template("kiosk_print.html", it=it, map=map_data("ENTRANCE", fx),
+    return render_template("kiosk_print.html", it=it, map=map_data("ENTRANCE", fx), dirtext=direction_text(fx) if fx else "",
                            printed=now().strftime("%m/%d %H:%M"), qr=qr_data_uri(link), qr_link=link)
 
 def public_base():

@@ -5,7 +5,7 @@
 *{box-sizing:border-box}body{margin:0;width:74mm;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#000}
 .c{text-align:center}.logo{font-weight:900;font-size:16pt}.logo i{font-style:normal;color:#000}
 .hr{border-top:1px dashed #000;margin:2.5mm 0}
-.nm{font-size:11pt;font-weight:700}.meta{font-size:9pt}
+.nm{font-size:11pt;font-weight:700}.dir{font-size:10pt;font-weight:700;margin:2mm 0 1mm;padding:1.5mm;border:1.5px solid #000;border-radius:2mm}.meta{font-size:9pt}
 .loc{font-size:20pt;font-weight:900;line-height:1.2;margin:1mm 0}.lv{font-size:14pt;font-weight:800}
 svg{width:100%;height:auto}svg text{font-family:inherit}
 .small{font-size:8pt}
@@ -22,6 +22,7 @@ svg{width:100%;height:auto}svg text{font-family:inherit}
 {% if it.place %}
 <div class="c loc">{{it.place.zone}}구역 · {{it.place.fixture_id}}</div>
 <div class="c lv">{{it.place.fixture_name}} · {{it.place.level}}</div>
+{% if dirtext %}<div class="c dir">▶ {{dirtext}}</div>{% endif %}
 {% else %}<div class="c lv">위치 미등록 · 직원에게 문의</div>{% endif %}
 {% set mono = True %}{% include "_cxmap.html" %}
 <div class="c small">● 나 = 지금 위치(입구 키오스크) · 검은 칸 = 옷이 있는 집기</div>
