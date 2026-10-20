@@ -77,19 +77,6 @@
       <div class="tx"><b>{{a.t}}</b><small>{{a.d}}</small></div><a href="{{a.href}}">{{a.btn}}</a></div>{% endfor %}
   </div>{% else %}<div class="allok">{{ cx.icon('checkcircle', 20) }}지금 처리할 일이 없어요</div>{% endif %}
 
-  {# ③ 응대 속도 (지난주와 비교) #}
-  <div class="h3"><b>응대 속도</b><small>지난주와 비교</small></div>
-  <div class="kpis">
-    <div class="kpi"><small>호출 → 손님에게 도착</small><div class="v"><b>{{ c.serve_min if c.serve_min is not none else '-' }}</b><span>분</span></div>
-      {{ dl('serve_min') }}<span class="hint">목표 5분 이내</span></div>
-    <div class="kpi"><small>'없어요' → 위치 고침</small><div class="v"><b>{{ c.fix_min if c.fix_min is not none else '-' }}</b><span>분</span></div>
-      {{ dl('fix_min') }}<span class="hint">빨리 고칠수록 다음 손님이 헛걸음 안 해요</span></div>
-    <div class="kpi"><small>직원 호출</small><div class="v"><b>{{ c.calls }}</b><span>건</span></div>
-      {{ dl('calls') }}<span class="hint">줄면 손님이 혼자 잘 찾는다는 뜻</span></div>
-    <div class="kpi"><small>놓친 호출 (10분 넘김)</small><div class="v"><b style="color:{{ 'var(--red)' if c.missed else 'inherit' }}">{{ c.missed }}</b><span>건</span></div>
-      {{ dl('missed') }}<span class="hint">0건이 목표</span></div>
-  </div>
-
   {# ⑤ 자주 못 찾는 자리 #}
   <div class="h3" id="heat"><b>자주 못 찾는 자리</b><small>진할수록 '없어요'가 많아요</small></div>
   <div class="card hmap">{% include "_cxmap.html" %}
@@ -112,6 +99,19 @@
       {% if i.floor + i.wh <= 3 %}<span class="chip r">재고 {{i.floor}}+{{i.wh}}</span>{% endif %}<b>{{i.n}}</b></li>
     {% else %}<li class="none">아직 없어요</li>{% endfor %}</ol>
   </div>
+  {# ③ 응대 속도 (지난주와 비교) #}
+  <div class="h3"><b>응대 속도</b><small>지난주와 비교</small></div>
+  <div class="kpis">
+    <div class="kpi"><small>호출 → 손님에게 도착</small><div class="v"><b>{{ c.serve_min if c.serve_min is not none else '-' }}</b><span>분</span></div>
+      {{ dl('serve_min') }}<span class="hint">목표 5분 이내</span></div>
+    <div class="kpi"><small>'없어요' → 위치 고침</small><div class="v"><b>{{ c.fix_min if c.fix_min is not none else '-' }}</b><span>분</span></div>
+      {{ dl('fix_min') }}<span class="hint">빨리 고칠수록 다음 손님이 헛걸음 안 해요</span></div>
+    <div class="kpi"><small>직원 호출</small><div class="v"><b>{{ c.calls }}</b><span>건</span></div>
+      {{ dl('calls') }}<span class="hint">줄면 손님이 혼자 잘 찾는다는 뜻</span></div>
+    <div class="kpi"><small>놓친 호출 (10분 넘김)</small><div class="v"><b style="color:{{ 'var(--red)' if c.missed else 'inherit' }}">{{ c.missed }}</b><span>건</span></div>
+      {{ dl('missed') }}<span class="hint">0건이 목표</span></div>
+  </div>
+
 </main>
 {{ ks.stabs('rep') }}
 </div>
