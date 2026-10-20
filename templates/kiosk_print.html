@@ -17,7 +17,7 @@ svg{width:100%;height:auto}svg text{font-family:inherit}
 <div class="c small">매장 안 옷 위치 안내 · {{printed}}</div>
 <div class="hr"></div>
 <div class="c nm">{{it.name}}</div>
-<div class="c meta">{{it.color}} · {{it.fit}} · {{ "{:,}".format(it.price) }}원</div>
+<div class="c meta">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %} · {{ "{:,}".format(it.price) }}원</div>
 <div class="hr"></div>
 {% if it.place %}
 <div class="c loc">{{it.place.zone}}구역 · {{it.place.fixture_id}}</div>

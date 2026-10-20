@@ -42,6 +42,7 @@ SUB_EN = {
     "긴팔티": "long sleeve t-shirt", "블라우스": "blouse", "조끼": "fleece vest",
     "반바지": "shorts", "재킷": "jacket", "후드집업": "zip up hoodie",
     "구두": "leather shoes", "부츠": "boots",
+    "모자": "cap", "가방": "bag", "양말": "socks", "벨트": "leather belt",
 }
 
 def key():

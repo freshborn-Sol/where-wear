@@ -10,7 +10,7 @@
     <img src="{{ imgsrc(it) }}" alt="">
     <div class="kinfo">
       <h2>{{it.name}}</h2>
-      <div class="meta">{{it.color}} · {{it.fit}} · {{ "{:,}".format(it.price) }}원</div>
+      <div class="meta">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %} · {{ "{:,}".format(it.price) }}원</div>
       {% if it.place %}
         <div class="kloc"><span class="pc">{{ cx.icon('pinfill', 40) }}</span>
           <div><b>{{it.place.zone}}구역 · {{ it.place.fixture_name.split(' ', 1)[1] if ' ' in it.place.fixture_name else it.place.fixture_name }}</b>

@@ -40,7 +40,7 @@
     <a class="card" href="/item/{{it.sku}}?at={{at}}">
       <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
       <div class="nm">{{it.name}}{% if it.is_demo %} <span class="demo">전시 실물</span>{% endif %}</div>
-      <div class="mt">{{it.color}} · {{it.fit}}{% if it.pattern and it.pattern != '무지' %} · {{it.pattern}}{% endif %}</div>
+      <div class="mt">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %}{% if it.pattern and it.pattern != '무지' %} · {{it.pattern}}{% endif %}</div>
       <div class="pl">{{ cx.icon('pin', 12) }}{% if it.place %}{{it.place.zone}}구역 · {{it.place.fixture_id}} · {{it.place.level}}{% else %}위치 미등록{% endif %}</div>
       <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 12) }}{{it.fresh[0]}}</div>
     </a>

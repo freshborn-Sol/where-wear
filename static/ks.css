@@ -40,6 +40,7 @@ body.kiosk{background:#fff;min-height:100vh}
 
 /* 1단계: 대분류 */
 .kcats{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.kcat:last-child:nth-child(odd){grid-column:span 2}
 .kcat{display:flex;align-items:center;height:300px;border-radius:28px;background:var(--g50);border:2px solid var(--g200);overflow:hidden}
 .kcat .t{flex:1;padding-left:34px}.kcat b{display:block;font-size:54px;font-weight:900}.kcat small{font-size:26px;font-weight:500;color:var(--g500)}
 .kcat img{width:170px;height:100%;object-fit:cover;background:var(--g100)}

@@ -27,7 +27,7 @@
     <img class="hero" src="{{ imgsrc(it) }}" alt="">
     <div class="dinfo">
       <div class="price">{{ "{:,}".format(it.price) }}원</div>
-      <div class="meta">{{it.color}} · {{it.fit}}</div>
+      <div class="meta">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %}</div>
       <div id="rec" class="rec" hidden></div>
     </div>
   </div>
@@ -243,6 +243,7 @@ function recommend(p){
 (function(){
   const box=$('#rec'), p=loadBody();
   const meLink='/me?at='+AT+'&next='+encodeURIComponent(location.pathname+location.search);
+  if(ITEM.sizes.every(s=>s.size==='F')){ box.hidden=true; return; }   // 잡화(프리 사이즈)는 추천 없음
   box.hidden=false;
   if(!p){ box.innerHTML=USER_IC+' <a href="'+meLink+'">키·몸무게를 등록</a>하면 추천 사이즈를 알려드려요'; return; }
   const r=recommend(p);
