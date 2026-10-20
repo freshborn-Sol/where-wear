@@ -1,5 +1,8 @@
 {% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
-{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block styles %}{{ ks.styles() }}<style>
+.hmap{background:#fff;border:1px solid var(--g200);border-radius:16px;padding:10px}.hmap svg{display:block;width:100%;height:auto}
+.hleg{display:flex;gap:12px;justify-content:center;padding-top:8px;font-size:12px;color:var(--g700)}
+.hleg span{display:flex;align-items:center;gap:4px}.hleg i{width:14px;height:14px;border-radius:4px;display:inline-block}</style>{% endblock %}{% block bodyclass %}staff{% endblock %}
 {% block body %}
 {% set u = summary.usage %}
 <div class="sshell">
@@ -21,6 +24,13 @@
     {% endfor %}
   </div>
   <div class="insight">{{ cx.icon('chart', 20) }}<span>'찾았어요' 비율이 오르고 직원 호출이 줄면, 손님이 서비스에 적응했다는 뜻이에요</span></div>
+
+  <div class="sh2" id="heat">자주 못 찾는 자리</div><p class="ssub">'여기 없어요' 신고가 많은 집기일수록 진하게 · 숫자 = 신고 수</p>
+  <div class="hmap">{% include "_cxmap.html" %}
+    <div class="hleg"><span><i style="background:#FDE7C2"></i>적음</span><span><i style="background:#F9A66C"></i>보통</span><span><i style="background:#E5484D"></i>많음</span><span><i style="background:#fff;border:1px solid #D7DCE6"></i>없음</span></div></div>
+  {% if summary.zone_n %}<div class="insight">{{ cx.icon('pin', 20) }}<span>
+    {% set z0 = summary.zone_n[0] %}{% for z in map.zones if z.id == z0[0] %}<b>{{z.id}}구역 {{z.name}}</b>{% endfor %}에서 신고가 가장 많아요 ({{z0[1]}}건)
+    {% if summary.top_fx %} · 특히 <b>{{summary.top_fx[0].fixture_id}}</b>{% endif %} → 진열 위치·라벨을 먼저 점검하세요</span></div>{% endif %}
 
   <div class="sh2" id="rank">순위</div>
   <div class="rank" style="--c:var(--amber)"><h3>{{ cx.icon('pin', 16) }}자주 틀리는 선반</h3><ol>

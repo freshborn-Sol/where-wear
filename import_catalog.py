@@ -6,7 +6,7 @@
      (sku / 이름 / 카테고리 / 종류 / 색상 / 핏 / 가격 / 사이즈별 재고 / 선반 / 단 / 몇 분 전 등록)
   2) 사진이 있으면 static/photos/<sku>.jpg 로 저장한다 (없으면 색상 그림이 자동 생성됨)
   3) python import_catalog.py          → DB를 새로 만든다 (신고·위치 기록 초기화)
-     python import_catalog.py --new    → DB에 없는 상품만 추가 (기록 유지)
+     python import_catalog.py --new    → DB에 없는 상품만 추가 + 새로 받은 사진 반영 (기록 유지)
 
 주의: 브랜드 홈페이지 사진을 그대로 쓰지 말 것. 직접 찍은 사진을 쓰거나 색상 그림을 그대로 둔다.
 """
@@ -67,8 +67,13 @@ def add_new():
     for r in rows:
         if r["sku"].strip().upper() in have: continue
         add_row(db, r, now, warn, wh=True); n += 1
+    m = 0                                   # fetch_photos.py 로 사진을 새로 받은 상품은 사진만 갈아 끼운다
+    for sku, img in db.execute("SELECT sku, image FROM items").fetchall():
+        photo = find_photo(sku)
+        if photo and photo != img:
+            db.execute("UPDATE items SET image=? WHERE sku=?", (photo, sku)); m += 1
     db.commit()
-    print(f"새 상품 {n}개 추가 → {DB} (기존 {len(have)}개 · 신고 기록은 그대로)")
+    print(f"새 상품 {n}개 추가 · 사진 {m}개 반영 → {DB} (기존 {len(have)}개 · 신고 기록은 그대로)")
     for w in warn: print("  ⚠", w)
 
 def main():

@@ -1,0 +1,43 @@
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}<style>
+.dbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dbtns .all{grid-column:span 2;padding:16px;font-size:16px}
+.dstat{display:flex;gap:8px;font-size:12.5px;color:var(--g700);margin:4px 0 2px}
+.dstep{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:#fff;border:1px solid var(--g200)}
+.dstep>i{flex:0 0 26px;height:26px;border-radius:13px;background:var(--navy);color:#fff;font-style:normal;font-weight:800;display:grid;place-items:center;font-size:13px}
+.dstep b{display:block;font-size:14.5px}.dstep small{display:block;color:var(--g700);font-size:12.5px;margin:2px 0 8px;line-height:1.45}
+.dstep a.sbtn{display:inline-flex;text-decoration:none}.dsteps{display:flex;flex-direction:column;gap:8px}
+.okmsg{background:#EAF6EF;color:#1D7A46;border-radius:12px;padding:10px 12px;font-weight:700;font-size:13.5px;display:flex;gap:6px;align-items:center}
+</style>{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+<div class="sshell">
+{{ ks.sbar('발표 시연 모드', back='/staff/settings') }}
+<main class="swrap">
+  {% if msg %}<p class="okmsg">{{ cx.icon('check', 16) }}{{msg}}</p>{% endif %}
+  <div class="sh2">시연 준비</div>
+  <p class="ssub">시연용 기록은 따로 표시돼서, 지우기를 누르면 진짜 기록은 그대로 남아요</p>
+  <div class="dstat"><span class="chip">지난 7일 기록 {{cnt.hist}}건</span><span class="chip {{ 'a' if cnt.live }}">지금 신고·요청 {{cnt.live}}건</span></div>
+  <form method="post" class="dbtns">
+    <button name="act" value="all" class="sbtn blue all">🎬 한 번에 발표 준비</button>
+    <button name="act" value="hist" class="sbtn line">지난 7일 기록 채우기</button>
+    <button name="act" value="live" class="sbtn line">지금 손님 신고 만들기</button>
+    <button name="act" value="clear" class="sbtn red" style="grid-column:span 2">시연 기록 모두 지우기 (원래대로)</button>
+  </form>
+
+  <div class="sh2">시연 순서</div><p class="ssub">각 버튼은 새 탭으로 열려요 · 발표 화면 옆에 띄워 두세요</p>
+  <div class="dsteps">
+    <div class="dstep"><i>1</i><div><b>키오스크에서 옷 찾기</b><small>입구 키오스크에서 종류 → 색 → 위치를 고르고, 종이 지도를 뽑아요</small>
+      <a class="sbtn sm blue" href="/kiosk" target="_blank">키오스크 열기</a></div></div>
+    <div class="dstep"><i>2</i><div><b>창고 사이즈 요청</b><small>{{wh.name if wh else ''}} 화면에서 "가져다 주세요"를 누르면 직원 신고함에 바로 떠요</small>
+      <a class="sbtn sm line" href="/kiosk/item/{{wh.sku if wh else ''}}" target="_blank">키오스크 상품 화면</a></div></div>
+    <div class="dstep"><i>3</i><div><b>손님 QR: 옷이 그 자리에 없어요</b><small>{{it.name if it else ''}} ({{it.color if it else ''}}) · {{fx}} 앞에서 QR을 찍은 손님 화면이에요.
+      '없어요'를 2명이 누르면 안내에서 자동으로 내려가요 (위 '지금 손님 신고 만들기'로 미리 만들 수 있어요)</small>
+      <a class="sbtn sm line" href="/item/{{it.sku if it else ''}}?at={{fx}}" target="_blank">손님 화면 열기</a></div></div>
+    <div class="dstep"><i>4</i><div><b>직원 신고함에서 처리</b><small>기다리는 손님 → '가는 중' → '전달 완료', 위치 고칠 것 → '찾아서 재등록'</small>
+      <a class="sbtn sm line" href="/staff/reports" target="_blank">신고함 열기</a></div></div>
+    <div class="dstep"><i>5</i><div><b>점장 요약 · 자주 못 찾는 자리</b><small>일주일 동안 쌓인 신고를 매장 지도에 색으로 보여 줘요 → 진열을 바꿀 곳</small>
+      <a class="sbtn sm line" href="/staff/summary#heat" target="_blank">점장 요약 열기</a></div></div>
+  </div>
+</main>
+{{ ks.stabs('set') }}
+</div>
+{% endblock %}

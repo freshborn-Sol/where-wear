@@ -3,6 +3,7 @@
 {% set M = mono is defined and mono %}
 {% set INK = '#000' if M else '#1B1F2D' %}
 {% set FX_FILL = {'행거':'#E8EDF4','원형행거':'#E8EDF4','벽면':'#DCE3EC','매대':'#F3ECE2','진열대':'#EEF1F5','마네킹':'#FFFFFF'} %}
+{% set HEAT = map.heat if map.heat is defined else none %}{# 점장 요약: 집기별 '없어요' 신고 수 → 색 #}
 {% set FX_LINE = {'행거':'#C3CDDA','원형행거':'#C3CDDA','벽면':'#BCC7D5','매대':'#D8C8B2','진열대':'#C9D1DC','마네킹':'#C3CDDA'} %}
 <svg class="map" viewBox="0 0 {{map.W}} {{map.H}}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="매장 도면과 길 안내"
      font-family="'Noto Sans KR','Apple SD Gothic Neo',sans-serif">
@@ -30,6 +31,12 @@
     {% set fill = ('#000' if M else '#3862DA') if on else ('#fff' if M else FX_FILL.get(f.kind, '#E8EDF4')) %}
     {% set line = ('#000' if M else '#12508F') if on else ('#000' if M else FX_LINE.get(f.kind, '#C3CDDA')) %}
     {% set tcol = '#fff' if on else ('#000' if M else '#6E7889') %}
+    {% if HEAT is not none and f.kind not in ('기둥','창고','피팅룸','계산대') %}
+      {% set hn = HEAT.get(f.id, 0) %}{% set hr = hn / (map.heat_max or 1) %}
+      {% set fill = '#FFFFFF' if not hn else ('#FDE7C2' if hr < 0.34 else ('#F9A66C' if hr < 0.67 else '#E5484D')) %}
+      {% set line = '#D7DCE6' if not hn else ('#F2C27B' if hr < 0.34 else ('#E8803F' if hr < 0.67 else '#B4232A')) %}
+      {% set tcol = '#A3ABB9' if not hn else ('#7A4A12' if hr < 0.67 else '#fff') %}
+    {% endif %}
     {% if f.kind == '원형행거' %}
       <circle cx="{{cx}}" cy="{{cy}}" r="{{f.w/2}}" fill="{{fill}}" stroke="{{line}}" stroke-width="2"/>
       <circle cx="{{cx}}" cy="{{cy}}" r="{{f.w/2 - 10}}" fill="none" stroke="{{ '#fff' if on else line }}" stroke-width="1.5" stroke-dasharray="4 4" opacity=".8"/>
@@ -64,6 +71,10 @@
     {% endif %}
   {% endfor %}
 
+  {% if HEAT is not none %}{% for f in map.fixtures if HEAT.get(f.id) %}
+    <g transform="translate({{f.x + f.w - 4}},{{f.y + 4}})"><circle r="15" fill="#1B1F2D" stroke="#fff" stroke-width="3"/>
+      <text y="6" text-anchor="middle" font-size="16" font-weight="800" fill="#fff">{{HEAT[f.id]}}</text></g>
+  {% endfor %}{% endif %}
   {# 구역 이름표 (집기 위에) #}
   {% for z in map.zones %}
     <g transform="translate({{ z.lx if z.lx is not none else z.x + 10 }},{{ z.ly if z.ly is not none else z.y + 10 }})">

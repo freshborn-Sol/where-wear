@@ -756,7 +756,9 @@ def staff_reports():
 @app.route("/staff/summary")
 def staff_summary():
     """점장 요약: 응대 지표 · 사용률 · 순위 (신고함에서 분리)"""
-    return render_template("summary.html", summary=manager_summary())
+    sm = manager_summary()
+    m = map_data("ENTRANCE"); m.update(heat=sm["heat"], heat_max=sm["heat_max"], start=(0, 0))
+    return render_template("summary.html", summary=sm, map=m)
 
 def manager_summary(days=7):
     since = (now() - datetime.timedelta(days=days)).isoformat(timespec="seconds")
@@ -784,8 +786,86 @@ def manager_summary(days=7):
     usage = {"like": ev.get("like", 0), "search": ev.get("search", 0), "photo": ev.get("photo", 0), "tag": ev.get("tag", 0),
              "view": ev.get("view", 0) + ev.get("tag", 0), "kiosk": ev.get("kiosk", 0), "calls": calls,
              "found_rate": round(found * 100 / (found + nones)) if (found + nones) else None}
-    return {"usage": usage, "top_liked": top_liked, "top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
+    heat = {r["fixture_id"]: r["n"] for r in rows("""SELECT fixture_id, COUNT(*) n FROM reports
+                 WHERE kind='none' AND created_at>=? AND fixture_id IS NOT NULL GROUP BY fixture_id""", (since,))}
+    zone_n = Counter()
+    for f in rows("SELECT id, zone FROM fixtures"):
+        if heat.get(f["id"]): zone_n[f["zone"]] += heat[f["id"]]
+    return {"heat": heat, "heat_max": max(heat.values(), default=0), "zone_n": zone_n.most_common(),
+            "usage": usage, "top_liked": top_liked, "top_fx": top_fx, "top_items": top_items, "serve_min": avg([(r["wait_at"], r["served_at"]) for r in served]),
             "fix_min": avg([(r["created_at"], r["resolved_at"]) for r in fixed]), "missed": missed, "found": found}
+
+# ---------- 발표 시연 모드: 버튼 한 번으로 시연 상황 만들기 / 지우기 ----------
+DEMO_SKU = "UQ127"          # 스카이블루 옥스포드 셔츠 (A-R1) — '여기 없어요' 시연용
+DEMO_WH_SKU = "UQ018"       # 캔버스 로우 스니커즈 — 키오스크 창고 사이즈 요청 시연용
+DEMO_HOT = [("A-R1", 9), ("C-H1", 7), ("D-S2", 6), ("B-T1", 5), ("A-H2", 4), ("C-W1", 3),
+            ("B-W1", 2), ("D-S1", 2), ("P-T1", 2), ("A-T1", 1), ("C-H2", 1)]
+
+def demo_clear():
+    """시연으로 만든 신고·기록을 지우고, 시연 때문에 안내에서 내려간 옷을 원래 자리로 되돌린다"""
+    skus = [r["sku"] for r in rows("SELECT DISTINCT sku FROM reports WHERE device LIKE 'demo%'")]
+    db().execute("DELETE FROM reports WHERE device LIKE 'demo%'")
+    db().execute("DELETE FROM events WHERE src='demo'")
+    for sku in set(skus + [DEMO_SKU]):
+        if not one("SELECT 1 x FROM placements WHERE sku=? AND active=1", (sku,)):
+            last = one("SELECT id FROM placements WHERE sku=? ORDER BY id DESC LIMIT 1", (sku,))
+            if last: db().execute("UPDATE placements SET active=1 WHERE id=?", (last["id"],))
+    db().commit()
+
+def demo_history():
+    """지난 7일 기록 채우기: 점장 요약 · 지도 히트맵이 비어 보이지 않게 (device='demo')"""
+    import random
+    rnd, t0 = random.Random(7), now()
+    def back(): return t0 - datetime.timedelta(days=rnd.uniform(0.2, 6.8))
+    for fx, n in DEMO_HOT:
+        items = [r["sku"] for r in rows("SELECT sku FROM placements WHERE fixture_id=? AND active=1", (fx,))] or [None]
+        for _ in range(n):
+            c = back(); r_ = c + datetime.timedelta(minutes=rnd.randint(4, 45))
+            db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,done,device,resolution,resolved_at)
+                            VALUES (?,?,'none',?,1,'demo',?,?)""", (rnd.choice(items), fx, c.isoformat(timespec="seconds"),
+                         rnd.choice(["재등록", "재등록", "위치 이동", "오신고"]), r_.isoformat(timespec="seconds")))
+    skus = [r["sku"] for r in rows("SELECT sku FROM placements WHERE active=1")]
+    for _ in range(46):
+        db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,done,device) VALUES (?,?,'found',?,1,'demo')",
+                     (rnd.choice(skus), None, back().isoformat(timespec="seconds")))
+    for i in range(13):
+        w = back(); sv = w + datetime.timedelta(minutes=rnd.uniform(1.5, 7))
+        db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,done,device,wait_state,wait_at,served_at,resolution,resolved_at)
+                        VALUES (?,?,?,?,1,'demo',?,?,?,?,?)""",
+                     (rnd.choice(skus), "ENTRANCE", "size" if i % 2 else "call", w.isoformat(timespec="seconds"),
+                      "expired" if i == 12 else "served", w.isoformat(timespec="seconds"),
+                      None if i == 12 else sv.isoformat(timespec="seconds"), "전달 완료", sv.isoformat(timespec="seconds")))
+    for kind, n in [("search", 64), ("photo", 19), ("tag", 27), ("view", 118), ("kiosk", 41), ("call", 13)]:
+        for _ in range(n):
+            db().execute("INSERT INTO events (kind,sku,src,ts) VALUES (?,?,'demo',?)", (kind, None, back().isoformat(timespec="seconds")))
+    db().commit()
+
+def demo_live():
+    """지금 일어나는 상황: 손님 2명이 '여기 없어요' → 안내에서 내려감 + 키오스크 창고 사이즈 요청"""
+    p = one("SELECT fixture_id FROM placements WHERE sku=? AND active=1", (DEMO_SKU,))
+    fx = p["fixture_id"] if p else "A-R1"
+    for i, mins in ((1, 3), (2, 1)):
+        db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,device) VALUES (?,?,'none',?,?)",
+                     (DEMO_SKU, fx, (now() - datetime.timedelta(minutes=mins)).isoformat(timespec="seconds"), f"demo-{i}"))
+    db().execute("UPDATE placements SET active=0 WHERE sku=? AND fixture_id=?", (DEMO_SKU, fx))
+    db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,detail,size,device,wait_state,wait_at)
+                    VALUES (?,'ENTRANCE','size',?,'260 창고에서 가져다주세요 (키오스크)','260','demo-k','waiting',?)""",
+                 (DEMO_WH_SKU, ts(), ts()))
+    db().commit()
+
+@app.route("/demo", methods=["GET", "POST"])
+def demo():
+    act, msg = request.form.get("act"), None
+    if act == "clear":   demo_clear(); msg = "시연 기록을 지웠어요"
+    elif act == "hist":  demo_clear(); demo_history(); msg = "지난 7일 기록을 채웠어요 — 점장 요약을 열어 보세요"
+    elif act == "live":  demo_live(); msg = "손님 신고 2건 · 창고 사이즈 요청 1건을 만들었어요 — 신고함을 열어 보세요"
+    elif act == "all":   demo_clear(); demo_history(); demo_live(); msg = "발표 준비 끝! 아래 순서대로 열어 보세요"
+    it = one("SELECT * FROM items WHERE sku=?", (DEMO_SKU,))
+    p = one("SELECT fixture_id FROM placements WHERE sku=? ORDER BY active DESC, id DESC LIMIT 1", (DEMO_SKU,))
+    cnt = {"hist": one("SELECT COUNT(*) n FROM reports WHERE device='demo'")["n"],
+           "live": one("SELECT COUNT(*) n FROM reports WHERE device LIKE 'demo-%' AND done=0")["n"]}
+    return render_template("demo.html", msg=msg, it=it, fx=(p or {}).get("fixture_id") or "A-R1",
+                           wh=one("SELECT * FROM items WHERE sku=?", (DEMO_WH_SKU,)), cnt=cnt)
 
 @app.route("/staff/reports/<int:rid>/wait", methods=["POST"])
 def staff_wait_action(rid):
