@@ -857,8 +857,33 @@ def kiosk_print(sku):
     it = decorate([one("SELECT * FROM items WHERE sku=?", (sku,))])[0]
     fx = it["place"]["fixture_id"] if it["place"] else None
     log_event("print", sku)
+    # 종이 지도에 '이 옷' QR: 행거 앞에서 찍으면 그 옷 화면이 열려 '찾는 게 없나요?'(신고·재고·직원)를 바로 쓸 수 있다
+    link = f"{public_base()}/item/{sku}?at={fx or 'ENTRANCE'}&src=paper"
     return render_template("kiosk_print.html", it=it, map=map_data("ENTRANCE", fx),
-                           printed=now().strftime("%m/%d %H:%M"))
+                           printed=now().strftime("%m/%d %H:%M"), qr=qr_data_uri(link), qr_link=link)
+
+def public_base():
+    """폰으로 찍을 주소. WW_PUBLIC_URL이 있으면 그것, 키오스크가 localhost로 열려 있으면 노트북의 내부 IP로 바꾼다."""
+    env = os.environ.get("WW_PUBLIC_URL")
+    if env: return env.rstrip("/")
+    base = request.host_url.rstrip("/")
+    host = request.host.split(":")[0]
+    if host in ("localhost", "127.0.0.1"):
+        import socket
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]; s.close()
+            port = request.host.split(":")[1] if ":" in request.host else "80"
+            base = f"http://{ip}:{port}"
+        except OSError:
+            pass
+    return base
+
+def qr_data_uri(text):
+    import base64, io, qrcode
+    buf = io.BytesIO()
+    qrcode.make(text, box_size=6, border=1).save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))     # 맥은 5000번을 AirPlay가 쓰므로 5001

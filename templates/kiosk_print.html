@@ -9,6 +9,7 @@
 .loc{font-size:20pt;font-weight:900;line-height:1.2;margin:1mm 0}.lv{font-size:14pt;font-weight:800}
 svg{width:100%;height:auto}svg text{font-family:inherit}
 .small{font-size:8pt}
+.qrbox{display:flex;gap:2.5mm;align-items:center;font-size:8.5pt;line-height:1.35}.qrbox img{width:22mm;height:22mm;flex:none;image-rendering:pixelated}.qrbox b{display:block;font-size:10pt}
 .sz{display:flex;gap:1.5mm;justify-content:center;flex-wrap:wrap;font-size:9pt}.sz span{border:1px solid #000;border-radius:1.5mm;padding:.5mm 1.5mm}
 @media screen{body{margin:10px auto;box-shadow:0 0 0 1px #ddd;padding:3mm}}
 </style></head><body onload="setTimeout(()=>window.print(),300)">
@@ -37,5 +38,5 @@ svg{width:100%;height:auto}svg text{font-family:inherit}
 <div class="c small">사이즈별 재고 (매장/창고)</div>
 <div class="sz">{% for s in it.sizes %}<span>{{s.size}} {{s.qty}}/{{s.wh}}</span>{% endfor %}</div>
 <div class="hr"></div>
-<div class="c small">못 찾으면 선반 QR을 찍어 '찾는 게 없나요?'를 눌러 주세요</div>
+<div class="qrbox"><img src="{{qr}}" alt="이 옷 QR"><div><b>옷이 없나요?</b>행거 앞에서 이 QR을 휴대폰으로 찍으면 바로 '여기 없어요' · 재고 확인 · 직원 호출을 할 수 있어요</div></div>
 </body></html>

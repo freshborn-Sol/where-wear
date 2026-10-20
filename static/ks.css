@@ -103,7 +103,8 @@ body.kiosk{background:#fff;min-height:100vh}
 .ksizes span b{font-size:40px;font-weight:900;color:var(--ink);line-height:1.15}
 .ksizes span.zero{color:var(--red);background:var(--g50)}.ksizes span.zero b{color:var(--g400)}
 .kmap{border-radius:24px;background:var(--g50);border:2px solid var(--g200);padding:22px}
-.kmap .map{width:100%;height:auto;display:block}
+.kmap{display:flex;justify-content:center}
+.kmap .map{width:100%;height:auto;max-height:470px;display:block}
 .knomap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:60px 40px;border-radius:24px;background:var(--g50);border:2px solid var(--g200);text-align:center}
 .knomap b{font-size:34px;color:var(--g700)}.knomap span{font-size:26px;color:var(--g500);line-height:1.5}
 .kbtns{display:flex;gap:18px}
@@ -117,6 +118,16 @@ body.kiosk{background:#fff;min-height:100vh}
 .kbtn.gray{background:var(--g100);border-color:var(--g100);color:var(--g700)}
 .kbusy{display:flex;align-items:center;gap:18px;padding:24px 28px;border-radius:24px;background:var(--amb50);color:var(--amber)}
 .kbusy b{display:block;font-size:32px;font-weight:900}.kbusy span{font-size:25px;font-weight:500;color:var(--g700)}
+.kfresh.found{background:var(--ok50);color:var(--ok)}
+.kwh{display:flex;flex-direction:column;gap:18px;padding:24px 28px;border-radius:24px;background:var(--blue50)}
+.kwh-h{display:flex;align-items:center;gap:18px;color:var(--btx)}.kwh-h b{display:block;font-size:30px;font-weight:900}.kwh-h span{font-size:24px;color:var(--g700)}
+.kwh .kbtn{height:100px;background:#fff}
+.kmain:has(.kwh){gap:22px}
+.kmain:has(.kwh) .kidle{display:none}
+.kmain:has(.kwh) .kmap .map{max-height:340px}
+.kmain:has(.kwh) .kmap{padding:14px}
+.khelp{display:flex;align-items:center;gap:16px;padding:22px 26px;border-radius:24px;border:2px solid var(--g200);font-size:24px;color:var(--g700)}
+.khelp .ic{color:var(--g500)}
 .kidle{margin-top:auto;text-align:center;font-size:23px;color:var(--g500)}
 
 /* 키오스크 팝업 */
@@ -128,7 +139,7 @@ body.kiosk{background:#fff;min-height:100vh}
 .kdim.sheet .kmodal{width:min(900px,100vw);border-radius:48px 48px 0 0}
 .kmodal .bi{width:150px;height:150px;border-radius:50%;display:grid;place-items:center;background:var(--blue50);color:var(--blue)}
 .kmodal .bi.ok{background:var(--ok50);color:var(--ok)}
-.kmodal h3{margin:0;font-size:50px;font-weight:900}
+.kmodal h3{margin:0;font-size:44px;font-weight:900;word-break:keep-all}
 .kmodal p{margin:0;font-size:30px;color:var(--g700);line-height:1.45}
 .kmodal .row{display:flex;align-items:center;gap:22px;width:100%;padding:26px 30px;border-radius:28px;background:var(--g50);text-align:left}
 .kmodal .row img{width:72px;height:96px;object-fit:cover;border-radius:12px}

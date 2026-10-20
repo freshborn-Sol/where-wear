@@ -24,7 +24,7 @@
     <img src="{{ url_for('static', filename=w.image) if w.image else '' }}" alt="">
     <div class="wbody">
       <div class="wtop"><b class="{{ 'size' if w.kind == 'size' }}">{{ w.label }}</b><span class="timer">{{ cx.icon('clock', 12) }}{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</span></div>
-      <div class="wloc">{{ cx.icon('pin', 13) }}{{ w.zone or '' }}구역 · {{ w.fixture_id or '-' }} {{ (w.fixture_name or '').split(' ', 1)[1] if ' ' in (w.fixture_name or '') else '' }} 앞</div>
+      <div class="wloc">{{ cx.icon('pin', 13) }}{% if w.fixture_id == 'ENTRANCE' %}매장 입구 · 키오스크 앞{% else %}{{ w.zone or '' }}구역 · {{ w.fixture_id or '-' }} {{ (w.fixture_name or '').split(' ', 1)[1] if ' ' in (w.fixture_name or '') else '' }} 앞{% endif %}</div>
       <div class="witem">{{ w.name }} ({{ w.color }}){% if w.size %} <span class="chip n">{{ w.size }}</span>{% endif %}{% if w.detail and w.kind != 'none' %} · {{ w.detail }}{% endif %}</div>
       <form method="post" action="/staff/reports/{{w.id}}/wait" class="wact">
         {% if w.wait_state == 'waiting' %}<button name="act" value="going" class="sbtn sm blue">가는 중</button>

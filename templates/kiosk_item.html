@@ -16,7 +16,8 @@
           <div><b>{{it.place.zone}}구역 · {{ it.place.fixture_name.split(' ', 1)[1] if ' ' in it.place.fixture_name else it.place.fixture_name }}</b>
             <span>{{it.place.level}}{% if LV.get(it.place.level) %} ({{ LV[it.place.level] }}){% endif %}</span></div></div>
         {% if flag and flag[0] == 'warn' %}<div class="kfresh warn">{{ cx.icon('alert', 28) }}{{ flag[1] }}</div>
-        {% else %}<div class="kfresh {{it.fresh[1]}}">{{ cx.icon('clock', 28) }}{{it.fresh[0]}}{% if flag %} · {{ flag[1] }}{% endif %}</div>{% endif %}
+        {% else %}<div class="kfresh {{it.fresh[1]}}">{{ cx.icon('clock', 28) }}{{it.fresh[0]}}</div>
+          {% if flag %}<div class="kfresh found">{{ cx.icon('check', 28) }}{{ flag[1] }}</div>{% endif %}{% endif %}
       {% else %}
         <div class="kloc none"><span class="pc">{{ cx.icon('pin', 40) }}</span>
           <div><b>위치가 등록되지 않았어요</b><span>직원에게 물어보면 바로 찾아 드려요</span></div></div>
@@ -28,15 +29,23 @@
     {% for s in it.sizes %}<span class="{{ 'zero' if not s.qty and not s.wh }}"><b>{{s.size}}</b>{% if s.qty or s.wh %}매장 {{s.qty}} · 창고 {{s.wh}}{% else %}없음{% endif %}</span>{% endfor %}
   </div>
 
+  {% set whonly = it.sizes|selectattr('qty', 'equalto', 0)|selectattr('wh')|list %}
+  {% if whonly %}
+  <div class="kwh">
+    <div class="kwh-h">{{ cx.icon('box', 44) }}<div><b>진열엔 없고 창고에만 있는 사이즈</b>
+      <span>{% if busy %}계산대에 말씀하시면 창고에서 가져다 드려요{% else %}행거에 가도 없어요 · 누르면 직원이 이 자리로 가져다 드려요{% endif %}</span></div></div>
+    {% if not busy %}<div class="kbtns">{% for s in whonly %}<button class="kbtn blue" onclick="askWh('{{s.size}}')">{{s.size}} 가져다 주세요</button>{% endfor %}</div>{% endif %}
+  </div>
+  {% endif %}
+
   {% if it.place %}<div class="kmap">{% include "_cxmap.html" %}</div>
-  {% else %}<div class="knomap"><b>지도를 보여 드릴 수 없어요</b><span>'직원 불러주세요'를 누르면 직원이 이 자리로 와요<br>종이 지도에는 '위치 미등록 · 직원에게 문의'로 나와요</span></div>{% endif %}
+  {% else %}<div class="knomap"><b>지도를 보여 드릴 수 없어요</b><span>가까운 직원이나 계산대에 물어보세요<br>종이 지도에는 '위치 미등록 · 직원에게 문의'로 나와요</span></div>{% endif %}
 
   <div class="kbtns">
     <button class="kbtn navy" onclick="printMap()">{{ cx.icon('printer', 34) }}종이 지도 받기</button>
-    <button class="kbtn red" onclick="report('none')">{{ cx.icon('x', 34) }}여기 없어요</button>
-    {% if not busy %}<button class="kbtn blue" onclick="report('call')">{{ cx.icon('user', 34) }}직원 불러주세요</button>{% endif %}
   </div>
-  {% if busy %}<div class="kbusy">{{ cx.icon('alert', 44) }}<div><b>지금은 직원이 바빠요</b><span>도움이 필요하면 계산대에 말씀해 주세요</span></div></div>{% endif %}
+  {% if busy %}<div class="kbusy">{{ cx.icon('alert', 44) }}<div><b>지금은 직원이 바빠요</b><span>도움이 필요하면 계산대에 말씀해 주세요</span></div></div>
+  {% else %}<div class="khelp">{{ cx.icon('help', 34) }}<span>못 찾으면 종이 지도의 QR을 찍거나 가까운 직원에게 물어보세요</span></div>{% endif %}
   <p class="kidle">1분 동안 누르지 않으면 처음 화면으로 돌아가요</p>
 </main>
 </div>
@@ -48,23 +57,11 @@
   <div class="bar"><i></i></div><span class="small">80mm 감열 프린터 · 인쇄 창 없이 바로 출력</span>
 </div></div>
 
-<!-- 여기 없어요 → 접수 (바텀시트) -->
-<div class="kdim sheet" id="mNone"><div class="kmodal">
-  <div class="bi ok">{{ cx.icon('check', 76) }}</div>
-  <h3 id="noneTitle">알려주셔서 고마워요</h3><p id="noneMsg">다음 손님은 정확한 위치를 안내받아요</p>
-  <div class="row">{{ cx.icon('box', 48) }}<div><b id="noneStock">이 옷은 매장에 {{floor_n}}벌, 창고에 {{wh_n}}벌 있어요</b>
-    <span>{% if busy %}지금은 직원이 바빠요 · 계산대에 말씀해 주세요{% else %}직원을 부르면 창고에서 가져다 드려요{% endif %}</span></div></div>
-  <div class="kbtns">{% if not busy %}<button class="kbtn solid" onclick="report('call')">{{ cx.icon('user', 34) }}직원 불러주세요</button>{% endif %}
-    <a class="kbtn gray" href="/kiosk">{{ cx.icon('home', 34) }}처음으로</a></div>
-  <span class="small">같은 자리를 손님 2명이 알려주면 안내에서 자동으로 내려가요</span>
-</div></div>
-
-<!-- 직원 불러주세요 → 접수 -->
-<div class="kdim" id="mCall"><div class="kmodal">
-  <div class="bi">{{ cx.icon('user', 76) }}</div>
-  <h3>직원에게 알렸어요</h3><p>이 자리(매장 입구 키오스크)에서<br>잠시만 기다려 주세요</p>
-  <div class="row"><img src="{{ imgsrc(it) }}" alt=""><div><b>{{it.name}} · {{it.color}}</b>
-    <span>{% if it.place %}{{it.place.fixture_name}} {{it.place.level}} · {% endif %}직원 신고함에 바로 떠요</span></div></div>
+<!-- 창고 사이즈 요청 → 접수 -->
+<div class="kdim" id="mWh"><div class="kmodal">
+  <div class="bi">{{ cx.icon('box', 76) }}</div>
+  <h3>직원이 창고에서 가져다 드려요</h3><p><b id="whSize"></b> 사이즈 · 이 자리(매장 입구 키오스크)에서<br>잠시만 기다려 주세요</p>
+  <div class="row"><img src="{{ imgsrc(it) }}" alt=""><div><b>{{it.name}} · {{it.color}}</b><span>직원 신고함에 바로 떠요</span></div></div>
   <span class="small">10분이 지나면 자동으로 취소돼요</span>
   <div class="kbtns"><a class="kbtn navy" href="/kiosk">확인</a></div>
 </div></div>
@@ -77,19 +74,12 @@ function printMap(){
   window.open('/kiosk/print/{{it.sku}}','print','width=420,height=760');
   setTimeout(()=>$('mPrint').classList.remove('on'), 3000);
 }
-function report(kind){
+function askWh(size){   // 창고에만 있는 사이즈: 직원이 키오스크 앞으로 가져다 줌
   fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({sku:'{{it.sku}}',fixture:'{{ it.place.fixture_id if it.place }}',kind:kind})})
-  .then(r=>r.json()).then(d=>{
-    if(kind==='none'){ const m=d.message||''; const dup=m.startsWith('이미');
-      $('noneTitle').textContent = dup ? '이미 알려주셨어요' : '알려주셔서 고마워요';
-      $('noneMsg').textContent = dup ? '직원이 확인할게요' : (m.replace('알려주셔서 고마워요. ','') || '다음 손님은 정확한 위치를 안내받아요');
-      if(d.stock!=null) $('noneStock').textContent=`이 옷은 매장에 ${d.stock}벌, 창고에 ${d.wh||0}벌 있어요`;
-      show('mNone'); }
-    else show('mCall');
-  });
+   body:JSON.stringify({sku:'{{it.sku}}',fixture:'ENTRANCE',kind:'size',size:size,detail:size+' 창고에서 가져다주세요 (키오스크)'})})
+  .then(r=>r.json()).then(()=>{ $('whSize').textContent=size; show('mWh'); });
 }
-document.querySelectorAll('.kdim').forEach(d=>d.addEventListener('click',e=>{ if(e.target===d && d.id!=='mCall') d.classList.remove('on'); }));
+document.querySelectorAll('.kdim').forEach(d=>d.addEventListener('click',e=>{ if(e.target===d && d.id!=='mWh') d.classList.remove('on'); }));
 setTimeout(()=>location.href='/kiosk', 60000);   // 1분 뒤 첫 화면으로
 </script>
 {% endblock %}
