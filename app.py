@@ -229,6 +229,48 @@ def _simplify(pts):
         if not out or out[-1] != p: out.append(p)
     return out
 
+def route_steps(pts, zones, target):
+    """꺾이는 점마다 '오른쪽으로 꺾어 12m' 같은 안내 문장 (종이 지도용). 처음엔 입구에서 매장 안쪽(위)을 보고 선다"""
+    if len(pts) < 2: return [], []
+    def unit(a_, b_):
+        dx, dy = b_[0] - a_[0], b_[1] - a_[1]
+        return ((dx > 0) - (dx < 0), (dy > 0) - (dy < 0))
+    def near_zone(p_):
+        best = None
+        for z in zones:
+            dx = max(z["x"] - p_[0], 0, p_[0] - (z["x"] + z["w"])); dy = max(z["y"] - p_[1], 0, p_[1] - (z["y"] + z["h"]))
+            d = dx + dy
+            if best is None or d < best[0]: best = (d, z)
+        return f"{best[1]['id']}구역({best[1]['name']})" if best and best[0] < 60 else None
+    segs = []                                  # [방향, 길이, 끝점] — 짧은 꺾임(2m 미만)은 앞 구간에 합침
+    for a_, b_ in zip(pts, pts[1:]):
+        d = unit(a_, b_); ln = abs(b_[0] - a_[0]) + abs(b_[1] - a_[1])
+        if segs and (segs[-1][0] == d or ln < 2 * PX_PER_M):
+            segs[-1][1] += ln; segs[-1][2] = b_
+            if segs[-1][0] != d and segs[-1][1] - ln < 2 * PX_PER_M: segs[-1][0] = d
+        else: segs.append([d, ln, b_])
+    if len(segs) > 1 and segs[-1][1] < 3 * PX_PER_M:     # 마지막 3m 미만 꺾임은 '도착' 안내로 대신
+        segs.pop()
+    steps, turns, head = [], [], (0, -1)       # 입구에서 안쪽(위)을 보고 시작
+    for i, (d, ln, end) in enumerate(segs):
+        cr = head[0] * d[1] - head[1] * d[0]
+        turn = "앞으로" if d == head else ("오른쪽으로 꺾어" if cr > 0 else "왼쪽으로 꺾어" if cr < 0 else "뒤로 돌아")
+        if i == 0: turn = "입구에서 " + ("앞으로" if d == (0, -1) else ("오른쪽으로" if d == (1, 0) else "왼쪽으로"))
+        m = max(1, round(ln / PX_PER_M))
+        z = near_zone(end)
+        steps.append({"no": i + 1, "turn": turn, "m": m, "by": z if (not steps or steps[-1]["zone"] != z) else None, "zone": z})
+        if i > 0: turns.append({"no": i + 1, "x": segs[i - 1][2][0], "y": segs[i - 1][2][1]})
+        head = d
+    if target:                                 # 도착: 찾는 집기가 진행 방향의 어느 쪽인지
+        f = one("SELECT * FROM fixtures WHERE id=?", (target,))
+        if f:
+            ex, ey = segs[-1][2]; tx, ty = f["x"] + f["w"] / 2 - ex, f["y"] + f["h"] / 2 - ey
+            cr = head[0] * ty - head[1] * tx
+            dot = head[0] * tx + head[1] * ty
+            side = "바로 앞" if abs(cr) < 25 and dot > 0 else ("오른쪽" if cr > 0 else "왼쪽")
+            steps.append({"no": 0, "turn": side, "m": 0, "by": None, "zone": None, "arrive": True})
+    return steps, turns
+
 def map_data(at, target_fixture=None):
     """도면 그리기에 필요한 값 묶음: 구역 · 집기 · 시설 · 경로 · 도면 크기"""
     pos, _ = _graph()
@@ -242,11 +284,13 @@ def map_data(at, target_fixture=None):
             pts.append((ex + (6 if ex < lx else -6 if ex > lx else 0), ey + (6 if ey < ly else -6 if ey > ly else 0)))
     try: zones = rows("SELECT * FROM zones")
     except sqlite3.OperationalError: zones = []
+    steps, turns = route_steps(_simplify(pts[:-1]) if len(pts) > 2 else [], zones, target_fixture)
     fixtures = rows("SELECT * FROM fixtures")
     W = max([f["x"] + f["w"] for f in fixtures] + [620]) + 20
     H = max([f["y"] + f["h"] for f in fixtures] + [470])
     start = pts[0] if pts else (pos.get(at) or (0, 0))   # '나' 표시: 지금 선 자리(통로)
     return {"fixtures": fixtures, "zones": zones, "at": at, "target": target_fixture, "W": W, "H": H + 20, "start": start,
+            "steps": steps, "turns": turns,
             "path": " ".join(f"{x},{y}" for x, y in _simplify(pts))}
 
 def _plen(path):
@@ -1155,6 +1199,7 @@ def kiosk_item(sku):
 def kiosk_print(sku):
     """③ 감열식 영수증 프린터(80mm)용 종이 지도. 키오스크에서 눌러 바로 출력."""
     it = decorate([one("SELECT * FROM items WHERE sku=?", (sku,))])[0]
+    it["sizes"] = sort_sizes(it["sizes"])
     fx = it["place"]["fixture_id"] if it["place"] else None
     log_event("print", sku)
     # 종이 지도에 '이 옷' QR: 행거 앞에서 찍으면 그 옷 화면이 열려 '찾는 게 없나요?'(신고·재고·직원)를 바로 쓸 수 있다

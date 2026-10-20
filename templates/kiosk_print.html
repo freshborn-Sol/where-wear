@@ -5,8 +5,16 @@
 *{box-sizing:border-box}body{margin:0;width:74mm;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#000}
 .c{text-align:center}.logo{font-weight:900;font-size:16pt}.logo i{font-style:normal;color:#000}
 .hr{border-top:1px dashed #000;margin:2.5mm 0}
-.nm{font-size:11pt;font-weight:700}.dir{font-size:10pt;font-weight:700;margin:2mm 0 1mm;padding:1.5mm;border:1.5px solid #000;border-radius:2mm}.meta{font-size:9pt}
-.loc{font-size:20pt;font-weight:900;line-height:1.2;margin:1mm 0}.lv{font-size:14pt;font-weight:800}
+.nm{font-size:11pt;font-weight:700}.meta{font-size:9pt}
+.loc{font-size:20pt;font-weight:900;line-height:1.2;margin:1mm 0}
+.dest{border:2.5px solid #000;border-radius:2.5mm;padding:2mm 2.5mm;text-align:center;margin-bottom:2mm}
+.dest small{display:block;font-size:8.5pt;font-weight:700}.dest b{display:block;font-size:17pt;font-weight:900;line-height:1.2}.dest span{font-size:11pt;font-weight:800}
+.leg{margin:1mm 0 2mm}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1.6mm}
+.steps li{display:flex;align-items:center;gap:2.5mm}
+.steps i{flex:none;width:7mm;height:7mm;border-radius:50%;background:#000;color:#fff;font-style:normal;font-weight:900;font-size:11pt;display:grid;place-items:center}
+.steps b{display:block;font-size:12.5pt;font-weight:900;line-height:1.25}.steps span{font-size:9pt}
+.steps li.arr{border-top:1.5px solid #000;padding-top:1.6mm}.steps li.arr i{border-radius:1.5mm}.lv{font-size:14pt;font-weight:800}
 svg{width:100%;height:auto}svg text{font-family:inherit}
 .small{font-size:8pt}
 .qrbox{display:flex;gap:2.5mm;align-items:center;font-size:8.5pt;line-height:1.35}.qrbox img{width:22mm;height:22mm;flex:none;image-rendering:pixelated}.qrbox b{display:block;font-size:10pt}
@@ -20,12 +28,20 @@ svg{width:100%;height:auto}svg text{font-family:inherit}
 <div class="c meta">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %} · {{ "{:,}".format(it.price) }}원</div>
 <div class="hr"></div>
 {% if it.place %}
-<div class="c loc">{{it.place.zone}}구역 · {{it.place.fixture_id}}</div>
-<div class="c lv">{{it.place.fixture_name}} · {{it.place.level}}</div>
-{% if dirtext %}<div class="c dir">▶ {{dirtext}}</div>{% endif %}
-{% else %}<div class="c lv">위치 미등록 · 직원에게 문의</div>{% endif %}
+{% set LV = {'상단':'맨 위 칸','중단':'가운데 칸','하단':'맨 아래 칸'} %}{% set fxn = it.place.fixture_name.split(' ', 1)[1] if ' ' in it.place.fixture_name else it.place.fixture_name %}
+<div class="dest"><small>찾아갈 곳</small><b>{{it.place.zone}}구역 · {{fxn}}</b><span>{{it.place.fixture_id}} · {{ LV.get(it.place.level, it.place.level) }}</span></div>
 {% set mono = True %}{% include "_cxmap.html" %}
-<div class="c small">● 나 = 지금 위치(입구 키오스크) · 검은 칸 = 옷이 있는 집기</div>
+<div class="c small leg">● 나 → 점선을 따라 ①②③에서 꺾으면 도착</div>
+{% if map.steps %}
+<ol class="steps">
+  {% for st in map.steps %}
+    {% if st.arrive %}<li class="arr"><i>■</i><div><b>도착 · {{st.turn}}에 {{fxn}}</b><span>{{it.place.fixture_id}} {{ LV.get(it.place.level, it.place.level) }}에 있어요</span></div></li>
+    {% else %}<li><i>{{ st.no }}</i><div><b>{{st.turn}} {{st.m}}m</b>{% if st.by %}<span>{{st.by}} 옆까지</span>{% endif %}</div></li>{% endif %}
+  {% endfor %}
+</ol>
+{% endif %}
+{% else %}<div class="c lv">위치 미등록 · 직원에게 문의</div>
+{% set mono = True %}{% include "_cxmap.html" %}{% endif %}
 <div class="hr"></div>
 <div class="c small">사이즈별 재고 (매장/창고)</div>
 <div class="sz">{% for s in it.sizes %}<span>{{s.size}} {{s.qty}}/{{s.wh}}</span>{% endfor %}</div>
