@@ -14,8 +14,7 @@
         {% if ci.rep %}<img src="{{ imgsrc(ci.rep) }}" alt="">{% endif %}</a>
     {% endfor %}
   </div>
-  <div class="kbanner">{{ cx.icon('printer', 52) }}<div><b>찾은 위치는 종이 지도로 뽑아 갈 수 있어요</b><span>위치를 외우지 않아도 돼요 · 글자를 입력할 필요도 없어요</span></div></div>
-  <div class="knote">{{ cx.icon('help', 44) }}<div><b>찾는 옷이 사진으로만 있나요?</b><span>휴대폰으로 선반 QR을 찍으면 사진으로도 찾을 수 있어요</span></div></div>
+  <div class="kbanner">{{ cx.icon('printer', 52) }}<div><b>찾은 위치는 종이 지도로 뽑아 갈 수 있어요</b></div></div>
 {% elif step == 'sub' %}
   {{ ks.kstep(1) }}
   <h1 class="kh1">{{cat}} · 어떤 종류인가요?</h1>
@@ -67,7 +66,7 @@
   </div>
 {% endif %}
 </main>
-{% if step == 'cat' %}{{ ks.kfoot('선반마다 있는 QR을 휴대폰으로 찍어도 같은 안내를 받을 수 있어요') }}
+{% if step == 'cat' %}
 {% elif step == 'sub' %}{{ ks.knav('/kiosk', '종류 다시 고르기') }}
 {% elif step == 'color' %}{{ ks.knav('/kiosk?step=sub&cat=' ~ cat, '세부 종류 다시') }}
 {% else %}{{ ks.knav('/kiosk?step=color&cat=' ~ cat ~ '&sub=' ~ sub, '색 다시 고르기') }}{% endif %}

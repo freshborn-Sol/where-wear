@@ -19,17 +19,17 @@
         <button type="button" onclick="stepN(1)" aria-label="한 명 늘리기">{{ cx.icon('plus', 16) }}</button>
       </div>
       <div style="flex:1;min-width:0"><b style="font-size:12px;display:block">2명 이하이면 바쁨 모드가 자동으로 켜져요</b>
-        <small style="font-size:11px;color:var(--g500)">인터뷰: 3~4명이면 바로 응대 가능, 2명은 애매</small></div>
+</div>
     </div>
 
     <label class="card" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;cursor:pointer">
       <div style="flex:1"><b style="font-size:13px;display:block">이 매장에서 키오스크 사용</b>
-        <small style="font-size:11px;color:var(--g700)">끄면 키오스크 화면에 '직원에게 문의' 안내만 나와요</small></div>
+        <small style="font-size:11px;color:var(--g700)">끄면 '직원에게 문의'만 보여요</small></div>
       <span class="toggle"><input type="checkbox" name="kiosk" {{'checked' if s.kiosk=='1'}}><i></i></span>
     </label>
 
     <div class="sh2">바쁨 모드 <span class="chip {{ 'a' if busy_now }}" style="margin-left:4px">{{ '지금 켜짐' if busy_now else '지금 꺼짐' }}</span></div>
-    {% for k, lab, d in [('auto','자동','직원 2명 이하이거나, 기다리는 손님 수가 직원 수 이상이면 켜져요'),('on','켜기','손님 화면에서 직원 호출 대신 재고·대안 옷을 먼저 보여 주고 계산대로 안내'),('off','끄기','항상 직원 호출 가능')] %}
+    {% for k, lab, d in [('auto','자동','직원이 적거나 손님이 몰리면 켜져요'),('on','켜기','직원 호출 대신 계산대로 안내'),('off','끄기','항상 직원 호출 가능')] %}
       <label class="radio"><input type="radio" name="busy" value="{{k}}" {{'checked' if s.busy==k}}><div><b>{{lab}}</b><small>{{d}}</small></div></label>
     {% endfor %}
     <button class="save">{{ cx.icon('check', 18) }}저장</button>

@@ -10,9 +10,7 @@
   <div class="qchips" id="recentBox" hidden><div class="qh"><b>최근 검색</b><button type="button" onclick="clearRecent()">지우기</button></div><div class="qrow" id="recent"></div></div>
   <div class="qchips"><div class="qh"><b>지금 많이 찾는</b></div><div class="qrow">
     {% for w in popular %}<a class="qc hot" href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em>{{w}}</a>{% endfor %}</div></div>
-  <p class="hint">{{ cx.icon('camera', 15) }}<span>옷 사진만 있어도 돼요 · 카메라를 눌러 찍거나 앨범에서 고르면 AI가 비슷한 옷을 찾아줘요</span></p>
 
-  <div id="mebanner" class="mebanner" hidden></div>
 
   <h2>종류</h2>
   <div class="tabs" role="tablist">
@@ -39,15 +37,6 @@
 </main>
 {{ cx.tabbar('find') }}
 <script>
-(function(){                      // 키·몸무게: 없으면 등록 안내, 있으면 요약
-  const b=document.getElementById('mebanner'), nx=encodeURIComponent(location.pathname+location.search);
-  const ic='<span class="mi">{{ cx.icon("user", 22)|replace("\n"," ") }}</span>';
-  let p=null; try{ p=JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){}
-  b.hidden=false;
-  b.innerHTML = p ? `${ic}<div class="mt"><small>내 사이즈 정보</small><b>${p.h}cm · ${p.w}kg</b></div><a class="mbtn" href="/me?at={{at}}&next=${nx}">수정</a>`
-                  : `${ic}<div class="mt"><b>키·몸무게를 등록해 두면</b><small>옷마다 추천 사이즈를 바로 알려드려요</small></div><a class="mbtn" href="/me?at={{at}}&next=${nx}">등록하기</a>`;
-  b.classList.toggle('saved', !!p);
-})();
 (function(){ let r=[]; try{ r=JSON.parse(localStorage.getItem('ww_recent')||'[]'); }catch(e){}
   if(!r.length) return; const box=document.getElementById('recent'); document.getElementById('recentBox').hidden=false;
   r.forEach(q=>{ const a=document.createElement('a'); a.className='qc'; a.textContent=q;

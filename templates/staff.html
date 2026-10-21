@@ -6,7 +6,7 @@
 <main class="swrap">
   {% if check_days >= CHECK_DAYS %}
   <form class="checkbar" method="post" action="/staff/checked">
-    {{ cx.icon('bell', 22) }}<div><b>진열 점검할 때예요</b><small>마지막 점검 {{check_days}}일 전 · 아래 '다시 찍을 옷'부터 확인하세요</small></div>
+    {{ cx.icon('bell', 22) }}<div><b>진열 점검할 때예요</b><small>마지막 점검 {{check_days}}일 전</small></div>
     <button class="sbtn sm">점검 완료</button>
   </form>
   {% endif %}
@@ -50,10 +50,8 @@
 
   <div class="sh2">최근 등록</div>
   <ul id="log" class="slog"><li class="none">아직 등록한 옷이 없어요</li></ul>
-  <div class="hintcard"><b>선반 QR 1번 → 옷 태그를 연속으로</b>진열을 바꿔도 옷을 한 벌씩 찍을 필요 없이, 상품마다 한 번만 찍으면 사이즈가 함께 등록돼요</div>
 
   <div class="sh2" id="priority">다시 찍을 옷</div>
-  <p class="ssub">자주 찾는데 위치가 오래됐거나 '없어요' 신고가 있는 옷부터</p>
   {% if not priority %}<div class="empty">지금은 다시 찍을 옷이 없어요.</div>{% endif %}
   {% for p in priority %}
     <div class="prio">

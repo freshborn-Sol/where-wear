@@ -24,7 +24,6 @@
       <label class="bigbtn line">{{ cx.icon('image', 32) }}사진 고르기
         <input type="file" name="photo" accept="image/*" onchange="this.form.requestSubmit()"></label>
     </div>
-    <p class="tip">{{ cx.icon('sparkle', 16) }}밝은 곳에서, 옷이 화면을 꽉 채우게 찍으면 정확해져요</p>
   </form>
 
 {% elif step == 'confirm' %}
@@ -37,7 +36,7 @@
       <div class="side">
         {% if err %}<div class="warnmsg"><b>{{ cx.icon('alert', 14) }}AI 분석 실패</b>{{ err.replace('AI 분석 실패: ', '') }}</div>
         {% elif a.desc %}<div class="aiq"><b>{{ cx.icon('sparkle', 14) }}AI 분석 결과</b>“{{a.desc}}”</div>{% endif %}
-        <small style="font-size:12px;color:var(--g500)">{{ '사진은 저장돼요. 칸을 채우고 저장하면 돼요' if err else '틀린 칸만 고치고 저장하세요' }}</small>
+        <small style="font-size:12px;color:var(--g500)">{{ '칸을 채우고 저장하세요' if err else '틀린 칸만 고치고 저장하세요' }}</small>
         <span class="locchip">{{ cx.icon('pin', 13) }}위치: {{fx}} {{lv}}</span>
       </div>
     </div>

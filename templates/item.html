@@ -22,12 +22,12 @@
       {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0 and s.wh==0}} {{'whonly' if s.qty==0 and s.wh>0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')"><b>{{s.size}}</b>
         <small>{% if s.qty %}매장 {{s.qty}}{% elif s.wh %}창고만{% else %}없음{% endif %}</small>{% if s.wh %}<em>창고 {{s.wh}}</em>{% endif %}</button>{% endfor %}
     </div>
-    {% if busy %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 매장이 붐벼요. 직원 도움은 계산대에서 받을 수 있어요.</p>{% endif %}
+    {% if busy %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 매장이 붐벼요 · 도움은 계산대에서</p>{% endif %}
   </section>
   {% for s in hsizes if s.qty == 0 %}
   <div class="szres {{'wh' if s.wh}}" data-size="{{s.size}}" hidden>
     {% if s.wh %}
-      <p class="szno">{{s.size}} 사이즈는 매장 진열엔 없지만 창고에 {{s.wh}}벌 있어요.</p>
+      <p class="szno">{{s.size}}은 창고에 {{s.wh}}벌 있어요</p>
       {% if busy %}<p class="szsub">지금은 직원이 바빠요. 계산대에 말씀하시면 창고에서 가져다 드려요.</p>
       {% else %}<button class="btn primary" onclick="sendInline('size','{{s.size}} 창고에서 가져다주세요','{{s.size}}')">{{ cx.icon('box', 18) }}직원이 창고에서 가져다 드려요</button>{% endif %}
     {% else %}
@@ -55,13 +55,12 @@
       <div><b>{{it.place.fixture_name}}</b><span>{{it.place.level}}{% if LV.get(it.place.level) %} · {{ LV[it.place.level] }}{% endif %}</span>
         {% if walk %}<div class="walkline">{{ cx.icon('run', 15) }}<i>{% if walk.m <= 8 %}바로 근처예요{% else %}여기서 {{walk.m}}m · 걸어서 약 {{walk.sec}}초{% endif %}</i></div>{% endif %}</div></div>
     <div class="trust">
-      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}{% if it.fresh[1] == 'old' and not flag %} · 위치가 바뀌었을 수 있어요{% endif %}</div>
-      {% if flag %}<div class="lflag {{flag[0]}}">{{ cx.icon('checkcircle' if flag[0]=='ok' else 'alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
+      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}</div>
+      {% if flag and flag[0] == 'warn' %}<div class="lflag warn">{{ cx.icon('alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
     </div>
   {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
 
   {% include "_cxmap.html" %}
-  <p class="legend">주황 점 = 지금 내 위치 · 파란 칸 = 찾는 옷이 있는 선반 · 점선을 따라가세요</p>
   {% else %}
   <div class="detail">
     <img class="hero" src="{{ imgsrc(it) }}" alt="">
@@ -77,13 +76,12 @@
       <div><b>{{it.place.fixture_name}}</b><span>{{it.place.level}}{% if LV.get(it.place.level) %} · {{ LV[it.place.level] }}{% endif %}</span>
         {% if walk %}<div class="walkline">{{ cx.icon('run', 15) }}<i>{% if walk.m <= 8 %}바로 근처예요{% else %}여기서 {{walk.m}}m · 걸어서 약 {{walk.sec}}초{% endif %}</i></div>{% endif %}</div></div>
     <div class="trust">
-      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}{% if it.fresh[1] == 'old' and not flag %} · 위치가 바뀌었을 수 있어요{% endif %}</div>
-      {% if flag %}<div class="lflag {{flag[0]}}">{{ cx.icon('checkcircle' if flag[0]=='ok' else 'alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
+      <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}</div>
+      {% if flag and flag[0] == 'warn' %}<div class="lflag warn">{{ cx.icon('alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
     </div>
   {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
 
   {% include "_cxmap.html" %}
-  <p class="legend">주황 점 = 지금 내 위치 · 파란 칸 = 찾는 옷이 있는 선반 · 점선을 따라가세요</p>
   {% set floor_n = hsizes|sum(attribute='qty') %}{% set wh_n = hsizes|sum(attribute='wh') %}
   <section class="stockcard {{ 'fromtag' if src=='tag' }}" aria-label="사이즈별 재고">
     <div class="sc-h">{% if src=='tag' %}<span class="sc-tag">{{ cx.icon('qr', 14) }}옷 태그로 확인</span>{% endif %}
@@ -92,12 +90,12 @@
       {% for s in hsizes %}<button class="sz {{'zero' if s.qty==0 and s.wh==0}} {{'whonly' if s.qty==0 and s.wh>0}}" data-size="{{s.size}}" onclick="showSize('{{s.size}}')"><b>{{s.size}}</b>
         <small>{% if s.qty %}매장 {{s.qty}}{% elif s.wh %}창고만{% else %}없음{% endif %}</small>{% if s.wh %}<em>창고 {{s.wh}}</em>{% endif %}</button>{% endfor %}
     </div>
-    {% if busy %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 매장이 붐벼요. 직원 도움은 계산대에서 받을 수 있어요.</p>{% endif %}
+    {% if busy %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 매장이 붐벼요 · 도움은 계산대에서</p>{% endif %}
   </section>
   {% for s in hsizes if s.qty == 0 %}
   <div class="szres {{'wh' if s.wh}}" data-size="{{s.size}}" hidden>
     {% if s.wh %}
-      <p class="szno">{{s.size}} 사이즈는 매장 진열엔 없지만 창고에 {{s.wh}}벌 있어요.</p>
+      <p class="szno">{{s.size}}은 창고에 {{s.wh}}벌 있어요</p>
       {% if busy %}<p class="szsub">지금은 직원이 바빠요. 계산대에 말씀하시면 창고에서 가져다 드려요.</p>
       {% else %}<button class="btn primary" onclick="sendInline('size','{{s.size}} 창고에서 가져다주세요','{{s.size}}')">{{ cx.icon('box', 18) }}직원이 창고에서 가져다 드려요</button>{% endif %}
     {% else %}
@@ -149,11 +147,11 @@
     {% set instock = hsizes|selectattr('qty')|list %}{% set inwh = hsizes|selectattr('wh')|list %}
     {% if instock or inwh %}
       <div class="nstock">
-        <div><b>매장에 {{ instock|sum(attribute='qty') }}벌{% if wh_n %} · 창고에 {{wh_n}}벌{% endif %} 있어요.</b> {{ '위치만 바뀐 것 같아요.' if instock else '창고에서 꺼내 와야 해요.' }}</div>
+        <div><b>매장에 {{ instock|sum(attribute='qty') }}벌{% if wh_n %} · 창고에 {{wh_n}}벌{% endif %} 있어요</b></div>
         {% if busy %}
-          <p class="busynote">{{ cx.icon('alert', 15) }}지금은 직원이 바빠서 바로 가기 어려워요. 계산대에 말씀해 주시면 찾아 드려요.</p>
+          <p class="busynote">{{ cx.icon('alert', 15) }}직원이 바빠요 · 계산대에 말씀해 주세요</p>
         {% else %}
-        <p class="sh-q" style="font-size:13px;font-weight:500;color:var(--g700)">찾는 사이즈를 고르면 직원이 찾아 드려요</p>
+        <p class="sh-q" style="font-size:13px;font-weight:500;color:var(--g700)">사이즈를 고르면 직원이 찾아 드려요</p>
         <div class="szpick">{% for z in hsizes if z.qty or z.wh %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{% if z.qty %}{{z.qty}}벌{% else %}창고 {{z.wh}}{% endif %}</small></button>{% endfor %}</div>
         <button class="btn primary" id="waitBtn" onclick="askStaff()" disabled>직원에게 찾아 달라고 하기</button>
         {% endif %}
@@ -181,7 +179,7 @@
 
   <section data-p="call" hidden>
     {% if busy %}
-      <p class="ans no"><span><b>지금 매장이 붐벼서 직원이 바로 가기 어려워요.</b><br><small>계산대에 말씀해 주시면 바로 도와드려요. 재고·다른 색·비슷한 옷은 이 화면에서 바로 볼 수 있어요.</small></span></p>
+      <p class="ans no"><span><b>직원이 바빠요 · 계산대로 와 주세요</b></span></p>
     {% else %}
     <p class="sh-q">무엇이 궁금하세요?<small>골라 주시면 직원이 미리 알고 와요</small></p>
     <div class="reasons">
@@ -240,8 +238,8 @@ function askStaff(){
    .then(r=>r.json()).then(d=>startTrack(d.id));
 }
 const TMSG={waiting:'직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.',going:'직원이 가고 있어요!',
-  served:'직원이 도착했어요. 이용해 주셔서 고마워요.',nostock:'죄송해요. 확인해 보니 매장에 재고가 없어요. 비슷한 옷을 확인해 보세요.',
-  expired:'직원이 지금 바빠요. 계산대에 말씀해 주시면 바로 도와드려요.'};
+  served:'직원이 도착했어요',nostock:'매장에 재고가 없어요 · 비슷한 옷을 확인해 보세요',
+  expired:'직원이 바빠요 · 계산대로 와 주세요'};
 function startTrack(id){
   RID=id; go('status'); $('#shBack').style.visibility='hidden';
   const tick=()=>fetch('/api/report/'+id).then(r=>r.json()).then(d=>{
@@ -249,7 +247,7 @@ function startTrack(id){
     document.querySelectorAll('.tstep').forEach((e,i)=>{ e.classList.toggle('on', k>=0 ? i<=k : false); });
     $('#tMsg').textContent=TMSG[d.state]||TMSG.waiting;
     $('#tMsg').className='ans '+(['nostock','expired'].includes(d.state)?'no':'ok');
-    $('#tTime').textContent=['waiting','going'].includes(d.state)?`${d.minutes<1?"방금 요청":d.minutes+"분째"} · 10분이 지나면 자동으로 취소돼요`:'';
+    $('#tTime').textContent=['waiting','going'].includes(d.state)?`${d.minutes<1?"방금 요청":d.minutes+"분째 기다리는 중"}`:'';
     if(!['waiting','going'].includes(d.state)) clearInterval(POLL);
   });
   tick(); clearInterval(POLL); POLL=setInterval(tick,3000);
@@ -297,13 +295,13 @@ function recommend(p){
   const meLink='/me?at='+AT+'&next='+encodeURIComponent(location.pathname+location.search);
   if(ITEM.sizes.every(s=>s.size==='F')){ box.hidden=true; return; }   // 잡화(프리 사이즈)는 추천 없음
   box.hidden=false;
-  if(!p){ box.innerHTML=USER_IC+' <a href="'+meLink+'">키·몸무게를 등록</a>하면 추천 사이즈를 알려드려요'; return; }
+  if(!p){ box.innerHTML=USER_IC+' <a href="'+meLink+'">키·몸무게 등록</a>하고 추천 사이즈 보기'; return; }
   const r=recommend(p);
   if(!r.size){ box.innerHTML=r.msg||''; box.hidden=!r.msg; return; }
   const st=ITEM.sizes.find(s=>s.size===r.size), q=st?st.qty:0, w=st?st.wh:0;
   document.querySelectorAll('.sz').forEach(b=>b.classList.toggle('mine', b.dataset.size===r.size));
   box.classList.add(q?'ok':(w?'wh':'no'));
-  box.innerHTML = `${USER_IC}추천 사이즈 <b>${r.size}</b> · ${q?`매장 ${q}벌`:(w?`<b>창고에 ${w}벌</b>`:'<b>지금 없어요</b>')}<br><small>${r.why} · 참고용 <a href="${meLink}">수정</a></small>`;
+  box.innerHTML = `${USER_IC}추천 사이즈 <b>${r.size}</b> · ${q?`매장 ${q}벌`:(w?`<b>창고에 ${w}벌</b>`:'<b>지금 없어요</b>')}<a class="recedit" href="${meLink}">수정</a><small hidden>${r.why}</small>`;
   if(!q) showSize(r.size);
 })();
 </script>

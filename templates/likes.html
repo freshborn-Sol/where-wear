@@ -5,7 +5,7 @@
 {% if not has_dev %}<script>if(window.WWDEV) location.replace('/likes?at={{at}}&d='+WWDEV);</script>{% endif %}
 <main class="page likes">
   {% if items %}
-  <p class="note">{{ cx.icon('pin', 15) }}<span>매장에서 돌기 좋게 <b>구역 순</b>으로 보여드려요 · <b id="likeCnt">{{items|length}}</b>벌</span></p>
+  <p class="note">{{ cx.icon('pin', 15) }}<span>구역 순 · <b id="likeCnt">{{items|length}}</b>벌</span></p>
   {% for it in items %}
   <div class="lcard" data-sku="{{it.sku}}">
     <a class="lc-main" href="/item/{{it.sku}}?at={{at}}">
@@ -25,10 +25,9 @@
   <div class="lempty" id="lempty" {% if items %}hidden{% endif %}>
     <span class="le-ic">{{ cx.icon('heart', 30) }}</span>
     <b>아직 찜한 옷이 없어요</b>
-    <small>상품 화면 오른쪽 위 하트를 누르면<br>여기에 모여요. 몇 벌 골라 두고 한 번에 입어 보세요.</small>
+    <small>하트를 누르면 여기에 모여요</small>
     <a class="btn primary" href="/go?at={{at}}">옷 찾으러 가기</a>
   </div>
-  <p class="lockhint">{{ cx.icon('lock', 18) }}<span>로그인 없이 <b>이 휴대폰</b>에만 연결돼요. 브라우저 기록을 지우면 찜목록도 사라져요.</span></p>
 </main>
 {{ cx.tabbar('like') }}
 <script>

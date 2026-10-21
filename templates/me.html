@@ -3,7 +3,7 @@
 {% block body %}
 {{ cx.appbar('내 사이즈 정보') }}
 <main class="page">
-  <p class="lockhint">{{ cx.icon('lock', 18) }}<span>입력한 정보는 <b>이 휴대폰에만</b> 저장되고 서버로 보내지 않아요. 옷마다 추천 사이즈를 계산할 때만 써요.</span></p>
+  <p class="lockhint">{{ cx.icon('lock', 18) }}<span><b>이 휴대폰에만</b> 저장돼요</span></p>
   <form id="f" class="meform" onsubmit="return save()">
     <label class="fld"><span>키</span><span class="inp"><input name="h" type="number" inputmode="numeric" min="120" max="220" required placeholder="172">cm</span></label>
     <label class="fld"><span>몸무게</span><span class="inp"><input name="w" type="number" inputmode="numeric" min="30" max="150" required placeholder="65">kg</span></label>

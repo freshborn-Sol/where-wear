@@ -89,12 +89,12 @@
   {# ⑦ 살펴볼 옷 #}
   <div class="h3" id="rank"><b>살펴볼 옷</b><small>최근 7일</small></div>
   <div class="card rk">
-    <h4>{{ cx.icon('alert', 16) }}'없어요'가 많은 옷 <span class="why">→ 놓친 매출 · 발주 근거</span></h4>
+    <h4>{{ cx.icon('alert', 16) }}'없어요'가 많은 옷</h4>
     <ol>{% for i in summary.top_items %}<li><img src="{{ url_for('static', filename=i.image) if i.image else '' }}" alt=""><span class="nm">{{i.name}} ({{i.color}})</span><b>{{i.n}}</b></li>
     {% else %}<li class="none">아직 없어요</li>{% endfor %}</ol>
   </div>
   <div class="card rk">
-    <h4>{{ cx.icon('heart', 16) }}많이 찜한 옷 <span class="why">→ 재고가 적으면 보충 먼저</span></h4>
+    <h4>{{ cx.icon('heart', 16) }}많이 찜한 옷</h4>
     <ol>{% for i in summary.top_liked %}<li><img src="{{ url_for('static', filename=i.image) if i.image else '' }}" alt=""><span class="nm">{{i.name}} ({{i.color}})</span>
       {% if i.floor + i.wh <= 3 %}<span class="chip r">재고 {{i.floor}}+{{i.wh}}</span>{% endif %}<b>{{i.n}}</b></li>
     {% else %}<li class="none">아직 없어요</li>{% endfor %}</ol>

@@ -18,7 +18,7 @@
       {% for k, lab in [('auto','자동'),('on','켜기'),('off','끄기')] %}<button name="mode" value="{{k}}" class="{{'sel' if busy_mode==k}}">{{lab}}</button>{% endfor %}
     </form>
   </div>
-  {% if busy %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>손님 화면은 직원 호출 대신 재고·비슷한 옷을 먼저 보여 주고 '계산대에서 도와드려요'로 안내해요</span></div>{% endif %}
+  {% if busy %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>손님에게 계산대로 안내 중이에요</span></div>{% endif %}
   <div class="newreq" id="newreq" hidden>{{ cx.icon('bell', 20) }}<b>새 손님 요청이 들어왔어요</b><span>아래 빨간 카드부터 확인하세요</span></div>
   <button type="button" class="sndbtn" id="sndbtn" onclick="toggleSound()">{{ cx.icon('bell', 15) }}<span>새 요청 알림 소리 켜기</span></button>
   <div class="rsum">
@@ -45,7 +45,6 @@
     </div>
   </div>
   {% endfor %}
-  {% if waiting %}<div class="wnote">5분 넘게 기다리면 빨간 테두리 · {{WAIT_MIN}}분이 지나면 자동 취소되고 '놓친 호출'로 남아요</div>{% endif %}
 
   <!-- ② 나중에 고칠 곳 (선반별) -->
   <div class="sh2" id="fix"><span class="dot y"></span>위치 고칠 것</div>

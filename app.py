@@ -477,7 +477,7 @@ def search_photo():
         f.stream.seek(0)
         rgb = S.dominant_color(f)
         items, cname = S.photo_search(rows("SELECT * FROM items"), COLORS, rgb)
-        note = f"AI 분석을 못 했어요({e}) · 대신 사진의 대표 색 '{cname}' 기준으로 찾았어요"
+        note = f"사진 색 '{cname}'으로 찾았어요"
         return render_template("results.html", at=at, items=decorate(items[:8]), q="",
                                cat="", color="", note=note, cats=list(CATS),
                                colors=COLORS, swatch="#%02x%02x%02x" % rgb)
@@ -554,7 +554,7 @@ def loc_flag(it):
     p = it.get("place")
     if not p: return None
     n = open_none(it["sku"], p["fixture_id"])
-    if n: return ("warn", "최근 '여기 없어요' 신고가 있었어요. 직원이 확인 중이에요")
+    if n: return ("warn", "직원이 위치 확인 중이에요")
     c = p.get("confirmed_at")
     if c and c >= (p.get("updated_at") or "") and mins_since(c) < 360:
         m = mins_since(c)
@@ -604,7 +604,7 @@ def report():
         else:
             rid = db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,device) VALUES (?,?,?,?,?)",
                                (sku, fx, "none", ts(), dev)).lastrowid
-            msg = "알려주셔서 고마워요. 다음 손님은 정확한 위치를 안내받아요"
+            msg = "알려주셔서 고마워요"
         delisted = False
         if fx and open_none(sku, fx) >= 2:     # 서로 다른 손님 2명이 신고 → 안내에서 내림
             db().execute("UPDATE placements SET active=0 WHERE sku=? AND fixture_id=?", (sku, fx))
@@ -651,7 +651,7 @@ def found():
     db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,device,done,resolution,resolved_at)
                     VALUES (?,?,'found',?,?,1,'손님이 찾음',?)""", (sku, fx, ts(), d.get("device"), ts()))   # 점장 요약용 기록
     db().commit()
-    return jsonify(ok=True, message="고마워요! 덕분에 다음 손님 안내가 더 정확해져요")
+    return jsonify(ok=True, message="고마워요!")
 
 # ---------- 직원 화면 ----------
 # ---------- 찜목록 ----------
@@ -1121,8 +1121,8 @@ def staff_fix():
     return redirect(url_for("staff_reports"))
 
 # ---------- ⑪ 매장 설정 / ④ 바쁨 모드 ----------
-STORE_TYPES = {"대형": "직원보다 손님이 훨씬 많은 대형 매장 (where:wear 효과 가장 큼)",
-               "중형": "일반 매장", "소형": "직원이 바로 보이는 작은 매장 (키오스크·호출은 끄는 걸 권장)"}
+STORE_TYPES = {"대형": "손님이 많은 대형 매장",
+               "중형": "일반 매장", "소형": "직원이 바로 보이는 작은 매장"}
 
 @app.route("/staff/settings", methods=["GET", "POST"])
 def staff_settings():
