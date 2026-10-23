@@ -41,7 +41,7 @@
   <p class="klead">옷 사진을 누르면 있는 곳을 크게 보여드려요</p>
   {% if kf.fit|length > 1 or kf.pattern|length > 1 or fit or pattern %}
   <section class="knarrow">
-    <div class="knh"><b>더 좁히기</b><span>(안 눌러도 돼요)</span>
+    <div class="knh"><b>핏·무늬</b><span>(안 눌러도 돼요)</span>
       {% if fit or pattern %}<a class="kclear" href="{{base}}">조건 지우기</a>{% endif %}</div>
     {% for key, label, cur, okey, oval in [('fit','핏',fit,'pattern',pattern), ('pattern','무늬',pattern,'fit',fit)] %}
       {% if kf[key]|length > 1 or cur %}
