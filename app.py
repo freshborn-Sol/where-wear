@@ -565,11 +565,11 @@ def loc_flag(it):
 def similar_items(it, limit=3):
     """대안: 같은 종류 · 위치 있음 · 재고 있음. 같은 색 → 같은 핏 순"""
     cand = rows("""SELECT i.* FROM items i
-                   WHERE i.subcat=? AND i.sku!=?
+                   WHERE i.subcat=? AND i.sku!=? AND i.name!=?
                      AND EXISTS (SELECT 1 FROM placements p WHERE p.sku=i.sku AND p.active=1)
                      AND (SELECT COALESCE(SUM(qty),0) FROM stock s WHERE s.sku=i.sku) > 0
                    ORDER BY (i.color=?) DESC, (i.fit=?) DESC, i.sku LIMIT ?""",
-                (it["subcat"], it["sku"], it["color"], it["fit"], limit))
+                (it["subcat"], it["sku"], it["name"], it["color"], it["fit"], limit))
     return decorate(cand)
 
 def expire_waits():

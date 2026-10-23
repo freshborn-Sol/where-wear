@@ -127,43 +127,33 @@
     <b id="shTitle">어떤 게 안 되나요?</b><button class="sh-x" onclick="closeHelp()" aria-label="닫기">{{ cx.icon('close', 20) }}</button></div>
 
   <section data-p="menu">
-    <button class="hopt" onclick="go('color')"><span class="oc c1">{{ cx.icon('palette', 23) }}</span><div><b>다른 색을 보고 싶어요</b><small>다른 색이 어디 있는지 바로 안내해요</small></div>{{ cx.icon('chev', 18) }}</button>
-    <button class="hopt" onclick="go('none')"><span class="oc c2">{{ cx.icon('nobox', 23) }}</span><div><b>여기에 옷이 없어요</b><small>재고 확인 · 비슷한 옷 · 직원 도움</small></div>{{ cx.icon('chev', 18) }}</button>
+    <button class="hopt" onclick="go('color')"><span class="oc c1">{{ cx.icon('palette', 23) }}</span><div><b>다른 색을 보고 싶어요</b><small>다른 색 위치 · 비슷한 옷 추천</small></div>{{ cx.icon('chev', 18) }}</button>
+    <button class="hopt" onclick="go('none')"><span class="oc c2">{{ cx.icon('nobox', 23) }}</span><div><b>여기에 옷이 없어요</b><small>매장 · 창고 재고 확인</small></div>{{ cx.icon('chev', 18) }}</button>
     <button class="hopt" onclick="go('call')"><span class="oc c3">{{ cx.icon('chat', 23) }}</span><div><b>직원에게 직접 물어볼게요</b><small>{{ '지금은 계산대에서 도와드려요' if busy else '직원이 이 선반으로 와요' }}</small></div>{{ cx.icon('chev', 18) }}</button>
   </section>
 
   <section data-p="color" hidden>
-    {% if other_colors %}
-      <p class="sh-sub">{{color_basis}}의 다른 색 {{other_colors|length}}가지</p>
-      <div class="hlist">{% for o in other_colors %}{{ alt_card(o, True) }}{% endfor %}</div>
-    {% else %}
-      <p class="ans no">매장에 다른 색이 없어요.</p>
-      {% if not busy %}<button class="btn" onclick="send('call','다른 색 문의')">직원에게 물어보기</button>{% endif %}
+    <p class="sh-sub">다른 색{% if other_colors %} {{other_colors|length}}가지 · 있는 곳{% endif %}</p>
+    {% if other_colors %}<div class="hlist">{% for o in other_colors %}{{ alt_card(o, True) }}{% endfor %}</div>
+    {% else %}<p class="ans no">매장에 다른 색이 없어요</p>{% endif %}
+    {% set sim = similar|rejectattr('name', 'equalto', it.name)|list %}
+    {% if sim %}
+      <p class="sh-sub">비슷한 옷</p>
+      <div class="hlist">{% for o in sim %}{{ alt_card(o) }}{% endfor %}</div>
     {% endif %}
   </section>
 
   <section data-p="none" hidden>
-    <p class="ans ok" id="nMsg">기록 중…</p>
-    {% set instock = hsizes|selectattr('qty')|list %}{% set inwh = hsizes|selectattr('wh')|list %}
-    {% if instock or inwh %}
-      <div class="nstock">
-        <div><b>매장에 {{ instock|sum(attribute='qty') }}벌{% if wh_n %} · 창고에 {{wh_n}}벌{% endif %} 있어요</b></div>
-        {% if busy %}
-          <p class="busynote">{{ cx.icon('alert', 15) }}직원이 바빠요 · 계산대에 말씀해 주세요</p>
-        {% else %}
-        <p class="sh-q" style="font-size:13px;font-weight:500;color:var(--g700)">사이즈를 고르면 직원이 찾아 드려요</p>
-        <div class="szpick">{% for z in hsizes if z.qty or z.wh %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{% if z.qty %}{{z.qty}}벌{% else %}창고 {{z.wh}}{% endif %}</small></button>{% endfor %}</div>
-        <button class="btn primary" id="waitBtn" onclick="askStaff()" disabled>직원에게 찾아 달라고 하기</button>
-        {% endif %}
-      </div>
-    {% else %}
-      <p class="ans no"><span><b>지금 매장에 재고가 없어요.</b><br><small>실서비스에서는 입고 알림·온라인 주문으로 연결해요.</small></span></p>
-    {% endif %}
-    {% if similar %}
-      <p class="sh-sub">대신 이런 옷은 지금 매장에 있어요</p>
-      <div class="hlist">{% for o in similar %}{{ alt_card(o) }}{% endfor %}</div>
-    {% endif %}
-    <button class="btn ghost" onclick="closeHelp()">괜찮아요, 다른 옷 볼게요</button>
+    <p class="ans ok" id="nMsg">알려주셔서 고마워요</p>
+    <div class="nstock2">
+      <div class="ns-h"><b>매장 {{ hsizes|sum(attribute='qty') }}벌</b><span>창고 {{ hsizes|sum(attribute='wh') }}벌</span></div>
+      <table class="nst">
+        <tr><th>사이즈</th>{% for z in hsizes %}<th>{{z.size}}</th>{% endfor %}</tr>
+        <tr><td>매장</td>{% for z in hsizes %}<td class="{{ 'z' if not z.qty }}">{{z.qty}}</td>{% endfor %}</tr>
+        <tr><td>창고</td>{% for z in hsizes %}<td class="{{ 'z' if not z.wh }}">{{z.wh}}</td>{% endfor %}</tr>
+      </table>
+    </div>
+    <button class="btn ghost" onclick="closeHelp()">확인</button>
   </section>
 
   <!-- 직원 호출 진행 상태 (몇 초마다 확인) -->
@@ -195,7 +185,7 @@
 
 <script>
 const SKU='{{it.sku}}', FX='{{ it.place.fixture_id if it.place }}', AT='{{at}}';
-const TITLES={menu:'어떤 게 안 되나요?',color:'다른 색 보기',none:'여기에 옷이 없어요',call:'직원에게 물어보기',status:'직원 호출'};
+const TITLES={menu:'어떤 게 안 되나요?',color:'다른 색 · 비슷한 옷',none:'여기에 옷이 없어요',call:'직원에게 물어보기',status:'직원 호출'};
 const USER_IC='{{ cx.icon("user", 14) }}';
 const $=s=>document.querySelector(s);
 function openHelp(){$('#help').classList.add('on');go('menu');}
@@ -224,18 +214,9 @@ function foundIt(){
   fetch('/api/found',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:SKU,fixture:FX,device:DEV})})
    .then(r=>r.json()).then(d=>{ b.disabled=true; b.querySelector('span').textContent='고마워요!'; toast(d.message); });
 }
-function notHere(){
-  post('none','').then(d=>{
-    RID=d.id;
-    $('#nMsg').textContent=d.message+(d.delisted?' (이 위치는 안내에서 내렸어요)':'');
-    const rec=(loadBody()&&typeof recommend==='function')?recommend(loadBody()).size:null;   // 추천 사이즈가 있으면 미리 선택
-    if(rec && document.querySelector(`.nstock .szb[data-sz="${rec}"]`)) pickWait(rec);
-  });
-}
-function pickWait(sz){ if(!$('#waitBtn')) return; WAIT_SZ=sz; document.querySelectorAll('.nstock .szb').forEach(b=>b.classList.toggle('on',b.dataset.sz===sz)); $('#waitBtn').disabled=false; $('#waitBtn').textContent=`직원에게 ${sz} 찾아 달라고 하기`; }
-function askStaff(){
-  fetch(`/api/report/${RID}/wait`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({size:WAIT_SZ})})
-   .then(r=>r.json()).then(d=>startTrack(d.id));
+function notHere(){              // 신고는 그대로 접수(직원 신고함 · 2명이면 안내에서 내림), 화면엔 재고만
+  if(RID) return;
+  post('none','').then(d=>{ RID=d.id; if(d.delisted) $('#nMsg').textContent='알려주셔서 고마워요 · 이 위치는 안내에서 내렸어요'; });
 }
 const TMSG={waiting:'직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.',going:'직원이 가고 있어요!',
   served:'직원이 도착했어요',nostock:'매장에 재고가 없어요 · 비슷한 옷을 확인해 보세요',
