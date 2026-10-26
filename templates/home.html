@@ -27,12 +27,6 @@
   </div>
   {% endfor %}
 
-  <h2>색상</h2>
-  <div class="hs">
-    {% for name, hex in colors.items() %}
-      <a class="cchip" href="/search?at={{at}}&color={{name}}"><i class="sw" style="background:{{hex}}"></i>{{name}}</a>
-    {% endfor %}
-  </div>
   <p class="foot">상품 사진 <a href="/credits?at={{at}}">출처</a></p>
 </main>
 {{ cx.tabbar('find') }}

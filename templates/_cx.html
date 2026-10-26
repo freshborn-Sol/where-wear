@@ -70,7 +70,7 @@ window.wwLikes={get(){try{return JSON.parse(localStorage.getItem('ww_likes')||'[
 {% macro tabbar(active) -%}
 {% set a = at if (at is defined and at) else cx_at %}
 <nav class="tabbar" aria-label="메뉴">
-  <a class="tab-i {{'on' if active=='find'}}" href="/go?at={{a}}">{{ icon('search', 24) }}<span>찾기</span></a>
+  <a class="tab-i {{'on' if active=='find'}}" href="/go?at={{a}}">{{ icon('search', 24) }}<span>검색</span></a>
   <a class="tab-i {{'on' if active=='like'}}" id="likeTab" href="/likes?at={{a}}"><span class="tb-ic">{{ icon('heart', 24) }}<b class="tb-n" id="likeN" hidden></b></span><span>찜</span></a>
   <a class="tab-i {{'on' if active=='me'}}" href="/me?at={{a}}&next={{ request.full_path|urlencode }}">{{ icon('user', 24) }}<span>내 사이즈</span></a>
   <a class="tab-i {{'on' if active=='info'}}" href="/info?at={{a}}">{{ icon('info', 24) }}<span>안내</span></a>
