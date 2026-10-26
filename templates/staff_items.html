@@ -5,18 +5,29 @@
 {{ ks.sbar('옷 목록', right=total ~ '벌') }}
 <main class="swrap">
   {% if saved %}<p class="okmsg">{{ cx.icon('check', 16) }}{{saved}} 저장했어요</p>{% endif %}
+  <nav class="regseg"><a class="{{ 'on' if view != 'shelf' }}" href="/staff/items{{ '?q=' ~ q if q }}">종류별</a>
+    <a class="{{ 'on' if view == 'shelf' }}" href="/staff/items?view=shelf{{ '&q=' ~ q if q }}">선반별</a></nav>
   <form class="isearch" method="get">
-    {% if cat %}<input type="hidden" name="cat" value="{{cat}}">{% endif %}
+    {% if view == 'shelf' %}<input type="hidden" name="view" value="shelf">{% if fx %}<input type="hidden" name="fx" value="{{fx}}">{% endif %}
+    {% elif cat %}<input type="hidden" name="cat" value="{{cat}}">{% endif %}
     <label>{{ cx.icon('search', 18) }}<input name="q" value="{{q}}" placeholder="이름 · 색 · 상품번호로 찾기" autocomplete="off"></label>
   </form>
+  {% set qs = ('&q=' ~ q) if q else '' %}
+  {% if view == 'shelf' %}
+  <div class="icats">
+    <a class="{{ 'on' if not fx }}" href="/staff/items?view=shelf{{qs}}">전체 선반</a>
+    {% for fid, fname, n in shelves_n %}<a class="{{ 'on' if fx == fid }}{{ ' none' if fid == 'none' }}" href="/staff/items?view=shelf&fx={{fid}}{{qs}}">{{ fid if fid != 'none' else fname }} <small>{{n}}</small></a>{% endfor %}
+  </div>
+  {% else %}
   <div class="icats">
     <a class="{{ 'on' if not cat }}" href="/staff/items{{ '?q=' ~ q if q }}">전체</a>
-    {% for c, n in cats %}<a class="{{ 'on' if cat == c }}" href="/staff/items?cat={{c}}{{ '&q=' ~ q if q }}">{{c}} <small>{{n}}</small></a>{% endfor %}
+    {% for c, n in cats %}<a class="{{ 'on' if cat == c }}" href="/staff/items?cat={{c}}{{qs}}">{{c}} <small>{{n}}</small></a>{% endfor %}
   </div>
+  {% endif %}
   {% if not items %}<div class="empty">맞는 옷이 없어요</div>{% endif %}
-  <ul class="ilist">
-  {% for it in items %}
-    <li id="i-{{it.sku}}" class="{{ 'just' if saved == it.sku }}"><a href="/staff/items/{{it.sku}}?back={{ ('/staff/items?cat=' ~ cat ~ '&q=' ~ q)|urlencode }}">
+  {% set back = '/staff/items?view=' ~ view ~ '&cat=' ~ cat ~ '&fx=' ~ fx ~ '&q=' ~ q %}
+  {% macro row(it) %}
+    <li id="i-{{it.sku}}" class="{{ 'just' if saved == it.sku }}"><a href="/staff/items/{{it.sku}}?back={{ back|urlencode }}">
       <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
       <div class="ib">
         <b>{{it.name}}</b>
@@ -26,9 +37,17 @@
       </div>
       <div class="ip"><b>{{ "{:,}".format(it.price) }}</b><small>원</small>{{ cx.icon('chev', 16) }}</div>
     </a></li>
-  {% endfor %}
-  </ul>
+  {% endmacro %}
+  {% if view == 'shelf' %}
+    {% for g_ in groups %}
+      <div class="shelfh"><b>{{ g_.id if g_.id != 'none' else '위치 없음' }}</b>{% if g_.id != 'none' %}<span>{{g_.name}}</span>{% endif %}<small>{{g_['items']|length}}벌</small></div>
+      <ul class="ilist">{% for it in g_['items'] %}{{ row(it) }}{% endfor %}</ul>
+    {% endfor %}
+  {% else %}
+  <ul class="ilist">{% for it in items %}{{ row(it) }}{% endfor %}</ul>
+  {% endif %}
 </main>
 {{ ks.stabs('items') }}
 </div>
+<script>document.querySelectorAll('.icats a.on').forEach(a=>a.scrollIntoView({inline:'center',block:'nearest'}));</script>
 {% endblock %}

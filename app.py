@@ -898,18 +898,33 @@ def staff_ai_ctx(**kw):
 # ---------- 직원: 옷 목록 · 정보 수정 ----------
 @app.route("/staff/items")
 def staff_items():
+    """옷 목록: 종류별(상의·하의…) 또는 선반별(A-H1…)로 보기"""
     q = (request.args.get("q") or "").strip()
-    cat = request.args.get("cat", "")
-    items = rows("SELECT * FROM items ORDER BY category, name, color")
-    if cat: items = [i for i in items if i["category"] == cat]
+    view = request.args.get("view", "cat")
+    cat, fx = request.args.get("cat", ""), request.args.get("fx", "")
+    items = decorate(rows("SELECT * FROM items ORDER BY category, name, color"))
     if q:
         words = q.lower().split()
         items = [i for i in items if all(w in f"{i['sku']} {i['name']} {i['color']} {i['subcat']}".lower() for w in words)]
-    items = decorate(items)
     for it in items:
         it["floor"] = sum(z["qty"] for z in it["sizes"]); it["wh"] = sum(z["wh"] for z in it["sizes"])
+    LV = {"상단": 0, "중단": 1, "하단": 2}
+    groups, shelves_n = [], []
+    if view == "shelf":
+        by = {}
+        for it in items: by.setdefault(it["place"]["fixture_id"] if it["place"] else "", []).append(it)
+        shelves_n = [(f["id"], f["name"], len(by.get(f["id"], []))) for f in shelves() if by.get(f["id"])]
+        if by.get(""): shelves_n.append(("none", "위치 없음", len(by[""])))
+        for fid, fname, n in shelves_n:
+            if fx and fx != fid: continue
+            lst = sorted(by["" if fid == "none" else fid], key=lambda i: (LV.get(i["place"]["level"], 9) if i["place"] else 9, i["name"]))
+            groups.append({"id": fid, "name": fname, "items": lst})
+        items = [i for g_ in groups for i in g_["items"]]
+    elif cat:
+        items = [i for i in items if i["category"] == cat]
     counts = Counter(r["category"] for r in rows("SELECT category FROM items"))
-    return render_template("staff_items.html", items=items, q=q, cat=cat, cats=[(c, counts[c]) for c in CATS if counts[c]],
+    return render_template("staff_items.html", items=items, groups=groups, shelves_n=shelves_n, view=view, fx=fx,
+                           q=q, cat=cat, cats=[(c, counts[c]) for c in CATS if counts[c]],
                            total=sum(counts.values()), saved=request.args.get("saved"))
 
 @app.route("/staff/items/<sku>", methods=["GET", "POST"])
@@ -938,7 +953,9 @@ def staff_item_edit(sku):
                          (sku, fx, lv, ts(), "staff-edit"))
             close_loc_reports(sku, None, "위치 이동")
         db().commit()
-        return redirect(url_for("staff_items", saved=sku, q=request.args.get("q", ""), cat=request.args.get("cat", "")) + f"#i-{sku}")
+        back = request.args.get("back") or "/staff/items"
+        if not back.startswith("/staff/items"): back = "/staff/items"
+        return redirect(back + ("&" if "?" in back else "?") + f"saved={sku}#i-{sku}")
     it = decorate([it])[0]
     it["sizes"] = sort_sizes(it["sizes"])
     return render_template("staff_item_edit.html", it=it, fixtures=shelves(), colors=COLORS, cats=list(CATS), V=V,
