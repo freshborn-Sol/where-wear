@@ -901,7 +901,8 @@ def staff_items():
     """옷 목록: 종류별(상의·하의…) 또는 선반별(A-H1…)로 보기"""
     q = (request.args.get("q") or "").strip()
     view = request.args.get("view", "cat")
-    cat, fx = request.args.get("cat", ""), request.args.get("fx", "")
+    cat, fx, zone = request.args.get("cat", ""), request.args.get("fx", ""), request.args.get("zone", "")
+    lv = request.args.get("lv", "") if request.args.get("lv", "") in ("상단", "중단", "하단") else ""
     items = decorate(rows("SELECT * FROM items ORDER BY category, name, color"))
     if q:
         words = q.lower().split()
@@ -909,21 +910,35 @@ def staff_items():
     for it in items:
         it["floor"] = sum(z["qty"] for z in it["sizes"]); it["wh"] = sum(z["wh"] for z in it["sizes"])
     LV = {"상단": 0, "중단": 1, "하단": 2}
-    groups, shelves_n = [], []
+    groups, shelves_n, zones = [], [], []
     if view == "shelf":
         by = {}
         for it in items: by.setdefault(it["place"]["fixture_id"] if it["place"] else "", []).append(it)
-        shelves_n = [(f["id"], f["name"], len(by.get(f["id"], []))) for f in shelves() if by.get(f["id"])]
-        if by.get(""): shelves_n.append(("none", "위치 없음", len(by[""])))
+        allsh = [(f["id"], f["name"], len(by.get(f["id"], [])), f["zone"]) for f in shelves() if by.get(f["id"])]
+        if by.get(""): allsh.append(("none", "위치 없음", len(by[""]), "none"))
+        zn = {z["id"]: z["name"] for z in rows("SELECT id, name FROM zones")}
+        zones = []                                       # 알파벳(구역)별: A 상의 · B 하의 …
+        for zid in sorted({z for *_, z in allsh if z != "none"}):
+            zones.append((zid, zn.get(zid, ""), sum(n for _, _, n, z in allsh if z == zid)))
+        if fx and not zone: zone = next((z for i, _, _, z in allsh if i == fx), "")
+        shelves_n = [(i, nm, n) for i, nm, n, z in allsh if not zone or z == zone]
         for fid, fname, n in shelves_n:
             if fx and fx != fid: continue
             lst = sorted(by["" if fid == "none" else fid], key=lambda i: (LV.get(i["place"]["level"], 9) if i["place"] else 9, i["name"]))
-            groups.append({"id": fid, "name": fname, "items": lst})
+            if lv: lst = [i for i in lst if i["place"] and i["place"]["level"] == lv]
+            if not lst: continue
+            levels = []                                   # 선반 안에서 상단 · 중단 · 하단으로 나눔
+            for i in lst:
+                k = i["place"]["level"] if i["place"] else ""
+                if not levels or levels[-1][0] != k: levels.append((k, []))
+                levels[-1][1].append(i)
+            groups.append({"id": fid, "name": fname, "items": lst, "levels": levels})
         items = [i for g_ in groups for i in g_["items"]]
     elif cat:
         items = [i for i in items if i["category"] == cat]
     counts = Counter(r["category"] for r in rows("SELECT category FROM items"))
     return render_template("staff_items.html", items=items, groups=groups, shelves_n=shelves_n, view=view, fx=fx,
+                           zones=zones, zone=zone, lv=lv, nonecount=sum(1 for i in items if not i["place"]) if view == "shelf" else 0,
                            q=q, cat=cat, cats=[(c, counts[c]) for c in CATS if counts[c]],
                            total=sum(counts.values()), saved=request.args.get("saved"))
 

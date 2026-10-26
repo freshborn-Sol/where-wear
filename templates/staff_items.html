@@ -8,16 +8,25 @@
   <nav class="regseg"><a class="{{ 'on' if view != 'shelf' }}" href="/staff/items{{ '?q=' ~ q if q }}">종류별</a>
     <a class="{{ 'on' if view == 'shelf' }}" href="/staff/items?view=shelf{{ '&q=' ~ q if q }}">선반별</a></nav>
   <form class="isearch" method="get">
-    {% if view == 'shelf' %}<input type="hidden" name="view" value="shelf">{% if fx %}<input type="hidden" name="fx" value="{{fx}}">{% endif %}
+    {% if view == 'shelf' %}<input type="hidden" name="view" value="shelf">{% if zone %}<input type="hidden" name="zone" value="{{zone}}">{% endif %}{% if fx %}<input type="hidden" name="fx" value="{{fx}}">{% endif %}{% if lv %}<input type="hidden" name="lv" value="{{lv}}">{% endif %}
     {% elif cat %}<input type="hidden" name="cat" value="{{cat}}">{% endif %}
     <label>{{ cx.icon('search', 18) }}<input name="q" value="{{q}}" placeholder="이름 · 색 · 상품번호로 찾기" autocomplete="off"></label>
   </form>
   {% set qs = ('&q=' ~ q) if q else '' %}
   {% if view == 'shelf' %}
-  <div class="icats">
-    <a class="{{ 'on' if not fx }}" href="/staff/items?view=shelf{{qs}}">전체 선반</a>
-    {% for fid, fname, n in shelves_n %}<a class="{{ 'on' if fx == fid }}{{ ' none' if fid == 'none' }}" href="/staff/items?view=shelf&fx={{fid}}{{qs}}">{{ fid if fid != 'none' else fname }} <small>{{n}}</small></a>{% endfor %}
+  <div class="izones">
+    <a class="{{ 'on' if not zone }}" href="/staff/items?view=shelf{{qs}}"><b>전체</b></a>
+    {% for zid, zname, n in zones %}<a class="{{ 'on' if zone == zid }}" href="/staff/items?view=shelf&zone={{zid}}{{qs}}"><b>{{zid}}</b><small>{{ zname|replace(' · ', '·') }}</small></a>{% endfor %}
+    <a class="nz {{ 'on' if zone == 'none' }}" href="/staff/items?view=shelf&zone=none&fx=none{{qs}}"><b>!</b><small>위치 없음</small></a>
   </div>
+  {% if zone != 'none' %}
+  <div class="icats">
+    <a class="{{ 'on' if not fx }}" href="/staff/items?view=shelf{{ '&zone=' ~ zone if zone }}{{qs}}">{{ zone ~ '구역 전체' if zone else '전체 선반' }}</a>
+    {% for fid, fname, n in shelves_n if fid != 'none' %}<a class="{{ 'on' if fx == fid }}" href="/staff/items?view=shelf&zone={{zone}}&fx={{fid}}{{qs}}">{{fid}} <small>{{n}}</small></a>{% endfor %}
+  </div>
+  {% endif %}
+  {% set base = '/staff/items?view=shelf&zone=' ~ zone ~ '&fx=' ~ fx ~ qs %}
+  {% if zone != 'none' %}<div class="ilv">{% for l in ['', '상단', '중단', '하단'] %}<a class="{{ 'on' if lv == l }}" href="{{ base }}{{ '&lv=' ~ l if l }}">{{ l or '모든 단' }}</a>{% endfor %}</div>{% endif %}
   {% else %}
   <div class="icats">
     <a class="{{ 'on' if not cat }}" href="/staff/items{{ '?q=' ~ q if q }}">전체</a>
@@ -25,7 +34,7 @@
   </div>
   {% endif %}
   {% if not items %}<div class="empty">맞는 옷이 없어요</div>{% endif %}
-  {% set back = '/staff/items?view=' ~ view ~ '&cat=' ~ cat ~ '&fx=' ~ fx ~ '&q=' ~ q %}
+  {% set back = '/staff/items?view=' ~ view ~ '&cat=' ~ cat ~ '&zone=' ~ zone ~ '&fx=' ~ fx ~ '&lv=' ~ lv ~ '&q=' ~ q %}
   {% macro row(it) %}
     <li id="i-{{it.sku}}" class="{{ 'just' if saved == it.sku }}"><a href="/staff/items/{{it.sku}}?back={{ back|urlencode }}">
       <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
@@ -41,7 +50,10 @@
   {% if view == 'shelf' %}
     {% for g_ in groups %}
       <div class="shelfh"><b>{{ g_.id if g_.id != 'none' else '위치 없음' }}</b>{% if g_.id != 'none' %}<span>{{g_.name}}</span>{% endif %}<small>{{g_['items']|length}}벌</small></div>
-      <ul class="ilist">{% for it in g_['items'] %}{{ row(it) }}{% endfor %}</ul>
+      {% for lvname, its in g_['levels'] %}
+        {% if lvname %}<div class="lvh"><i>{{ lvname[0] }}</i>{{lvname}} <small>{{its|length}}</small></div>{% endif %}
+        <ul class="ilist">{% for it in its %}{{ row(it) }}{% endfor %}</ul>
+      {% endfor %}
     {% endfor %}
   {% else %}
   <ul class="ilist">{% for it in items %}{{ row(it) }}{% endfor %}</ul>
