@@ -7,7 +7,6 @@
 {% if step == 'cat' %}
   {{ ks.kstep(0) }}
   <div><h1 class="kh1">무엇을 찾으세요?</h1></div>
-  <p class="klead">종류만 고르면 옷이 있는 자리를 알려드려요</p>
   <div class="kcats">
     {% for c in cats if catinfo.get(c) %}{% set ci = catinfo[c] %}
       <a class="kcat" href="/kiosk?step=sub&cat={{c}}"><div class="t"><b>{{c}}</b><small>옷 {{ci.n}}종</small></div>
@@ -19,15 +18,14 @@
   {{ ks.kstep(1) }}
   <h1 class="kh1">{{cat}} · 어떤 종류인가요?</h1>
   <div class="ktiles">
+    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><div class="big"><b>전체</b><span>모든 {{cat}}</span></div><b>잘 모르겠어요</b><small>{{ tiles|sum(attribute='n') }}종</small></a>
     {% for t in tiles %}
       <a class="ktile" href="/kiosk?step=color&cat={{cat}}&sub={{t.sub}}"><img src="{{ imgsrc(t.rep) }}" alt=""><b>{{t.sub}}</b><small>{{t.n}}종</small></a>
     {% endfor %}
-    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><div class="big"><b>전체</b><span>모든 {{cat}}</span></div><b>잘 모르겠어요</b><small>{{ tiles|sum(attribute='n') }}종</small></a>
   </div>
 {% elif step == 'color' %}
   {{ ks.kstep(2) }}
   <div><h1 class="kh1">{{ sub or cat }} · 어떤 색인가요?</h1></div>
-  <p class="klead">색이 기억나지 않으면 맨 위 파란 버튼을 누르세요</p>
   <a class="kall top" href="/kiosk?step=result&cat={{cat}}&sub={{sub}}">{{ cx.icon('palette', 56) }}<div><b>색 상관없이 모두 보기</b><span>{{ sub or cat }} {{ kcolors|sum(attribute=2) }}개</span></div></a>
   <div class="kcolors">
     {% for name, hex, n in kcolors %}
