@@ -433,3 +433,6 @@ details.mv select:first-child{flex:1;min-width:0}
 .estock input{width:100%;height:40px;padding:0 10px;border:1px solid var(--g300);border-radius:10px;font-size:15px;font-weight:700;text-align:center}
 .estock td+td{padding:0 3px}
 .ilist li{scroll-margin-top:90px}
+.pushbar{display:flex;flex-direction:column;gap:3px}.pushbar small{font-size:11.5px;color:var(--g500);padding-left:4px}
+.sndbtn:disabled{opacity:.6}
+.esc{margin-left:6px;padding:1px 7px;border-radius:8px;background:var(--red);color:#fff;font-size:11px;font-weight:700}

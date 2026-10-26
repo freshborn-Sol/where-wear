@@ -20,3 +20,6 @@ static/uploads/
 static/img/
 # - 선반·상품 QR (python make_qr.py <서버주소> 로 생성)
 qr/
+
+# 직원 알림 열쇠 (자동 생성 · 올리지 않기)
+vapid.json

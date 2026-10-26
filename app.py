@@ -8,7 +8,7 @@
   /staff         직원: 선반 QR 1번 → 옷 QR 연속 스캔으로 위치 등록
   /staff/reports 직원: 신고·호출 목록
 """
-import datetime, json, os, sqlite3, uuid
+import datetime, json, os, sqlite3, time, uuid
 from collections import Counter, deque
 from urllib.parse import urlencode
 from pathlib import Path
@@ -39,7 +39,8 @@ def ensure_schema():
                      ("device", "TEXT"),        # 익명 기기 id (중복 신고 방지)
                      ("wait_state", "TEXT DEFAULT ''"),   # '' / waiting / going / served / nostock / expired
                      ("wait_at", "TEXT"), ("served_at", "TEXT"),
-                     ("resolution", "TEXT"), ("resolved_at", "TEXT")]:
+                     ("resolution", "TEXT"), ("resolved_at", "TEXT"),
+                     ("escalated_at", "TEXT")]:     # 2분 동안 아무도 안 받아서 전체 직원에게 다시 알린 시각
         if col not in rcols:
             con.execute(f"ALTER TABLE reports ADD COLUMN {col} {typ}")
     if "confirmed_at" not in {r[1] for r in con.execute("PRAGMA table_info(placements)")}:
@@ -59,6 +60,8 @@ def ensure_schema():
             for season in ("26SS", "26FW"):
                 n = zlib.crc32(f"{sku}{season}".encode()) % 10**9
                 con.execute("INSERT OR IGNORE INTO barcodes VALUES (?,?,?)", (f"880{n:09d}{'1' if season=='26SS' else '2'}", sku, season))
+    # 직원 휴대폰 잠금화면 알림 구독 (Web Push)
+    con.execute("CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT, auth TEXT, created TEXT, agent TEXT)")
     # ④⑪ 매장 설정 / ⑦ 진열 점검일
     con.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     for k, v in [("store_type", "대형"), ("staff_count", "4"), ("kiosk", "1"), ("busy", "auto"),
@@ -589,6 +592,102 @@ def close_loc_reports(sku, fx, resolution):
     db().execute(q, args)
 
 # ---------- 손님: 신고 / 호출 ----------
+# ---------- 직원 잠금화면 알림 (Web Push · webpush.py) ----------
+import threading
+try:
+    import webpush as WP                     # 필요: pip install cryptography
+except Exception as _e:                      # 없어도 앱은 그대로 돌아간다 (알림만 꺼짐)
+    WP = None
+ESCALATE_MIN = 2                             # 이 시간 동안 아무도 '가는 중'을 안 누르면 전체 직원에게 다시 알림
+
+def _push_all(data):
+    """구독한 모든 직원 휴대폰에 보내기 (손님 화면이 기다리지 않게 뒤에서)"""
+    if not WP: return
+    con = sqlite3.connect(DBFILE); con.row_factory = sqlite3.Row
+    subs = [dict(r) for r in con.execute("SELECT endpoint, p256dh, auth FROM push_subs")]
+    con.close()
+    def run():
+        gone = [sub["endpoint"] for sub in subs if WP.send(sub, data) in (404, 410)]
+        if gone:
+            c = sqlite3.connect(DBFILE); c.executemany("DELETE FROM push_subs WHERE endpoint=?", [(e,) for e in gone]); c.commit(); c.close()
+    threading.Thread(target=run, daemon=True).start()
+
+def notify_report(rid, again=False):
+    """신고 접수 알림 문장 만들기 → 전체 직원에게"""
+    con = sqlite3.connect(DBFILE); con.row_factory = sqlite3.Row
+    r = con.execute("""SELECT r.*, i.name, i.color, f.name fxname FROM reports r LEFT JOIN items i ON i.sku=r.sku
+                       LEFT JOIN fixtures f ON f.id=r.fixture_id WHERE r.id=?""", (rid,)).fetchone()
+    con.close()
+    if not r: return
+    where = "매장 입구 · 키오스크 앞" if r["fixture_id"] == "ENTRANCE" else (r["fixture_id"] or "위치 없음")
+    what = f"{r['name'] or ''}{(' (' + r['color'] + ')') if r['color'] else ''}{(' · ' + r['size']) if r['size'] else ''}"
+    if again:
+        title = f"⚠ {ESCALATE_MIN}분째 아무도 받지 않았어요"
+        body = f"{where} · {what} — 가까운 직원이 '가는 중'을 눌러 주세요"
+    elif r["wait_state"] in ("waiting", "going"):
+        title = {"size": "사이즈 요청", "call": "직원 호출"}.get(r["kind"], "손님이 기다려요") + f" · {where}"
+        body = what + (f" · {r['detail']}" if r["detail"] and r["kind"] == "call" else "")
+    else:
+        title = f"위치 신고 · {where}"
+        body = f"{what} — 손님이 '여기 없어요'를 눌렀어요"
+    _push_all({"title": title, "body": body, "tag": f"r{rid}", "url": "/staff/reports" + ("#wait" if r["wait_state"] else "#fix")})
+
+def escalate_waits(con=None):
+    """기다리는 요청 중 2분 넘게 아무도 안 받은 것 → 전체 직원에게 한 번 더"""
+    con = con or sqlite3.connect(DBFILE)
+    cut = (now() - datetime.timedelta(minutes=ESCALATE_MIN)).isoformat(timespec="seconds")
+    ids = [r[0] for r in con.execute("""SELECT id FROM reports WHERE wait_state='waiting' AND wait_at<=?
+                                          AND escalated_at IS NULL""", (cut,))]
+    for rid in ids:
+        con.execute("UPDATE reports SET escalated_at=? WHERE id=?", (now().isoformat(timespec="seconds"), rid))
+    con.commit()
+    for rid in ids: notify_report(rid, again=True)
+    return ids
+
+def _watcher():
+    while True:
+        try: escalate_waits()
+        except Exception: pass
+        time.sleep(15)
+_WATCH = {"on": False}
+@app.before_request
+def _start_watcher():
+    if not _WATCH["on"]:
+        _WATCH["on"] = True
+        threading.Thread(target=_watcher, daemon=True).start()
+
+@app.route("/sw.js")
+def service_worker():
+    r = app.send_static_file("sw.js")
+    r.headers["Service-Worker-Allowed"] = "/"; r.headers["Cache-Control"] = "no-cache"
+    return r
+
+@app.route("/api/push/key")
+def push_key():
+    if not WP: return jsonify(ok=False, message="서버에 cryptography 패키지가 없어요 (pip install cryptography)")
+    return jsonify(ok=True, key=WP.vapid()[1])
+
+@app.route("/api/push/subscribe", methods=["POST"])
+def push_subscribe():
+    d = request.get_json(force=True) or {}
+    k = d.get("keys") or {}
+    if not d.get("endpoint") or not k.get("p256dh") or not k.get("auth"): return jsonify(ok=False), 400
+    db().execute("INSERT OR REPLACE INTO push_subs VALUES (?,?,?,?,?)",
+                 (d["endpoint"], k["p256dh"], k["auth"], ts(), (request.headers.get("User-Agent") or "")[:120]))
+    db().commit()
+    return jsonify(ok=True, count=one("SELECT COUNT(*) n FROM push_subs")["n"])
+
+@app.route("/api/push/unsubscribe", methods=["POST"])
+def push_unsubscribe():
+    d = request.get_json(force=True) or {}
+    db().execute("DELETE FROM push_subs WHERE endpoint=?", (d.get("endpoint", ""),)); db().commit()
+    return jsonify(ok=True)
+
+@app.route("/api/push/test", methods=["POST"])
+def push_test():
+    _push_all({"title": "알림 테스트", "body": "이 휴대폰에 신고 알림이 이렇게 떠요", "tag": "test", "url": "/staff/reports"})
+    return jsonify(ok=True)
+
 @app.route("/api/report", methods=["POST"])
 def report():
     d = request.get_json(force=True)
@@ -598,6 +697,7 @@ def report():
 
     if kind == "none":
         # 같은 기기가 같은 옷을 이미 신고했으면 새로 만들지 않음
+        new_none = False
         old = one("""SELECT id FROM reports WHERE sku=? AND kind='none' AND done=0 AND device=?""", (sku, dev)) if dev else None
         if old:
             rid, msg = old["id"], "이미 알려주셨어요. 직원이 확인할게요"
@@ -605,11 +705,13 @@ def report():
             rid = db().execute("INSERT INTO reports (sku,fixture_id,kind,created_at,device) VALUES (?,?,?,?,?)",
                                (sku, fx, "none", ts(), dev)).lastrowid
             msg = "알려주셔서 고마워요"
+            new_none = True
         delisted = False
         if fx and open_none(sku, fx) >= 2:     # 서로 다른 손님 2명이 신고 → 안내에서 내림
             db().execute("UPDATE placements SET active=0 WHERE sku=? AND fixture_id=?", (sku, fx))
             delisted = True
         db().commit()
+        if new_none: notify_report(rid)
         return jsonify(ok=True, id=rid, message=msg, delisted=delisted, stock=stock_total(sku), wh=wh_total(sku), busy=is_busy())
 
     # 호출·사이즈 요청: 손님이 그 자리에서 기다림
@@ -618,6 +720,7 @@ def report():
                        (sku, fx, kind, ts(), detail, size, dev, ts())).lastrowid
     db().commit()
     log_event("call", sku, kind)
+    notify_report(rid)
     return jsonify(ok=True, id=rid, message="직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요")
 
 @app.route("/api/report/<int:rid>/wait", methods=["POST"])
@@ -629,6 +732,7 @@ def report_wait(rid):
                     detail=? WHERE id=?""", (ts(), size, f"위치에 없음{(' · ' + size) if size else ''}", rid))
     db().commit()
     log_event("call", None, "none")
+    notify_report(rid)
     return jsonify(ok=True, id=rid, message="직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요")
 
 @app.route("/api/report/<int:rid>")
@@ -1109,6 +1213,8 @@ def demo_live():
                     VALUES (?,'ENTRANCE','size',?,'260 창고에서 가져다주세요 (키오스크)','260','demo-k','waiting',?)""",
                  (DEMO_WH_SKU, ts(), ts()))
     db().commit()
+    last = one("SELECT MAX(id) n FROM reports")["n"]
+    if last: notify_report(last)
 
 @app.route("/demo", methods=["GET", "POST"])
 def demo():

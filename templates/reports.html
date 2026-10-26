@@ -20,7 +20,8 @@
   </div>
   {% if busy %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>손님에게 계산대로 안내 중이에요</span></div>{% endif %}
   <div class="newreq" id="newreq" hidden>{{ cx.icon('bell', 20) }}<b>새 손님 요청이 들어왔어요</b><span>아래 빨간 카드부터 확인하세요</span></div>
-  <button type="button" class="sndbtn" id="sndbtn" onclick="toggleSound()">{{ cx.icon('bell', 15) }}<span>새 요청 알림 소리 켜기</span></button>
+  <div class="pushbar" id="pushbar"><button type="button" class="sndbtn" id="pushbtn" onclick="togglePush()">{{ cx.icon('bell', 15) }}<span>잠금화면 신고 알림 켜기</span></button>
+    <small id="pushhint"></small></div>
   <div class="rsum">
     <a class="urgent" href="#wait">손님 대기 <b>{{ waiting|length }}</b></a>
     <a class="fix" href="#fix">위치 고칠 것 <b>{{ groups.values()|map('length')|sum }}</b><small>· 선반 {{ groups|length }}곳</small></a>
@@ -33,7 +34,7 @@
   <div class="wcard {{ 'late' if w.mins >= 5 }}" data-id="{{w.id}}">
     <img src="{{ url_for('static', filename=w.image) if w.image else '' }}" alt="">
     <div class="wbody">
-      <div class="wtop"><b class="{{ 'size' if w.kind == 'size' }}">{{ w.label }}</b><span class="timer" data-at="{{w.wait_at}}">{{ cx.icon('clock', 12) }}<em>{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</em></span></div>
+      <div class="wtop"><b class="{{ 'size' if w.kind == 'size' }}">{{ w.label }}</b>{% if w.escalated_at and w.wait_state == 'waiting' %}<span class="esc">전체 알림 보냄</span>{% endif %}<span class="timer" data-at="{{w.wait_at}}">{{ cx.icon('clock', 12) }}<em>{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</em></span></div>
       <div class="wloc">{{ cx.icon('pin', 13) }}{% if w.fixture_id == 'ENTRANCE' %}매장 입구 · 키오스크 앞{% else %}{{ w.zone or '' }}구역 · {{ w.fixture_id or '-' }} {{ (w.fixture_name or '').split(' ', 1)[1] if ' ' in (w.fixture_name or '') else '' }} 앞{% endif %}</div>
       <div class="witem">{{ w.name }} ({{ w.color }}){% if w.size %} <span class="chip n">{{ w.size }}</span>{% endif %}{% if w.detail and w.kind != 'none' %} · {{ w.detail }}{% endif %}</div>
       <form method="post" action="/staff/reports/{{w.id}}/wait" class="wact">
@@ -108,18 +109,35 @@
     document.getElementById('newreq').hidden = false;
     fresh.forEach(i => document.querySelector('.wcard[data-id="'+i+'"]').classList.add('new'));
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    if (localStorage.getItem('ww_sound') === '1') ding();
     document.title = '🔔 새 요청 · 신고함';
   }
   try{ localStorage.setItem('ww_seen', JSON.stringify(ids)); localStorage.setItem('ww_seen_init', '1'); }catch(e){}
-  sndLabel();
+  pushInit();
 })();
-function ding(){ try{ const A = new (window.AudioContext || window.webkitAudioContext)();
-  [880, 1175].forEach((f, k) => { const o = A.createOscillator(), g = A.createGain(); o.frequency.value = f; g.gain.value = .12;
-    o.connect(g); g.connect(A.destination); o.start(A.currentTime + k * .18); o.stop(A.currentTime + k * .18 + .16); }); }catch(e){} }
-function sndLabel(){ const on = localStorage.getItem('ww_sound') === '1', b = document.getElementById('sndbtn');
-  b.classList.toggle('on', on); b.querySelector('span').textContent = on ? '새 요청 알림 소리 켜짐' : '새 요청 알림 소리 켜기'; }
-function toggleSound(){ const on = localStorage.getItem('ww_sound') === '1'; localStorage.setItem('ww_sound', on ? '0' : '1'); if (!on) ding(); sndLabel(); }
+// 잠금화면 알림 (Web Push): 이 휴대폰을 구독 → 신고가 들어오면 기본 알림음과 함께 잠금화면에 뜸
+const PB = () => document.getElementById('pushbtn'), PH = () => document.getElementById('pushhint');
+const u8 = b => { const p = '='.repeat((4 - b.length % 4) % 4), s = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...s].map(c => c.charCodeAt(0))); };
+function pushLabel(on, hint){ PB().classList.toggle('on', on); PB().querySelector('span').textContent = on ? '잠금화면 신고 알림 켜짐' : '잠금화면 신고 알림 켜기'; PH().textContent = hint || ''; }
+async function pushInit(){
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !window.isSecureContext) {
+    PB().disabled = true;
+    pushLabel(false, /iPhone|iPad/.test(navigator.userAgent) ? 'https 공유 주소를 사파리로 열고 [공유 → 홈 화면에 추가] 후 그 아이콘으로 열면 켤 수 있어요'
+                                                              : 'https 공유 주소(공유링크켜기)로 열어야 켤 수 있어요'); return; }
+  const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+  const sub = await reg.pushManager.getSubscription();
+  pushLabel(!!sub && Notification.permission === 'granted', sub ? '신고가 들어오면 기본 알림음과 함께 잠금화면에 떠요' : '');
+}
+async function togglePush(){
+  const reg = await navigator.serviceWorker.ready, cur = await reg.pushManager.getSubscription();
+  if (cur) { await fetch('/api/push/unsubscribe', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({endpoint: cur.endpoint})});
+             await cur.unsubscribe(); return pushLabel(false, '알림을 껐어요'); }
+  if (await Notification.requestPermission() !== 'granted') return pushLabel(false, '휴대폰 설정에서 알림을 허용해 주세요');
+  const k = await (await fetch('/api/push/key')).json(); if (!k.ok) return pushLabel(false, k.message);
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(k.key) });
+  await fetch('/api/push/subscribe', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(sub)});
+  await fetch('/api/push/test', {method:'POST'});
+  pushLabel(true, '켜졌어요 · 테스트 알림을 보냈어요');
+}
 // 기다린 시간: 1초마다 갱신, 5분 넘으면 빨간 테두리
 setInterval(() => document.querySelectorAll('.timer[data-at]').forEach(t => {
   const s = Math.max(0, (Date.now() - new Date(t.dataset.at)) / 1000), m = Math.floor(s / 60);
