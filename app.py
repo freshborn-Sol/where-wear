@@ -791,6 +791,55 @@ def staff_ai_ctx(**kw):
                 demos=decorate(rows("SELECT * FROM items WHERE is_demo=1 ORDER BY sku")),
                 V=V, **kw)
 
+# ---------- 직원: 옷 목록 · 정보 수정 ----------
+@app.route("/staff/items")
+def staff_items():
+    q = (request.args.get("q") or "").strip()
+    cat = request.args.get("cat", "")
+    items = rows("SELECT * FROM items ORDER BY category, name, color")
+    if cat: items = [i for i in items if i["category"] == cat]
+    if q:
+        words = q.lower().split()
+        items = [i for i in items if all(w in f"{i['sku']} {i['name']} {i['color']} {i['subcat']}".lower() for w in words)]
+    items = decorate(items)
+    for it in items:
+        it["floor"] = sum(z["qty"] for z in it["sizes"]); it["wh"] = sum(z["wh"] for z in it["sizes"])
+    counts = Counter(r["category"] for r in rows("SELECT category FROM items"))
+    return render_template("staff_items.html", items=items, q=q, cat=cat, cats=[(c, counts[c]) for c in CATS if counts[c]],
+                           total=sum(counts.values()), saved=request.args.get("saved"))
+
+@app.route("/staff/items/<sku>", methods=["GET", "POST"])
+def staff_item_edit(sku):
+    it = one("SELECT * FROM items WHERE sku=?", (sku,))
+    if not it: return "없는 상품", 404
+    if request.method == "POST":
+        f = request.form
+        try: price = max(0, int((f.get("price") or "0").replace(",", "")))
+        except ValueError: price = it["price"]
+        color = f.get("color") or it["color"]
+        db().execute("""UPDATE items SET name=?, price=?, category=?, subcat=?, color=?, hex=?, fit=?, pattern=? WHERE sku=?""",
+                     ((f.get("name") or it["name"]).strip(), price, f.get("category") or it["category"], f.get("subcat") or it["subcat"],
+                      color, COLORS.get(color, it["hex"]), f.get("fit", it["fit"] or ""), f.get("pattern") or it["pattern"], sku))
+        for z in rows("SELECT size FROM stock WHERE sku=?", (sku,)):
+            def num(k, d):
+                try: return max(0, int(f.get(k, d)))
+                except (TypeError, ValueError): return d
+            db().execute("UPDATE stock SET qty=?, wh=? WHERE sku=? AND size=?",
+                         (num(f"qty_{z['size']}", 0), num(f"wh_{z['size']}", 0), sku, z["size"]))
+        fx, lv = f.get("fixture"), f.get("level") or "중단"
+        cur = placement_of(sku)
+        if fx and (not cur or cur["fixture_id"] != fx or cur["level"] != lv):      # 위치가 바뀌면 새로 등록
+            db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,))
+            db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active) VALUES (?,?,?,?,?,1)",
+                         (sku, fx, lv, ts(), "staff-edit"))
+            close_loc_reports(sku, None, "위치 이동")
+        db().commit()
+        return redirect(url_for("staff_items", saved=sku, q=request.args.get("q", ""), cat=request.args.get("cat", "")) + f"#i-{sku}")
+    it = decorate([it])[0]
+    it["sizes"] = sort_sizes(it["sizes"])
+    return render_template("staff_item_edit.html", it=it, fixtures=shelves(), colors=COLORS, cats=list(CATS), V=V,
+                           fits=["오버핏", "레귤러핏", "슬림핏", "크롭"], back=request.args.get("back", "/staff/items"))
+
 @app.route("/staff/ai")
 def staff_ai():
     return render_template("staff_ai.html", step="photo", **staff_ai_ctx())

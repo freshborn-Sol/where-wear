@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+<div class="sshell">
+{{ ks.sbar('옷 목록', right=total ~ '벌') }}
+<main class="swrap">
+  {% if saved %}<p class="okmsg">{{ cx.icon('check', 16) }}{{saved}} 저장했어요</p>{% endif %}
+  <form class="isearch" method="get">
+    {% if cat %}<input type="hidden" name="cat" value="{{cat}}">{% endif %}
+    <label>{{ cx.icon('search', 18) }}<input name="q" value="{{q}}" placeholder="이름 · 색 · 상품번호로 찾기" autocomplete="off"></label>
+  </form>
+  <div class="icats">
+    <a class="{{ 'on' if not cat }}" href="/staff/items{{ '?q=' ~ q if q }}">전체</a>
+    {% for c, n in cats %}<a class="{{ 'on' if cat == c }}" href="/staff/items?cat={{c}}{{ '&q=' ~ q if q }}">{{c}} <small>{{n}}</small></a>{% endfor %}
+  </div>
+  {% if not items %}<div class="empty">맞는 옷이 없어요</div>{% endif %}
+  <ul class="ilist">
+  {% for it in items %}
+    <li id="i-{{it.sku}}" class="{{ 'just' if saved == it.sku }}"><a href="/staff/items/{{it.sku}}?back={{ ('/staff/items?cat=' ~ cat ~ '&q=' ~ q)|urlencode }}">
+      <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
+      <div class="ib">
+        <b>{{it.name}}</b>
+        <span class="im">{{it.color}}{% if it.fit %} · {{it.fit}}{% endif %} · {{it.sku}}</span>
+        <span class="il">{% if it.place %}{{ cx.icon('pin', 12) }}{{it.place.fixture_id}} {{it.place.level}}{% else %}<em>위치 없음</em>{% endif %}
+          · 매장 {{it.floor}} · 창고 {{it.wh}}</span>
+      </div>
+      <div class="ip"><b>{{ "{:,}".format(it.price) }}</b><small>원</small>{{ cx.icon('chev', 16) }}</div>
+    </a></li>
+  {% endfor %}
+  </ul>
+</main>
+{{ ks.stabs('items') }}
+</div>
+{% endblock %}

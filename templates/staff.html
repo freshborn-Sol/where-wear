@@ -2,8 +2,9 @@
 {% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
 {% block body %}
 <div class="sshell">
-{{ ks.sbar('위치 등록', right=('<a class="amb" href="#priority">진열 점검 ' ~ check_days ~ '일 전</a>') if check_days >= CHECK_DAYS else None) }}
+{{ ks.sbar('등록', right=('<a class="amb" href="#priority">진열 점검 ' ~ check_days ~ '일 전</a>') if check_days >= CHECK_DAYS else None) }}
 <main class="swrap">
+  {{ ks.regseg('scan') }}
   {% if check_days >= CHECK_DAYS %}
   <form class="checkbar" method="post" action="/staff/checked">
     {{ cx.icon('bell', 22) }}<div><b>진열 점검할 때예요</b><small>마지막 점검 {{check_days}}일 전</small></div>

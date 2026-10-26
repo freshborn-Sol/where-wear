@@ -66,10 +66,16 @@
 </header>
 {%- endmacro %}
 
+{# 등록 화면 위: 바코드로 위치 등록 ↔ 사진으로 새 옷 등록 #}
+{% macro regseg(active) -%}
+<nav class="regseg"><a class="{{ 'on' if active == 'scan' }}" href="/staff">{{ cx.icon('scan', 18) }}바코드로 위치 등록</a>
+  <a class="{{ 'on' if active == 'photo' }}" href="/staff/ai">{{ cx.icon('camera', 18) }}사진으로 새 옷 등록</a></nav>
+{%- endmacro %}
+
 {% macro stabs(active) -%}
 <nav class="stabs" aria-label="직원 메뉴">
-  <a class="st {{ 'on' if active == 'reg' }}" href="/staff">{{ cx.icon('scan', 24) }}<span>위치 등록</span></a>
-  <a class="st {{ 'on' if active == 'ai' }}" href="/staff/ai">{{ cx.icon('camera', 24) }}<span>사진 등록</span></a>
+  <a class="st {{ 'on' if active in ('reg', 'ai') }}" href="/staff">{{ cx.icon('scan', 24) }}<span>등록</span></a>
+  <a class="st {{ 'on' if active == 'items' }}" href="/staff/items">{{ cx.icon('list', 24) }}<span>옷 목록</span></a>
   <a class="st {{ 'on' if active == 'rep' }}" href="/staff/reports"><span class="st-ic">{{ cx.icon('bell', 24) }}{% if staff_badge %}<b>{{ staff_badge }}</b>{% endif %}</span><span>신고함</span></a>
   <a class="st {{ 'on' if active == 'set' }}" href="/staff/settings">{{ cx.icon('sliders', 24) }}<span>설정</span></a>
 </nav>

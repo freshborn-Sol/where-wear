@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+<div class="sshell">
+{{ ks.sbar('옷 정보 수정', back=back) }}
+<main class="swrap">
+  <form method="post" class="iedit">
+    <div class="ehead"><img src="{{ imgsrc(it) }}" alt=""><div><small>{{it.sku}}</small><b>{{it.name}}</b>
+      <span>{% if it.place %}지금 안내: {{it.place.fixture_id}} {{it.place.level}}{% else %}위치 없음{% endif %}</span></div></div>
+
+    <div class="sh2">기본 정보</div>
+    <label class="fld">상품명<input name="name" value="{{it.name}}" required></label>
+    <label class="fld">가격 (원)<input name="price" value="{{it.price}}" inputmode="numeric" pattern="[0-9,]*" required></label>
+    <div class="frow">
+      <label class="fld">분류<select name="category" id="cat" onchange="fillSub()">{% for c in V.CATEGORIES %}<option {{ 'selected' if c == it.category }}>{{c}}</option>{% endfor %}</select></label>
+      <label class="fld">종류<select name="subcat" id="sub"></select></label>
+    </div>
+    <div class="frow">
+      <label class="fld">색<select name="color">{% for c in colors %}<option {{ 'selected' if c == it.color }}>{{c}}</option>{% endfor %}</select></label>
+      <label class="fld">핏<select name="fit"><option value="" {{ 'selected' if not it.fit }}>없음</option>{% for f in fits %}<option {{ 'selected' if f == it.fit }}>{{f}}</option>{% endfor %}</select></label>
+      <label class="fld">무늬<select name="pattern">{% for pt in V.PATTERNS %}<option {{ 'selected' if pt == it.pattern }}>{{pt}}</option>{% endfor %}</select></label>
+    </div>
+
+    <div class="sh2">사이즈별 재고</div>
+    <table class="estock">
+      <tr><th>사이즈</th><th>매장</th><th>창고</th></tr>
+      {% for z in it.sizes %}<tr><td>{{z.size}}</td>
+        <td><input name="qty_{{z.size}}" value="{{z.qty}}" type="number" min="0" inputmode="numeric"></td>
+        <td><input name="wh_{{z.size}}" value="{{z.wh}}" type="number" min="0" inputmode="numeric"></td></tr>{% endfor %}
+    </table>
+
+    <div class="sh2">위치</div>
+    <div class="frow">
+      <label class="fld">선반<select name="fixture">{% if not it.place %}<option value="">위치 없음</option>{% endif %}
+        {% for f in fixtures %}<option value="{{f.id}}" {{ 'selected' if it.place and it.place.fixture_id == f.id }}>{{f.id}} · {{f.name}}</option>{% endfor %}</select></label>
+      <label class="fld lv">단<select name="level">{% for l in ['상단','중단','하단'] %}<option {{ 'selected' if (it.place and it.place.level == l) or (not it.place and l == '중단') }}>{{l}}</option>{% endfor %}</select></label>
+    </div>
+
+    <button class="save">{{ cx.icon('check', 18) }}저장</button>
+    <a class="linkrow" href="/item/{{it.sku}}?at={{ it.place.fixture_id if it.place else 'ENTRANCE' }}" target="_blank">손님 화면으로 보기{{ cx.icon('chev', 16) }}</a>
+  </form>
+</main>
+{{ ks.stabs('items') }}
+</div>
+<script>
+const SUBS = {{ V.SUBCATS|tojson }}, CUR = {{ it.subcat|tojson }};
+function fillSub(){ const c = document.getElementById('cat').value, s = document.getElementById('sub');
+  const list = SUBS[c] || []; s.innerHTML = '';
+  (list.includes(CUR) || c !== {{ it.category|tojson }} ? list : [CUR, ...list]).forEach(v => { const o = document.createElement('option'); o.textContent = v; if (v === CUR) o.selected = true; s.appendChild(o); }); }
+fillSub();
+</script>
+{% endblock %}

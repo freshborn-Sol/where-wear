@@ -2,8 +2,9 @@
 {% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
 {% block body %}
 <div class="sshell">
-{{ ks.sbar('사진으로 상품 등록', back='/staff') }}
+{{ ks.sbar('등록') }}
 <main class="swrap">
+{{ ks.regseg('photo') }}
 
 {% if done %}<p class="okmsg">{{ cx.icon('check', 18) }}{{done}}</p>{% endif %}
 
