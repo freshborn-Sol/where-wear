@@ -411,6 +411,11 @@ def facet_counts(base, sel):
     return out
 
 # ---------- 손님 화면 ----------
+@app.route("/favicon.ico")
+def favicon():
+    """주소창·탭·방문 기록에 뜨는 아이콘 (브라우저가 /favicon.ico를 따로 찾음)"""
+    r = app.send_static_file("logo/favicon.ico"); r.headers["Cache-Control"] = "no-cache"; return r
+
 @app.route("/")
 def root(): return redirect(url_for("go", at="ENTRANCE"))
 

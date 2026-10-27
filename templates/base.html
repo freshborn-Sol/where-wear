@@ -1,9 +1,11 @@
 <!doctype html><html lang="ko"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{% block title %}where:wear{% endblock %}</title>
-<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo/icon.svg') }}">
-<link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='logo/icon-64.png') }}">
-<link rel="apple-touch-icon" href="{{ url_for('static', filename='logo/icon-180.png') }}">
+<link rel="icon" href="/favicon.ico?v=g2" sizes="any">
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo/icon.svg') }}?v=g2">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='logo/icon-32.png') }}?v=g2">
+<link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='logo/icon-64.png') }}?v=g2">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='logo/icon-180.png') }}?v=g2">
 <meta name="theme-color" content="#306A50">
 {% block styles %}<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">{% endblock %}
 </head><body class="{% block bodyclass %}{% endblock %}">
