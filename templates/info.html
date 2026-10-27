@@ -14,7 +14,8 @@
   </div></section>
 
   <section class="group"><h3>설정</h3><div class="gcard">
-    <div class="row"><span class="l">{{ cx.icon('globe', 20) }}언어</span><span class="v">한국어</span></div>
+    <div class="row"><span class="l">{{ cx.icon('globe', 20) }}언어 · Language</span>
+      <span class="lseg">{% for code, name in [('ko', '한국어'), ('en', 'English')] %}<a class="{{ 'on' if LANG == code }}" href="/lang?m=q&to={{code}}&next={{ request.full_path|urlencode }}">{{name}}</a>{% endfor %}</span></div>
     <button class="row" type="button" onclick="toggleBig()"><span class="l">{{ cx.icon('textsize', 20) }}글자 크기</span><span class="v"><span id="bigv">보통</span>{{ CHEV }}</span></button>
   </div></section>
 

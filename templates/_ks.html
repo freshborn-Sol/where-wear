@@ -15,6 +15,7 @@
 <header class="ktop">
   <a href="/kiosk" class="klogo-a"><img class="klogo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"></a>
   <span class="ksub">옷 찾기</span>
+  <a class="klang" href="/lang?m=k&to={{ 'ko' if LANG == 'en' else 'en' }}&next={{ request.full_path|urlencode }}">{{ cx.icon('globe', 26) }}<span>{{ '한국어' if LANG == 'en' else 'English' }}</span></a>
   {% if back %}<a class="khome" href="/kiosk">{{ cx.icon('home', 28) }}처음으로</a>{% endif %}
 </header>
 {%- endmacro %}
@@ -51,7 +52,7 @@
   window.kIdleReset=()=>{ t0=Date.now(); shown=false; box.classList.remove('on'); };
   ['pointerdown','touchstart','scroll','keydown'].forEach(e=>addEventListener(e,()=>{ if(!shown) t0=Date.now(); },{passive:true}));
   setInterval(()=>{ const left=LIM-(Date.now()-t0);
-    if(left<=0) location.href='/kiosk';
+    if(left<=0) location.href='/lang?m=k&to=ko&next=/kiosk';   // 다음 손님은 한국어로 시작
     else if(left<=WARN){ if(!shown){ shown=true; document.querySelectorAll('.kdim.on').forEach(d=>d.classList.remove('on')); box.classList.add('on'); } n.textContent=Math.ceil(left/1000); } },250);
 })();
 </script>

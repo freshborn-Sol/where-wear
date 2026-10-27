@@ -63,11 +63,34 @@ def _find(query, table):
             hits.append(key)
     return hits
 
+# 영어 검색어 (외국인 손님 · 영어 화면)
+for _t, _add in ((COLOR_WORDS, {"스카이블루": ["skyblue", "lightblue", "babyblue"], "카키": ["olive"], "그레이": ["charcoal"],
+                                "블랙": ["검정색"], "화이트": ["흰색", "ivory"]}),
+                 (SUB_WORDS, {"후드티": ["hoody", "hooded"], "맨투맨": ["sweatshirt", "crewneck"], "니트": ["sweater", "knitwear"],
+                              "반팔티": ["t-shirt", "tee", "반팔티셔츠"], "슬랙스": ["trousers", "dresspants"], "청바지": ["denimpants"],
+                              "조거팬츠": ["joggers", "sweatpants", "trackpants"], "패딩": ["puffer", "padded", "downjacket"],
+                              "바람막이": ["windbreaker"], "운동화": ["sneaker", "trainers", "runningshoes"],
+                              "슬리퍼": ["slippers", "slides", "sandals"], "긴팔티": ["longsleeve", "long-sleeve"],
+                              "후드집업": ["zip-up", "ziphoodie", "zip-uphoodie", "zipuphoodie"],
+                              "구두": ["loafers", "dressshoes", "derby"], "모자": ["beanie", "buckethat", "ballcap"],
+                              "가방": ["backpack", "tote", "crossbody"], "재킷": ["blouson"]}),
+                 (CAT_WORDS, {"상의": ["tops"], "하의": ["bottoms"], "아우터": ["outerwear"], "잡화": ["accessories", "accessory"]}),
+                 (FIT_WORDS, {"오버핏": ["oversized", "oversize", "loose", "baggy", "overfit"], "슬림핏": ["slim", "slimfit", "skinny"],
+                              "크롭": ["crop", "cropped"], "레귤러핏": ["regular", "regularfit", "standard"]})):
+    for _k, _ws in _add.items(): _t[_k] = _t[_k] + [w for w in _ws if w not in _t[_k]]
+
 def parse_query(q):
-    """'오버핏 파란색 후드티' → {'colors':['블루'], 'subs':['후드티'], ...}"""
+    """'오버핏 파란색 후드티' → {'colors':['블루'], 'subs':['후드티'], ...}
+       긴 낱말부터 먼저 알아듣고 지운다 → 'tshirt' 안의 'shirt', '후드집업' 안의 '후드'가 또 잡히지 않게"""
     q = q.lower().replace(" ", "")
-    return {"colors": _find(q, COLOR_WORDS), "subs": _find(q, SUB_WORDS),
-            "cats": _find(q, CAT_WORDS), "fits": _find(q, FIT_WORDS)}
+    out = {"colors": [], "subs": [], "cats": [], "fits": []}
+    cand = [(w, name, key) for name, table in (("colors", COLOR_WORDS), ("subs", SUB_WORDS), ("cats", CAT_WORDS), ("fits", FIT_WORDS))
+            for key, words in table.items() for w in words]
+    for w, name, key in sorted(cand, key=lambda c: -len(c[0])):
+        if w in q:
+            if key not in out[name]: out[name].append(key)
+            q = q.replace(w, "|")
+    return out
 
 def score_item(it, parsed):
     """속성이 맞을수록 높은 점수. (색 4점, 종류 4점, 대분류 2점, 핏 1점)"""
@@ -96,7 +119,10 @@ def is_exact(it, parsed):
 def text_search(items, q, limit=12):
     parsed = parse_query(q)
     if not any(parsed.values()):                       # 아는 단어가 하나도 없을 때
-        return [it for it in items if q.replace(" ", "") in it["name"].replace(" ", "")][:limit], parsed, "이름으로 찾았어요"
+        import i18n                                     # 영어 상품 이름으로도 (예: 'merino', 'trench')
+        k = q.replace(" ", "").lower()
+        hit = [it for it in items if k in it["name"].replace(" ", "") or k in i18n.tr(it["name"]).replace(" ", "").lower()]
+        return hit[:limit], parsed, "이름으로 찾았어요"
     scored = [(score_item(it, parsed), it) for it in items]
     scored = [(s, it) for s, it in scored if s > 0]
     scored.sort(key=lambda t: -t[0])

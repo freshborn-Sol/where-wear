@@ -457,3 +457,9 @@ details.mv select:first-child{flex:1;min-width:0}
 .pgrp{display:flex;flex-direction:column;gap:8px}.pgrp[hidden]{display:none}
 .pgrp .prio.more{display:none}.pgrp.all .prio.more{display:flex}.pgrp.all .pmore{display:none}
 .pmore{height:40px;border:1px dashed var(--g300);border-radius:12px;background:#fff;font-size:13px;font-weight:700;color:var(--g700);font-family:inherit}
+
+/* 언어 바꾸기: 키오스크 위쪽 / 직원 설정 */
+.klang{margin-left:auto;display:flex;align-items:center;gap:10px;padding:14px 26px;border:2px solid var(--g300);border-radius:40px;
+  font-size:24px;font-weight:700;color:var(--g700);background:#fff}
+.klang + .khome{margin-left:0}
+.slang a{display:flex;align-items:center;justify-content:center;gap:6px}

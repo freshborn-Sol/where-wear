@@ -5,6 +5,8 @@
 {{ ks.sbar('매장 설정', back='/staff') }}
 <main class="swrap">
   {% if saved %}<p class="okmsg">{{ cx.icon('check', 16) }}저장했어요</p>{% endif %}
+  <div class="sh2">언어 · Language</div>
+  <div class="regseg slang">{% for code, name in [('ko', '한국어'), ('en', 'English')] %}<a class="{{ 'on' if LANG == code }}" href="/lang?m=s&to={{code}}&next=/staff/settings">{{ cx.icon('globe', 16) }}{{name}}</a>{% endfor %}</div>
   <form method="post" style="display:flex;flex-direction:column;gap:8px">
     <div class="sh2">매장 유형</div>
     {% for k, d in types.items() %}

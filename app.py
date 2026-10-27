@@ -15,6 +15,7 @@ from pathlib import Path
 from flask import Flask, g, jsonify, redirect, render_template, request, url_for
 
 import search as S
+import i18n
 import vision as V
 from seed import COLORS, CATS
 
@@ -411,6 +412,59 @@ def facet_counts(base, sel):
     return out
 
 # ---------- 손님 화면 ----------
+# ---------- 언어 (모드별로 따로: 손님 QR · 키오스크 · 직원) ----------
+LANG_COOKIE = {"q": "ww_lang_q", "k": "ww_lang_k", "s": "ww_lang_s"}
+
+def mode_of(path):
+    if path.startswith("/kiosk"): return "k"
+    if path.startswith(("/staff", "/demo", "/api/register")): return "s"
+    return "q"
+
+def cur_lang():
+    path = request.path
+    if path.startswith("/api/"):                          # API는 부른 화면(Referer)의 모드를 따른다
+        from urllib.parse import urlsplit
+        path = urlsplit(request.referrer or "").path or path
+    m = mode_of(path)
+    v = request.cookies.get(LANG_COOKIE[m])
+    if v in ("ko", "en"): return v
+    if m == "q":                                          # 손님 휴대폰: 처음엔 휴대폰 언어를 따름
+        best = request.accept_languages.best_match(["ko", "en"])
+        return "en" if best == "en" else "ko"
+    return "ko"
+
+@app.context_processor
+def _lang_ctx():
+    try: return {"LANG": cur_lang(), "LMODE": mode_of(request.path)}
+    except Exception: return {"LANG": "ko", "LMODE": "q"}
+
+@app.route("/lang")
+def set_lang():
+    """?m=q|k|s &to=ko|en &next=돌아갈 주소"""
+    m = request.args.get("m", "q"); to = request.args.get("to", "ko")
+    nxt = request.args.get("next", "/")
+    if not nxt.startswith("/") or nxt.startswith("//"): nxt = "/"
+    r = redirect(nxt)
+    if m in LANG_COOKIE and to in ("ko", "en"):
+        r.set_cookie(LANG_COOKIE[m], to, max_age=(None if m == "k" else 31536000), samesite="Lax")
+    return r
+
+@app.after_request
+def _translate(r):
+    try:
+        if r.direct_passthrough or r.status_code >= 300 or cur_lang() != "en": return r
+        ct = r.content_type or ""
+        if ct.startswith("text/html"):
+            r.set_data(i18n.html(r.get_data(as_text=True)))
+        elif ct.startswith("application/json"):
+            d = r.get_json(silent=True)
+            if d is not None: r.set_data(json.dumps(i18n.json_obj(d), ensure_ascii=False))
+        r.headers["Content-Language"] = "en"
+        r.vary.add("Cookie")
+    except Exception as e:
+        app.logger.warning("i18n: %s", e)
+    return r
+
 @app.route("/favicon.ico")
 def favicon():
     """주소창·탭·방문 기록에 뜨는 아이콘 (브라우저가 /favicon.ico를 따로 찾음)"""
