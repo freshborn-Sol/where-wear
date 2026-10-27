@@ -8,6 +8,11 @@
 제2회 인공지능 활용 우수사례 공모전 제작부문 출품작
 </p>
 
+<p align="center">
+<a href="https://youtu.be/30Rv38LvmzM"><img src="https://img.youtube.com/vi/30Rv38LvmzM/hqdefault.jpg" alt="where:wear 시연 영상" width="640"></a><br>
+▶ <a href="https://youtu.be/30Rv38LvmzM"><b>시연 영상 보기 (1분)</b></a> — 글자 · 사진(AI) 검색, 키오스크 종이 지도, English, 직원 화면
+</p>
+
 ---
 
 ## 실행 방법
