@@ -10,23 +10,37 @@
 
 ---
 
+## 실행 방법
+
+```bash
+pip install -r requirements.txt
+python import_catalog.py      # catalog.csv → store.db (처음 한 번)
+python app.py                 # http://localhost:5001/go?at=A-H1
+```
+
+- 사진으로 찾기(AI)를 쓰려면 [Google AI Studio](https://aistudio.google.com/apikey)에서 받은 Gemini 키를 `gemini_key.txt`에 넣으세요. 키는 `.gitignore`로 제외되어 저장소에 없습니다. 키가 없으면 사진의 대표 색으로 찾습니다.
+- 발표용 예시 데이터: `/demo`
+- macOS: `서버켜기.command` 더블클릭
+
+---
+
 ## 한눈에 보기
 
-| 손님 QR · 홈 | 사진으로 찾기 (AI) | 위치 + 2D 길 안내 | English |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/screens/qr_home.jpg" width="200"> | <img src="docs/screens/qr_photo.jpg" width="200"> | <img src="docs/screens/qr_item.jpg" width="200"> | <img src="docs/screens/qr_item_en.jpg" width="200"> |
-| 매장 QR을 찍으면 앱 없이 바로 열림 | Gemini가 옷 특징을 뽑고 가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단" + 선 자리에서의 경로 · 사이즈별 재고 | 휴대폰 언어에 맞춰 영어 화면 |
+| 손님 QR · 홈 | 사진으로 찾기 (AI) | 위치 + 2D 길 안내 | English | 직원 신고함 |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/screens/qr_home.jpg" width="160"> | <img src="docs/screens/qr_photo.jpg" width="160"> | <img src="docs/screens/qr_item.jpg" width="160"> | <img src="docs/screens/qr_item_en.jpg" width="160"> | <img src="docs/screens/staff_reports.jpg" width="160"> |
+| 매장 QR을 찍으면<br>앱 없이 바로 열림 | Vision AI가 옷 특징을 뽑고<br>가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단"<br>+ 경로 · 사이즈별 재고 | 휴대폰 언어에 맞춰<br>영어 화면 | 손님 신고 · 호출 확인<br>+ 한 번에 도는 경로 |
 
-| 키오스크 (40대 이상) | 종이 지도 | 직원 신고함 |
-|:---:|:---:|:---:|
-| <img src="docs/screens/kiosk_item.jpg" width="380"> | <img src="docs/screens/kiosk_print.jpg" width="120"> | <img src="docs/screens/staff_reports.jpg" width="200"> |
-| 큰 글씨 · 글자 입력 없이 3번 터치 | 80mm 감열지에 단계별 길 안내 | 손님 신고 · 호출을 바로 확인하고 고칠 선반을 한 번에 도는 경로 |
+| 키오스크 (40대 이상) | 종이 지도 (80mm 감열지) |
+|:---:|:---:|
+| <img src="docs/screens/kiosk_item.jpg" width="474"> | <img src="docs/screens/kiosk_print.jpg" width="356"> |
+| 큰 글씨 · 글자 입력 없이 3번 터치 | 도면 + 꺾는 곳마다 번호 안내 (왼쪽 → 오른쪽 순서) |
 
 > 화면은 모두 이 저장소의 코드를 실행해 캡처했습니다. 신고함 숫자는 시연 모드(`/demo`)의 예시 데이터입니다.
 
 ---
 
-## 왜 만들었나
+## Why?
 
 | 근거 | 수치 |
 |---|---|
@@ -115,18 +129,6 @@
 **위치가 틀렸을 때** — 손님 2명이 "여기에 옷이 없어요"를 누르면 그 위치를 안내에서 내리고, 직원이 고치면 다시 보입니다. 화면에는 언제 등록된 위치인지 늘 함께 표시합니다.
 
 ---
-
-## 실행 방법
-
-```bash
-pip install -r requirements.txt
-python import_catalog.py      # catalog.csv → store.db (처음 한 번)
-python app.py                 # http://localhost:5001/go?at=A-H1
-```
-
-- 사진으로 찾기(AI)를 쓰려면 [Google AI Studio](https://aistudio.google.com/apikey)에서 받은 Gemini 키를 `gemini_key.txt`에 넣으세요. 키는 `.gitignore`로 제외되어 저장소에 없습니다. 키가 없으면 사진의 대표 색으로 찾습니다.
-- 발표용 예시 데이터: `/demo`
-- macOS: `서버켜기.command` 더블클릭
 
 ## 구성
 
