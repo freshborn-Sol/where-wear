@@ -68,10 +68,10 @@
 </header>
 {%- endmacro %}
 
-{# 등록 화면 위: 바코드로 위치 등록 ↔ 사진으로 새 옷 등록 #}
+{# 등록 화면 위: 바코드 모드(위치 등록) ↔ 사진 모드(새 옷 등록) #}
 {% macro regseg(active) -%}
-<nav class="regseg"><a class="{{ 'on' if active == 'scan' }}" href="/staff">{{ cx.icon('scan', 18) }}바코드로 위치 등록</a>
-  <a class="{{ 'on' if active == 'photo' }}" href="/staff/ai">{{ cx.icon('camera', 18) }}사진으로 새 옷 등록</a></nav>
+<nav class="regseg"><a class="{{ 'on' if active == 'scan' }}" href="/staff">{{ cx.icon('scan', 18) }}바코드 모드</a>
+  <a class="{{ 'on' if active == 'photo' }}" href="/staff/ai">{{ cx.icon('camera', 18) }}사진 모드</a></nav>
 {%- endmacro %}
 
 {% macro stabs(active) -%}

@@ -1,10 +1,16 @@
 {% extends "base.html" %}{% import "_cx.html" as cx with context %}
 {% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
 {% block body %}
-{{ cx.appbar('내 사이즈 정보') }}
+{{ cx.appbar('MY') }}
 <main class="page">
   <p class="lockhint">{{ cx.icon('lock', 18) }}<span><b>이 휴대폰에만</b> 저장돼요</span></p>
   <form id="f" class="meform" onsubmit="return save()">
+    <div class="prefq">성별<small> · 인기 검색어를 나와 비슷한 손님 기준으로</small></div>
+    <div class="prefs">
+      <label><input type="radio" name="g" value="F">여성</label>
+      <label><input type="radio" name="g" value="M">남성</label>
+    </div>
+    <label class="fld"><span>나이</span><span class="inp"><input name="age" type="number" inputmode="numeric" min="10" max="99" placeholder="23">세</span></label>
     <label class="fld"><span>키</span><span class="inp"><input name="h" type="number" inputmode="numeric" min="120" max="220" required placeholder="172">cm</span></label>
     <label class="fld"><span>몸무게</span><span class="inp"><input name="w" type="number" inputmode="numeric" min="30" max="150" required placeholder="65">kg</span></label>
     <label class="fld"><span>발 사이즈<small>선택 · 신발 추천용</small></span><span class="inp"><input name="foot" type="number" inputmode="numeric" min="200" max="320" step="5" placeholder="260">mm</span></label>
@@ -22,13 +28,15 @@
 <script>
 const f=document.getElementById('f'), next=new URLSearchParams(location.search).get('next')||'/go?at={{cx_at}}';
 try{ const p=JSON.parse(localStorage.getItem('ww_body')||'null');
-  if(p){ f.h.value=p.h; f.w.value=p.w; if(p.foot) f.foot.value=p.foot; f.querySelector(`[name=pref][value=${p.pref||'normal'}]`).checked=true; } }catch(e){}
+  if(p){ f.h.value=p.h; f.w.value=p.w; if(p.foot) f.foot.value=p.foot; f.querySelector(`[name=pref][value=${p.pref||'normal'}]`).checked=true;
+    if(p.g){ const r=f.querySelector(`[name=g][value=${p.g}]`); if(r) r.checked=true; } if(p.age) f.age.value=p.age; } }catch(e){}
 function back(){ location.href = (next.startsWith('/') && !next.startsWith('/me')) ? next : '/go?at={{cx_at}}'; }
 function save(){
-  const p={h:+f.h.value, w:+f.w.value, foot:+f.foot.value||0, pref:f.pref.value};
+  const p={h:+f.h.value, w:+f.w.value, foot:+f.foot.value||0, pref:f.pref.value, g:f.g.value||'', age:+f.age.value||0};
   try{ localStorage.setItem('ww_body', JSON.stringify(p)); }catch(e){}
+  wwSeg(p);
   back(); return false;
 }
-function clearMe(){ try{ localStorage.removeItem('ww_body'); }catch(e){} back(); }
+function clearMe(){ try{ localStorage.removeItem('ww_body'); }catch(e){} wwSeg(null); back(); }
 </script>
 {% endblock %}

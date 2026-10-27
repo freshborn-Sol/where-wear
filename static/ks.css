@@ -450,3 +450,8 @@ details.mv select:first-child{flex:1;min-width:0}
 .lvh{display:flex;align-items:center;gap:6px;margin:4px 2px -2px;font-size:12.5px;font-weight:700;color:var(--g700)}
 .lvh i{font-style:normal;width:20px;height:20px;border-radius:6px;background:var(--blue50);color:var(--btx);display:grid;place-items:center;font-size:11px;font-weight:900}
 .lvh small{color:var(--g500);font-weight:500}
+
+/* 다시 찍을 옷: 목록별 */
+.pgrp{display:flex;flex-direction:column;gap:8px}.pgrp[hidden]{display:none}
+.pgrp .prio.more{display:none}.pgrp.all .prio.more{display:flex}.pgrp.all .pmore{display:none}
+.pmore{height:40px;border:1px dashed var(--g300);border-radius:12px;background:#fff;font-size:13px;font-weight:700;color:var(--g700);font-family:inherit}

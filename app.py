@@ -8,7 +8,7 @@
   /staff         직원: 선반 QR 1번 → 옷 QR 연속 스캔으로 위치 등록
   /staff/reports 직원: 신고·호출 목록
 """
-import datetime, json, os, sqlite3, time, uuid
+import datetime, json, os, re, sqlite3, time, uuid
 from collections import Counter, deque
 from urllib.parse import urlencode
 from pathlib import Path
@@ -43,6 +43,8 @@ def ensure_schema():
                      ("escalated_at", "TEXT")]:     # 2분 동안 아무도 안 받아서 전체 직원에게 다시 알린 시각
         if col not in rcols:
             con.execute(f"ALTER TABLE reports ADD COLUMN {col} {typ}")
+    if "seg" not in {r[1] for r in con.execute("PRAGMA table_info(events)")}:
+        con.execute("ALTER TABLE events ADD COLUMN seg TEXT")     # 검색한 손님의 성별·나이대 (예: F20) — MY에 적은 경우만
     if "confirmed_at" not in {r[1] for r in con.execute("PRAGMA table_info(placements)")}:
         con.execute("ALTER TABLE placements ADD COLUMN confirmed_at TEXT")   # 손님이 '찾았어요' 누른 시각
     # ⑧ 창고 재고: stock.qty = 매장 진열, stock.wh = 창고
@@ -108,9 +110,15 @@ def is_busy():
     return staff <= 2 or waiting >= staff
 
 # ---------- ⑩ 사용률 기록 ----------
+def cur_seg():
+    """MY에 적은 성별·나이대 (휴대폰이 쿠키 ww_seg로 보냄). 예: 'F20' = 20대 여성"""
+    v = (request.cookies.get("ww_seg") or "").upper()
+    return v if re.fullmatch(r"[MF](10|20|30|40|50)", v) else None
+
 def log_event(kind, sku=None, src=None):
     try:
-        db().execute("INSERT INTO events (kind,sku,src,ts) VALUES (?,?,?,?)", (kind, sku, src, now().isoformat(timespec="seconds")))
+        seg = cur_seg() if kind == "search" else None
+        db().execute("INSERT INTO events (kind,sku,src,ts,seg) VALUES (?,?,?,?,?)", (kind, sku, src, now().isoformat(timespec="seconds"), seg))
         db().commit()
     except Exception:
         pass
@@ -410,14 +418,58 @@ def root(): return redirect(url_for("go", at="ENTRANCE"))
 def go():
     at = request.args.get("at", "ENTRANCE")
     here = one("SELECT * FROM fixtures WHERE id=?", (at,))
-    popular = [r["src"] for r in rows("""SELECT src, COUNT(*) n FROM events WHERE kind='search' AND src IS NOT NULL AND src!=''
-                                            AND src!='demo' AND ts>=? GROUP BY src ORDER BY n DESC LIMIT 20""",
-                                         ((now() - datetime.timedelta(days=14)).isoformat(timespec="seconds"),))
-               if any(S.parse_query(r["src"]).values())][:6]      # 알아듣는 검색어만 (오타·장난 입력 제외)
-    if len(popular) < 4:                                    # 기록이 적을 때 기본 추천어
-        popular += [w for w in ["검정 후드티", "와이드 청바지", "오버핏 맨투맨", "숏 패딩", "볼캡", "흰 운동화"] if w not in popular][:6 - len(popular)]
-    return render_template("home.html", popular=popular, at=at, here=here, tiles=subcat_tiles(),
+    seg = cur_seg()
+    popular, rising, by_seg = search_trends(seg)
+    return render_template("home.html", popular=popular, rising=rising, seg=seg, by_seg=by_seg,
+                           seg_label=seg_label(seg), at=at, here=here, tiles=subcat_tiles(),
                            tab=request.args.get("tab", "상의"), cats=list(CATS), colors=COLORS)
+
+# ---------- 인기 · 급상승 검색어 (성별·나이대별) ----------
+SEG_DEFAULT = {   # 검색 기록이 아직 적을 때 보여줄 기본 검색어 (인기, 급상승)
+    None: (["검정 후드티", "와이드 청바지", "오버핏 맨투맨", "숏 패딩", "볼캡", "흰 운동화"],
+           ["바람막이", "가디건", "니트", "코트", "후드집업", "부츠"]),
+    "M":  (["검정 후드티", "오버핏 맨투맨", "와이드 청바지", "숏 패딩", "조거팬츠", "흰 운동화"],
+           ["바람막이", "후드집업", "니트", "볼캡", "코트", "부츠"]),
+    "F":  (["와이드 청바지", "가디건", "니트", "스커트", "블라우스", "숏 패딩"],
+           ["코트", "후드집업", "부츠", "가방", "맨투맨", "바람막이"]),
+    "M40": (["셔츠", "슬랙스", "니트", "코트", "패딩", "구두"], ["가디건", "바람막이", "조끼", "벨트", "운동화", "재킷"]),
+    "F40": (["가디건", "블라우스", "슬랙스", "코트", "니트", "패딩"], ["스커트", "부츠", "가방", "재킷", "셔츠", "조끼"]),
+}
+
+def seg_label(seg):
+    if not seg: return None
+    return f"{'50대 이상' if seg[1:] == '50' else seg[1:] + '대'} {'남성' if seg[0] == 'M' else '여성'}"
+
+def search_trends(seg, n=6):
+    """인기 = 최근 14일 많이 찾은 순, 급상승 = 최근 하루가 그 전 13일 하루 평균보다 많이 늘어난 순.
+       MY에 성별·나이를 적었으면 같은 성별·나이대 손님 기록으로 (기록이 적으면 성별만 → 전체 순으로 넓힘)."""
+    t = now()
+    d14 = (t - datetime.timedelta(days=14)).isoformat(timespec="seconds")
+    d1 = (t - datetime.timedelta(days=1)).isoformat(timespec="seconds")
+    ok = lambda q: any(S.parse_query(q).values())            # 알아듣는 검색어만 (오타·장난 입력 제외)
+    def fetch(cond, args):
+        rs = rows(f"""SELECT src, SUM(ts>=?) recent, COUNT(*) n FROM events WHERE kind='search' AND src IS NOT NULL
+                      AND src!='' AND src!='demo' AND ts>=? {cond} GROUP BY src""", (d1, d14, *args))
+        return [r for r in rs if ok(r["src"])]
+    # 기록이 충분한 가장 좁은 범위부터 (같은 성별·나이대 → 같은 성별). 그래도 적으면 그 성별·나이대 기본 검색어로 채움
+    scopes = [("AND seg=?", (seg,)), ("AND seg LIKE ?", (seg[0] + "%",))] if seg else [("", ())]
+    data = []
+    for cond, args in scopes:
+        data = fetch(cond, args)
+        if sum(r["n"] for r in data) >= 10: break
+    popular = [r["src"] for r in sorted(data, key=lambda r: -r["n"])][:n]
+    def growth(r):
+        before = (r["n"] - r["recent"]) / 13
+        return (r["recent"] + 1) / (before + 1)
+    top3 = popular[:3]                       # 늘 1~3위인 검색어는 '급상승'에서 뺌
+    rising = [r["src"] for r in sorted([r for r in data if r["recent"] >= 2 and growth(r) >= 1.5 and r["src"] not in top3],
+                                       key=lambda r: (-growth(r), -r["recent"]))][:n]
+    dkey = seg if seg in SEG_DEFAULT else (seg[0] + ("40" if seg[1:] in ("40", "50") else "") if seg else None)
+    dkey = dkey if dkey in SEG_DEFAULT else (seg[0] if seg else None)
+    dp, dr = SEG_DEFAULT[dkey]
+    popular += [w for w in dp if w not in popular][:n - len(popular)]
+    rising += [w for w in dr if w not in rising and w not in popular[:3]][:n - len(rising)]
+    return popular, rising, bool(seg)
 
 @app.route("/search")
 def search():
@@ -798,7 +850,7 @@ def staff():
     return render_template("staff.html",
                            fixtures=shelves(),
                            items=rows("SELECT sku, name, color, subcat FROM items ORDER BY name, color"),
-                           priority=priority_list(), check_days=days, CHECK_DAYS=CHECK_DAYS,
+                           priority=priority_list(limit=None), check_days=days, CHECK_DAYS=CHECK_DAYS,
                            samples=rows("""SELECT b.code, b.season, i.sku, i.name, i.color FROM barcodes b JOIN items i ON i.sku=b.sku
                                            WHERE i.sku IN ('UQ003','UQ004','UQ073') ORDER BY i.sku, b.season"""))
 
@@ -817,10 +869,11 @@ def priority_list(limit=10):
             if not p: why.append("위치 없음")
             elif age >= CHECK_DAYS: why.append(f"{age}일 전 등록")
             if views: why.append(f"최근 7일 조회 {views}회")
-            out.append({**it, "place": p, "age": age, "views": views, "reps": reps, "why": why,
+            grp = "report" if reps else ("noloc" if not p else "old")     # 목록 나눔: 신고 / 위치 없음 / 오래된 위치
+            out.append({**it, "place": p, "age": age, "views": views, "reps": reps, "why": why, "group": grp,
                         "score": reps * 5 + views * 2 + min(age, 60) / 10 + (3 if not p else 0)})
     out.sort(key=lambda x: -x["score"])
-    return out[:limit]
+    return out[:limit] if limit else out
 
 @app.route("/staff/confirm/<sku>", methods=["POST"])
 def staff_confirm(sku):

@@ -30,10 +30,10 @@
 
   <div class="regres" id="regres" hidden aria-live="assertive"></div>
 
-  <label class="allc"><input type="checkbox" id="allc" checked><div>같은 상품의 다른 색도 이 선반에 함께 등록<small>사이즈는 원래 한 번에 등록돼요</small></div></label>
+  <label class="allc"><input type="checkbox" id="allc" checked><div>다른 색상도 함께 등록</div></label>
 
   <details class="manual-d" id="manual">
-    <summary>{{ cx.icon('camoff', 18) }}카메라가 안 되면 직접 고르기{{ cx.icon('chev', 16) }}</summary>
+    <summary>{{ cx.icon('camoff', 18) }}직접 등록{{ cx.icon('chev', 16) }}</summary>
     <div class="mbody">
       <div class="frow">
         <label class="fld">선반<select id="fx" onchange="setFixture(this.value)">{% for f in fixtures %}<option value="{{f.id}}">{{f.id}} · {{f.name}}</option>{% endfor %}</select></label>
@@ -52,10 +52,18 @@
   <div class="sh2">최근 등록</div>
   <ul id="log" class="slog"><li class="none">아직 등록한 옷이 없어요</li></ul>
 
-  <div class="sh2" id="priority">다시 찍을 옷</div>
-  {% if not priority %}<div class="empty">지금은 다시 찍을 옷이 없어요.</div>{% endif %}
-  {% for p in priority %}
-    <div class="prio">
+  {% set PG = [('report', "'없어요' 신고", '손님이 못 찾았다고 한 옷'), ('noloc', '위치 없음', '안내할 위치가 아직 없는 옷'), ('old', '오래된 위치', CHECK_DAYS ~ '일 넘게 다시 안 찍은 옷')] %}
+  <div class="sh2" id="priority">다시 찍을 옷<small>{{ priority|length }}벌</small></div>
+  {% if not priority %}<div class="empty">지금은 다시 찍을 옷이 없어요.</div>{% else %}
+  <div class="icats" id="pcats">
+    <a href="#" class="on" data-g="">전체 <small>{{ priority|length }}</small></a>
+    {% for k, t, d in PG %}{% set n = priority|selectattr('group', 'equalto', k)|list|length %}{% if n %}<a href="#" class="{{ 'none' if k == 'report' }}" data-g="{{k}}">{{t}} <small>{{n}}</small></a>{% endif %}{% endfor %}
+  </div>
+  {% for k, t, d in PG %}{% set its = priority|selectattr('group', 'equalto', k)|list %}{% if its %}
+  <section class="pgrp" data-g="{{k}}">
+    <div class="shelfh"><b>{{t}}</b><span>{{d}}</span><small>{{its|length}}벌</small></div>
+    {% for p in its %}
+    <div class="prio{{ ' more' if loop.index > 5 }}">
       <img src="{{ url_for('static', filename=p.image) if p.image else '' }}" alt="">
       <div class="pb">
         <div class="nm">{{p.name}} <small>({{p.color}})</small></div>
@@ -67,13 +75,22 @@
         </div>
       </div>
     </div>
-  {% endfor %}
+    {% endfor %}
+    {% if its|length > 5 %}<button type="button" class="pmore" onclick="this.parentNode.classList.add('all')">{{ its|length - 5 }}벌 더 보기</button>{% endif %}
+  </section>
+  {% endif %}{% endfor %}
+  {% endif %}
 </main>
 {{ ks.stabs('reg') }}
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
+// 다시 찍을 옷: 목록(신고 / 위치 없음 / 오래된 위치)별로 보기
+document.querySelectorAll('#pcats a').forEach(a => a.onclick = e => { e.preventDefault();
+  document.querySelectorAll('#pcats a').forEach(x => x.classList.toggle('on', x === a));
+  document.querySelectorAll('.pgrp').forEach(g => { g.hidden = !!a.dataset.g && g.dataset.g !== a.dataset.g;
+    g.classList.toggle('all', !!a.dataset.g); }); });
 // 선반 QR(…/go?at=A-H1)을 찍으면 선반이 정해지고, 그 뒤 찍는 코드는 옷으로 본다.
 // 옷 태그 QR(…/item/UQ001?src=tag)이나 시즌 바코드(880…)도 같은 상품으로 인식.
 const FXN = {{ fixtures|map(attribute='id')|list|tojson }}, FXNAME = {{ fixtures|map(attribute='name')|list|tojson }};
@@ -119,7 +136,7 @@ function reg(code){
       log.prepend(li);
       beep(d.ok); if (navigator.vibrate) navigator.vibrate(d.ok ? 60 : [120, 80, 120]);
       const box = $('regres'); box.hidden = false; clearInterval(undoTimer);
-      if (!d.ok) { box.className = 'regres bad'; box.innerHTML = '<div class="rr-t">등록하지 못했어요</div><div class="rr-m"></div><small>바코드를 다시 찍거나 아래 \'직접 고르기\'에서 이름으로 찾아 주세요</small>';
+      if (!d.ok) { box.className = 'regres bad'; box.innerHTML = '<div class="rr-t">등록하지 못했어요</div><div class="rr-m"></div><small>바코드를 다시 찍거나 아래 \'직접 등록\'에서 이름으로 찾아 주세요</small>';
         box.querySelector('.rr-m').textContent = d.message; return; }
       fxN[d.fixture] = (fxN[d.fixture] || 0) + d.count;
       if (fixture) { $('fxcount').hidden = false; $('fxcount').textContent = '이 선반에 이번에 ' + fxN[d.fixture] + '벌 등록했어요'; }
@@ -151,7 +168,7 @@ function onScan(text){
 }
 new Html5Qrcode("reader").start({facingMode:"environment"},
    {fps:10, qrbox:220}, onScan, ()=>{})
-   .catch(e => { $('reader').innerHTML = '<p class="camfail">카메라를 쓸 수 없어요 (' + e + ').<br>아래 \'카메라가 안 되면 직접 고르기\'를 눌러 주세요.</p>';
+   .catch(e => { $('reader').innerHTML = '<p class="camfail">카메라를 쓸 수 없어요 (' + e + ').<br>아래 \'직접 등록\'을 눌러 주세요.</p>';
                  $('camhint').hidden = true; $('manual').open = true; });
 </script>
 {% endblock %}

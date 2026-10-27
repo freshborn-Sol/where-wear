@@ -3,13 +3,21 @@
 {% block body %}
 <header class="hd">
   <a class="brand" href="/go?at={{at}}"><img class="logo" src="{{ url_for('static', filename='logo/icon.svg') }}" alt="">where:wear</a>
-  <span class="here">{{ cx.icon('pin', 14) }}지금 위치 · <b>{{ here.name if here else at }}</b></span>
+  <span class="here">{{ cx.icon('pin', 14) }}현 위치 · <b>{{ here.name if here else at }}</b></span>
 </header>
 <main class="page">
   {% set autofocus = False %}{% include "_searchbar.html" %}
   <div class="qchips" id="recentBox" hidden><div class="qh"><b>최근 검색</b><button type="button" onclick="clearRecent()">지우기</button></div><div class="qrow" id="recent"></div></div>
-  <div class="qchips"><div class="qh"><b>지금 많이 찾는</b></div><div class="qrow">
-    {% for w in popular %}<a class="qc hot" href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em>{{w}}</a>{% endfor %}</div></div>
+  <div class="qchips trend">
+    <div class="qh"><div class="qseg" role="tablist">
+        <button type="button" class="on" data-t="pop" role="tab">인기 검색어</button>
+        <button type="button" data-t="rise" role="tab">급상승</button></div>
+      <a class="qwho" href="/me?at={{at}}&next={{ request.full_path|urlencode }}">{{ seg_label ~ ' 기준' if seg_label else '전체 손님 기준' }}</a></div>
+    <div class="qrow on" data-p="pop">
+      {% for w in popular %}<a class="qc hot" href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em>{{w}}</a>{% endfor %}</div>
+    <div class="qrow" data-p="rise">
+      {% for w in rising %}<a class="qc hot" href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em>{{w}}<i class="up">▲</i></a>{% endfor %}</div>
+  </div>
 
 
   <h2>종류</h2>
@@ -36,6 +44,10 @@
   r.forEach(q=>{ const a=document.createElement('a'); a.className='qc'; a.textContent=q;
     a.href='/search?at={{at}}&q='+encodeURIComponent(q); box.appendChild(a); }); })();
 function clearRecent(){ try{ localStorage.removeItem('ww_recent'); }catch(e){} document.getElementById('recentBox').hidden=true; }
+document.querySelectorAll('.qseg button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.qseg button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.trend .qrow').forEach(p => p.classList.toggle('on', p.dataset.p === b.dataset.t));
+});
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.tiles').forEach(p => p.classList.toggle('on', p.dataset.panel === b.dataset.tab));

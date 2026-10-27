@@ -321,3 +321,12 @@ details[open] .row .v .ic{transform:rotate(90deg)}
 .walkline{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;font-weight:700;color:#fff;opacity:.95}
 .walkline i{font-style:normal;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.2)}
 .rec .recedit{margin-left:6px;font-size:12px;color:var(--g500);text-decoration:underline}
+
+/* 인기 · 급상승 검색어 (MY의 성별·나이대 기준) */
+.trend .qrow{display:none}.trend .qrow.on{display:flex}
+.qseg{display:flex;gap:2px;padding:3px;border-radius:16px;background:var(--g100)}
+.qh .qseg button{min-height:28px;padding:0 12px;border-radius:13px;font-size:13px;font-weight:700;color:var(--g500)}
+.qh .qseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.qwho{font-size:12px;font-weight:600;color:var(--g500)!important;padding:4px 2px}
+.qc .up{font-style:normal;font-size:9px;color:var(--red)}
+.prefq small{font-size:12px;color:var(--g500);font-weight:500}
