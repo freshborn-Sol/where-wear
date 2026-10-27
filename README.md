@@ -15,7 +15,7 @@
 | 손님 QR · 홈 | 사진으로 찾기 (AI) | 위치 + 2D 길 안내 | English |
 |:---:|:---:|:---:|:---:|
 | <img src="docs/screens/qr_home.jpg" width="200"> | <img src="docs/screens/qr_photo.jpg" width="200"> | <img src="docs/screens/qr_item.jpg" width="200"> | <img src="docs/screens/qr_item_en.jpg" width="200"> |
-| 매장 QR을 찍으면 앱 없이 바로 열림 | Vision AI가 옷 특징을 뽑고 가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단" + 선 자리에서의 경로 · 사이즈별 재고 | 휴대폰 언어에 맞춰 영어 화면 |
+| 매장 QR을 찍으면 앱 없이 바로 열림 | Gemini가 옷 특징을 뽑고 가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단" + 선 자리에서의 경로 · 사이즈별 재고 | 휴대폰 언어에 맞춰 영어 화면 |
 
 | 키오스크 (40대 이상) | 종이 지도 | 직원 신고함 |
 |:---:|:---:|:---:|
