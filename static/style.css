@@ -1,5 +1,5 @@
-:root{--ink:#1d2330;--mute:#6b7688;--line:#dfe5ec;--blue:#1F2948;--navy:#1F2948;
-      --bg:#fff;--surf:#f5f8fb;--warn:#b3261e;--ok:#178062}
+:root{--ink:#1d2330;--mute:#6b7688;--line:#dfe5ec;--blue:#306A50;--navy:#306A50;
+      --bg:#fff;--surf:#f5f8fb;--warn:#b3261e;--ok:#1D7A46}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:var(--ink);background:var(--bg)}
 a{color:inherit;text-decoration:none}
@@ -69,7 +69,7 @@ body.kiosk{background:#fff}
 .kwrap{padding:24px;max-width:1100px;margin:0 auto}
 .kwrap h1{font-size:34px;margin:6px 0 20px}
 .kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
-.kbtn{display:flex;align-items:center;justify-content:center;gap:12px;min-height:110px;border:3px solid var(--blue);border-radius:16px;font-size:30px;font-weight:700;color:var(--navy);background:#F7F8FB}
+.kbtn{display:flex;align-items:center;justify-content:center;gap:12px;min-height:110px;border:3px solid var(--blue);border-radius:16px;font-size:30px;font-weight:700;color:var(--navy);background:#F6FAF8}
 .kgrid.color .kbtn{font-size:26px}
 .kbtn i{width:34px;height:34px;border-radius:50%;border:2px solid #0002;display:inline-block}
 .kcard{border:3px solid var(--line);border-radius:16px;padding:14px;font-size:22px;text-align:center}
@@ -107,7 +107,7 @@ body.kiosk{background:#fff}
 .go{margin-top:auto;align-self:flex-start;padding:9px 14px;border-radius:10px;background:var(--blue);color:#fff;font-weight:700;font-size:14px}
 .demo{display:inline-block;font-size:11px;font-weight:700;color:#fff;background:var(--ok);border-radius:6px;padding:1px 6px;vertical-align:middle}
 .foot{font-size:13px;color:var(--mute);margin-top:22px}.foot a{color:var(--blue)}
-.okmsg{background:#E6F6F0;color:var(--ok);padding:10px 12px;border-radius:10px;font-weight:600}
+.okmsg{background:#EAF6EF;color:var(--ok);padding:10px 12px;border-radius:10px;font-weight:600}
 .fields{display:flex;flex-direction:column;gap:8px;flex:1}
 .fields label,.confirm .manual label{display:flex;flex-direction:column;font-size:12px;color:var(--mute);gap:3px}
 .fields select,.confirm input{padding:9px;border:1px solid var(--line);border-radius:8px;font-size:14px}
@@ -142,13 +142,13 @@ body.kiosk{background:#fff}
 .fchips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .fchip{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:#fff;white-space:nowrap}
 .fchip small{color:var(--mute);font-size:11px}
-.fchip.on{background:var(--blue);border-color:var(--blue);color:#fff}.fchip.on small{color:#E1E6EF}
+.fchip.on{background:var(--blue);border-color:var(--blue);color:#fff}.fchip.on small{color:#DDEBE3}
 .fchip i{width:12px;height:12px;border-radius:50%;border:1px solid #0002;display:inline-block}
 .note b{color:var(--ink)}
 .ktiles{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
 .ktile{display:flex;flex-direction:column;gap:10px;padding:12px;border:3px solid var(--line);border-radius:16px;font-size:28px;font-weight:700;color:var(--navy);text-align:center}
 .ktile img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;background:var(--surf)}
-.ktile.all span{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;border-radius:12px;background:#F7F8FB;color:var(--blue);font-size:34px}
+.ktile.all span{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;border-radius:12px;background:#F6FAF8;color:var(--blue);font-size:34px}
 .ktile.all div{font-size:22px}
 
 /* ---- 키오스크: 결과 화면 '더 좁히기' (핏·무늬) ---- */
@@ -162,8 +162,8 @@ body.kiosk{background:#fff}
 .kchips{display:flex;flex-wrap:wrap;gap:10px}
 .kchip{font-size:24px;min-height:64px;padding:0 24px;display:inline-flex;align-items:center;gap:8px;border-radius:32px;background:#fff;border:2px solid #ccd;color:#222;text-decoration:none}
 .kchip small{font-size:18px;color:#888}
-.kchip.on{background:#1F2948;border-color:#1F2948;color:#fff}
-.kchip.on small{color:#D5DBE8}
+.kchip.on{background:#306A50;border-color:#306A50;color:#fff}
+.kchip.on small{color:#CFE0D6}
 
 /* ---- 상품 화면: '찾는 게 없나요?' ---- */
 .helpbtn{display:block;width:100%;margin-top:16px;padding:16px;border:0;border-radius:14px;background:var(--navy);color:#fff;font-size:17px;font-weight:800}
@@ -183,9 +183,9 @@ body.kiosk{background:#fff}
 .szb{min-width:64px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font-size:17px;font-weight:800;color:var(--ink)}
 .szb small{display:block;font-size:11px;font-weight:500;color:var(--ok)}
 .szb.zero small{color:var(--warn)}
-.szb.on{border-color:var(--navy);background:#EEF1F6}
+.szb.on{border-color:var(--navy);background:#EDF4F0}
 .ans{padding:12px;border-radius:12px;margin:12px 0;font-size:15px;line-height:1.5}
-.ans.ok{background:#E6F6F0}.ans.no{background:#fdecea}
+.ans.ok{background:#EAF6EF}.ans.no{background:#fdecea}
 .ans small{color:var(--mute)}
 .hlist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
 .hcard{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:12px}
@@ -212,15 +212,15 @@ body.kiosk{background:#fff}
 button.sz{background:#fff;color:var(--ink);font-family:inherit;cursor:pointer}
 .sz small{font-size:11px;color:var(--mute)}
 .sz.zero{text-decoration:none;color:#aab}.sz.zero small{color:var(--warn)}
-.sz.on{border-color:var(--navy);background:#EEF1F6}
+.sz.on{border-color:var(--navy);background:#EDF4F0}
 .sz.mine{border:2px solid var(--ok);font-weight:800}
 .rec{font-size:13px;line-height:1.5;padding:8px 10px;border-radius:10px;background:var(--surf);margin:4px 0 6px}
-.rec.ok{background:#E6F6F0}.rec.no{background:#fdecea}
+.rec.ok{background:#EAF6EF}.rec.no{background:#fdecea}
 .rec small{color:var(--mute)}.rec a{color:var(--blue);text-decoration:underline}
 .szres{margin-top:12px}.szres > .btn{display:block;width:100%}
 .mebanner{background:var(--surf);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px;line-height:1.5}
 .mebanner a{color:var(--blue);margin-left:6px}
-.mebanner.new{background:#EEF1F6;border:1px solid #D5DBE8}
+.mebanner.new{background:#EDF4F0;border:1px solid #CFE0D6}
 .mebanner .mego{display:inline-block;margin:6px 0 0;padding:6px 14px;border-radius:999px;background:var(--navy);color:#fff}
 .meform label{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-weight:700}
 .meform label small{font-weight:400;color:var(--mute)}
@@ -229,7 +229,7 @@ button.sz{background:#fff;color:var(--ink);font-family:inherit;cursor:pointer}
 .prefs{display:flex;gap:8px}
 .prefs label{flex:1;justify-content:center;border:1.5px solid var(--line);border-radius:12px;padding:12px 4px;font-weight:700}
 .prefs input{margin-right:6px}
-.prefs label:has(input:checked){border-color:var(--navy);background:#EEF1F6}
+.prefs label:has(input:checked){border-color:var(--navy);background:#EDF4F0}
 
 /* ---- 로고 · 빨간 '찾는 게 없나요?' ---- */
 .logo{height:30px;display:block}
@@ -240,7 +240,7 @@ button.sz{background:#fff;color:var(--ink);font-family:inherit;cursor:pointer}
 
 /* ---- '여기 없어요' 고객 흐름 ---- */
 .lflag{margin-top:8px;font-size:12px;line-height:1.4;padding:6px 8px;border-radius:8px}
-.lflag.warn{background:#fff4e0;color:#8a5300}.lflag.ok{background:#E6F6F0;color:var(--ok)}
+.lflag.warn{background:#fff4e0;color:#8a5300}.lflag.ok{background:#EAF6EF;color:var(--ok)}
 .ncheck{display:flex;gap:12px;align-items:center;background:var(--surf);border-radius:14px;padding:10px}
 .ncheck img{width:84px;height:84px;object-fit:cover;border-radius:10px}
 .ncheck b{font-size:16px}.ncheck .lv{font-size:22px;font-weight:800;color:var(--navy)}
@@ -260,7 +260,7 @@ button.sz{background:#fff;color:var(--ink);font-family:inherit;cursor:pointer}
 h2 small{font-weight:400;margin-left:6px}
 .rsum small{font-size:12px}
 .wcard{display:flex;gap:10px;border:2px solid #f3c3bf;background:#fff7f6;border-radius:14px;padding:10px;margin-bottom:10px}
-.wcard.late{border-color:var(--warn)}.wcard.going{background:#F4F6FA;border-color:#C5CDDD}
+.wcard.late{border-color:var(--warn)}.wcard.going{background:#F3F8F5;border-color:#BFD6C9}
 .wcard img{width:64px;height:64px;object-fit:cover;border-radius:10px;background:var(--surf)}
 .wbody{flex:1}.wtop{display:flex;justify-content:space-between}
 .timer{font-weight:800;color:var(--warn)}
@@ -288,13 +288,13 @@ h2 small{font-weight:400;margin-left:6px}
 /* ---- 지도 밑: 찾았어요! / 찾는 게 없나요? ---- */
 .findbar{display:flex;gap:10px;margin-top:16px}
 .fbtn{flex:1;padding:16px 8px;border:0;border-radius:14px;color:#fff;font-size:17px;font-weight:800;font-family:inherit}
-.fbtn.found{background:var(--ok)}.fbtn.found:disabled{background:#6FD0B1}
+.fbtn.found{background:var(--ok)}.fbtn.found:disabled{background:#E8B653}
 .fbtn.red{background:#d93025}.fbtn.red:active{background:#b3261e}
 
 /* ---- 직원: 진열 점검 · 다시 찍을 옷 · 설정 ---- */
 .checkbar{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:#fff4e0;border:1px solid #f2d9a6;margin-bottom:12px}
 .checkbar div{flex:1}.checkbar small{display:block;color:var(--mute);font-size:12px}.checkbar .btn{flex:0 0 auto;padding:10px 14px}
-.allc{display:block;font-size:14px;margin:4px 0 10px;padding:10px 12px;border-radius:10px;background:#EEF1F6}
+.allc{display:block;font-size:14px;margin:4px 0 10px;padding:10px 12px;border-radius:10px;background:#EDF4F0}
 .allc small{color:var(--mute)}
 .manual.code{margin-top:8px}.manual.code input{padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;width:180px}
 .manual.code .hint{width:100%;margin:0}.manual.code a{color:var(--blue)}
@@ -310,7 +310,7 @@ h2 small{font-weight:400;color:var(--mute);font-size:12px}
 .setform .opt small,.setform .row small{display:block;color:var(--mute);font-size:12px}
 .setform .row{display:block;font-size:15px}.setform input[type=number]{width:70px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:15px}
 .setform .btn{margin-top:18px;width:100%}.tag.on{background:#fff4e0;border-color:#f2d9a6;color:#8a5300}
-.okmsg{padding:10px;border-radius:10px;background:#E6F6F0;color:var(--ok)}
+.okmsg{padding:10px;border-radius:10px;background:#EAF6EF;color:var(--ok)}
 .busybar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;margin-bottom:10px;font-size:14px;background:var(--surf)}
 .busybar.on{background:#fff4e0}.busybar form{margin-left:auto;display:flex;gap:4px}
 .busybar button{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:12px}
