@@ -29,8 +29,8 @@
   {% for f in map.fixtures if f.kind != '입구' %}
     {% set on = (f.id == map.target) %}
     {% set cx = f.x + f.w/2 %}{% set cy = f.y + f.h/2 %}
-    {% set fill = ('#000' if M else '#3862DA') if on else ('#fff' if M else FX_FILL.get(f.kind, '#E8EDF4')) %}
-    {% set line = ('#000' if M else '#12508F') if on else ('#000' if M else FX_LINE.get(f.kind, '#C3CDDA')) %}
+    {% set fill = ('#000' if M else '#1F2948') if on else ('#fff' if M else FX_FILL.get(f.kind, '#E8EDF4')) %}
+    {% set line = ('#000' if M else '#141B33') if on else ('#000' if M else FX_LINE.get(f.kind, '#C3CDDA')) %}
     {% set tcol = '#fff' if on else ('#000' if M else '#6E7889') %}
     {% if STOPS is not none and STOPS.get(f.id) %}
       {% set fill = '#FDE2E1' %}{% set line = '#E5484D' %}{% set tcol = '#B4232A' %}
@@ -48,7 +48,7 @@
     {% elif f.kind == '마네킹' %}
       <circle cx="{{cx}}" cy="{{cy}}" r="{{f.w/2}}" fill="{{fill}}" stroke="{{line}}" stroke-width="2" stroke-dasharray="{{ '' if on else '5 4' }}"/>
       <g fill="{{ '#fff' if on else ('#000' if M else '#AFB7C6') }}"><circle cx="{{cx}}" cy="{{cy - 13}}" r="6"/><path d="M{{cx - 9}} {{cy + 14}} l3 -19 h12 l3 19 z"/></g>
-      <text x="{{cx}}" y="{{f.y + f.h + 18}}" text-anchor="middle" font-size="15" font-weight="{{ 800 if on else 600 }}" fill="{{ ('#000' if M else '#3158D0') if on else tcol }}">{{f.id}}</text>
+      <text x="{{cx}}" y="{{f.y + f.h + 18}}" text-anchor="middle" font-size="15" font-weight="{{ 800 if on else 600 }}" fill="{{ ('#000' if M else '#1F2948') if on else tcol }}">{{f.id}}</text>
     {% elif f.kind == '기둥' %}
       <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="3" fill="{{ '#000' if M else '#AFB7C6' }}"/>
     {% elif f.kind == '창고' %}
@@ -60,9 +60,9 @@
       {% for i in range(1, 5) %}<line x1="{{f.x + f.w*i/5}}" y1="{{f.y}}" x2="{{f.x + f.w*i/5}}" y2="{{f.y + f.h*0.62}}" stroke="{{ '#000' if M else '#D7DCE6' }}" stroke-width="2"/>{% endfor %}
       <text x="{{cx}}" y="{{f.y + f.h - 14}}" text-anchor="middle" font-size="18" font-weight="700" fill="{{ '#000' if M else '#6E7889' }}">피팅룸</text>
     {% elif f.kind == '계산대' %}
-      <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="12" fill="{{ '#fff' if M else '#EAF6EF' }}" stroke="{{ '#000' if M else '#A9D3BA' }}" stroke-width="2"/>
-      <rect x="{{f.x + 18}}" y="{{f.y + 20}}" width="{{f.w - 36}}" height="22" rx="6" fill="{{ '#000' if M else '#A9D3BA' }}"/>
-      <text x="{{cx}}" y="{{f.y + f.h - 22}}" text-anchor="middle" font-size="18" font-weight="700" fill="{{ '#000' if M else '#1D7A46' }}">계산대</text>
+      <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="12" fill="{{ '#fff' if M else '#E6F6F0' }}" stroke="{{ '#000' if M else '#A8E3CF' }}" stroke-width="2"/>
+      <rect x="{{f.x + 18}}" y="{{f.y + 20}}" width="{{f.w - 36}}" height="22" rx="6" fill="{{ '#000' if M else '#A8E3CF' }}"/>
+      <text x="{{cx}}" y="{{f.y + f.h - 22}}" text-anchor="middle" font-size="18" font-weight="700" fill="{{ '#000' if M else '#178062' }}">계산대</text>
     {% else %}
       <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="{{ 4 if f.kind == '벽면' else 8 }}" fill="{{fill}}" stroke="{{line}}" stroke-width="2"/>
       {% if f.kind == '행거' %}<line x1="{{f.x + 10}}" y1="{{cy}}" x2="{{f.x + f.w - 10}}" y2="{{cy}}" stroke="{{ '#fff' if on else line }}" stroke-width="2" opacity=".55"/>{% endif %}
@@ -83,14 +83,14 @@
   {% for z in map.zones %}
     <g transform="translate({{ z.lx if z.lx is not none else z.x + 10 }},{{ z.ly if z.ly is not none else z.y + 10 }})">
       {% if not M %}<rect width="{{ 26 + z.name|length * 15 }}" height="28" rx="14" fill="#fff" opacity=".92"/>{% endif %}
-      <text x="12" y="20" font-size="{{ 22 if M else 16 }}" font-weight="800" fill="{{ '#000' if M else '#485366' }}"><tspan fill="{{ '#000' if M else '#3862DA' }}">{{z.id}}</tspan> {{z.name}}</text>
+      <text x="12" y="20" font-size="{{ 22 if M else 16 }}" font-weight="800" fill="{{ '#000' if M else '#485366' }}"><tspan fill="{{ '#000' if M else '#2FA982' }}">{{z.id}}</tspan> {{z.name}}</text>
     </g>
   {% endfor %}
 
   {# 길 안내 #}
   {% if map.path %}
     <polyline points="{{map.path}}" fill="none" stroke="#fff" stroke-width="{{ 13 if M else 11 }}" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
-    <polyline points="{{map.path}}" fill="none" stroke="{{ '#000' if M else '#3862DA' }}" stroke-width="{{ 7 if M else 6 }}" stroke-dasharray="{{ '14 9' if M else '12 10' }}"
+    <polyline points="{{map.path}}" fill="none" stroke="{{ '#000' if M else '#2FA982' }}" stroke-width="{{ 7 if M else 6 }}" stroke-dasharray="{{ '14 9' if M else '12 10' }}"
               stroke-linecap="round" stroke-linejoin="round"/>
   {% endif %}
   {% if STOPS is not none %}{% for f in map.fixtures if STOPS.get(f.id) %}
@@ -99,7 +99,7 @@
   {% endfor %}{% endif %}
   {% for f in map.fixtures if f.id == map.target and not M %}
     <g transform="translate({{f.x + f.w/2 - 21}},{{ f.y - 50 if f.y > 70 else f.y + f.h - 6 }}) scale(1.75)">
-      <path d="M12 22s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" fill="#3862DA" stroke="#fff" stroke-width="1.4"/>
+      <path d="M12 22s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" fill="#1F2948" stroke="#fff" stroke-width="1.4"/>
       <circle cx="12" cy="10.5" r="2.6" fill="#fff"/></g>
   {% endfor %}
   {% if M and map.turns is defined %}
