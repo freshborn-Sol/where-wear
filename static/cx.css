@@ -337,3 +337,89 @@ details[open] .row .v .ic{transform:rotate(90deg)}
 .lseg{display:flex;gap:2px;padding:3px;border-radius:14px;background:var(--g100)}
 .lseg a{padding:5px 11px;border-radius:11px;font-size:13px;font-weight:600;color:var(--g500)!important}
 .lseg a.on{background:#fff;color:var(--ink)!important;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* =====================================================================
+   리테일 앱 느낌 다듬기 (무신사 · 유니클로 · 다이소 · 탑텐 · 스파오 앱에서 흔한 패턴)
+   - 위·아래 바: 반투명 + 블러 (스크롤하면 뒤 화면이 비침)
+   - 홈: 사진 배너(어두운 그라데이션 위 흰 글씨) · 랭킹 숫자 카드 · 사진 위 이름표 타일
+   - 검색 결과: 사진 위 반투명 위치 배지
+   - 상품: 상품 사진을 흐리게 깐 배경
+   ===================================================================== */
+.glass,.appbar,.tabbar{background:rgba(255,255,255,.78)!important;-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px)}
+.hd.glass{position:sticky;top:0;z-index:25;padding-top:12px;padding-bottom:10px}
+.appbar{border-bottom:1px solid rgba(227,231,238,.7)}
+.tabbar{border-top:1px solid rgba(227,231,238,.8)}
+body.cx{background:linear-gradient(180deg,#F3F7F4 0,#fff 260px) no-repeat,#fff}
+.sb{box-shadow:0 2px 10px rgba(27,31,45,.05)}
+
+/* 홈 배너 */
+.hbanner{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -20px;padding:2px 20px 6px;scroll-padding:0 20px}
+.hbanner::-webkit-scrollbar{display:none}
+.slide{position:relative;flex:none;width:calc(100% - 26px);height:168px;border-radius:20px;overflow:hidden;scroll-snap-align:center;
+  background:var(--blue);color:#fff!important;display:block;box-shadow:0 10px 24px rgba(27,31,45,.12)}
+.slide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.02)}
+.slide::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(17,32,25,.82) 0,rgba(17,32,25,.55) 45%,rgba(17,32,25,.05) 100%)}
+.slide .stag{position:absolute;z-index:2;top:14px;left:16px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:900;letter-spacing:.08em;
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.slide .stxt{position:absolute;z-index:2;left:16px;right:60px;bottom:16px;display:flex;flex-direction:column;gap:4px}
+.slide .stxt b{font-size:22px;font-weight:900;letter-spacing:-.03em;line-height:1.2}
+.slide .stxt small{font-size:12.5px;font-weight:500;opacity:.88}
+.slide .sgo{position:absolute;z-index:2;right:14px;bottom:14px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+  background:var(--gold);color:#1B1F2D}
+.slide.photo{background:linear-gradient(135deg,#306A50 0,#23523D 60%,#1B3D2E 100%);cursor:pointer}
+.slide.photo::after{background:radial-gradient(circle at 85% 20%,rgba(232,182,83,.35) 0,rgba(232,182,83,0) 55%)}
+.slide.photo .pbig{position:absolute;z-index:2;right:22px;top:26px;width:76px;height:76px;border-radius:24px;display:grid;place-items:center;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3)}
+.slide.photo input{position:absolute;inset:0;opacity:0;z-index:3;cursor:pointer}
+.dots{display:flex;justify-content:center;gap:5px;margin-top:-6px}
+.dots i{width:6px;height:6px;border-radius:3px;background:var(--g300);transition:width .2s}
+.dots i.on{width:18px;background:var(--blue)}
+
+/* 섹션 머리 */
+.sec{display:flex;flex-direction:column;gap:10px}
+.sech{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.sech b{font-size:17px;font-weight:900;letter-spacing:-.03em}.sech small{font-size:11.5px;color:var(--g500);font-weight:500}
+
+/* 매장 인기 랭킹 (사진 위 큰 순위 숫자) */
+.rank{gap:10px;scroll-snap-type:x proximity;scroll-padding:0 20px}
+.rcard{flex:none;width:128px;display:flex;flex-direction:column;gap:3px;scroll-snap-align:start}
+.rimg{position:relative;width:128px;height:160px;border-radius:14px;overflow:hidden;background:var(--g100)}
+.rimg img{width:100%;height:100%;object-fit:cover;display:block}
+.rimg::after{content:"";position:absolute;inset:auto 0 0 0;height:55%;background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0))}
+.rimg em{position:absolute;z-index:2;left:9px;bottom:2px;font-style:normal;font-size:34px;font-weight:900;color:#fff;letter-spacing:-.05em;line-height:1;
+  text-shadow:0 2px 8px rgba(0,0,0,.35)}
+.rcard:nth-child(-n+3) .rimg em{color:var(--gold)}
+.rloc{position:absolute;z-index:2;top:7px;left:7px;display:flex;align-items:center;gap:2px;padding:3px 7px 3px 5px;border-radius:10px;
+  font-size:10.5px;font-weight:700;color:#fff;background:rgba(17,24,20,.42);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.rcard b{margin-top:5px;font-size:12.5px;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rcard small{font-size:11px;color:var(--g500);font-weight:500}
+
+/* 종류 타일: 사진 위에 이름표 */
+.tiles.on{gap:8px}
+.tile:not(.all){position:relative;border-radius:14px;overflow:hidden}
+.tile:not(.all) img{aspect-ratio:1/1.12;border-radius:14px}
+.tile:not(.all)::after{content:"";position:absolute;inset:auto 0 0 0;height:52%;border-radius:0 0 14px 14px;background:linear-gradient(0deg,rgba(0,0,0,.6),rgba(0,0,0,0))}
+.tile:not(.all) .tl{position:absolute;z-index:2;left:10px;right:8px;bottom:8px;flex-direction:column;gap:0}
+.tile:not(.all) .tl b{color:#fff;font-size:14px;font-weight:900}.tile:not(.all) .tl small{color:rgba(255,255,255,.82);font-size:11px}
+.tile.all .ti{aspect-ratio:1/1.12;border-radius:14px;background:linear-gradient(160deg,var(--blue50),#fff);border:1px solid var(--blue100)}
+.tile.all .tl{display:none}
+
+/* 검색 결과 카드: 사진 위 반투명 위치 배지 */
+.card{padding:0 0 10px;border:0;background:transparent;gap:3px}
+.cimg{position:relative;border-radius:14px;overflow:hidden;margin-bottom:6px}
+.card .cimg img{aspect-ratio:4/5;border-radius:0;margin:0}
+.cloc{position:absolute;left:8px;bottom:8px;display:flex;align-items:center;gap:3px;padding:4px 8px 4px 6px;border-radius:10px;font-size:11px;font-weight:700;
+  color:#fff;background:rgba(48,106,80,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.cloc.none{background:rgba(72,83,102,.6)}
+.card .nm,.card .mt,.card .pl,.card .wk,.card .fr{padding:0 2px}
+.card .pl{color:var(--g700);font-weight:500;font-size:11.5px}
+
+/* 상품: 사진을 흐리게 깐 배경 (불투명도) */
+.detail.glow{position:relative;padding:14px;border-radius:20px;overflow:hidden;isolation:isolate}
+.detail.glow::before{content:"";position:absolute;inset:-30px;z-index:-2;background:var(--bg) center/cover;filter:blur(28px) saturate(130%);opacity:.55}
+.detail.glow::after{content:"";position:absolute;inset:0;z-index:-1;background:rgba(255,255,255,.62)}
+.detail.glow .hero{box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.locbox{background:linear-gradient(120deg,#306A50 0,#23523D 100%)}
+
+/* 아래에서 올라오는 창: 뒤를 흐리게 */
+.sheet{background:rgba(15,23,40,.32);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}

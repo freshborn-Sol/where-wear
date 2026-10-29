@@ -463,3 +463,12 @@ details.mv select:first-child{flex:1;min-width:0}
   font-size:24px;font-weight:700;color:var(--g700);background:#fff}
 .klang + .khome{margin-left:0}
 .slang a{display:flex;align-items:center;justify-content:center;gap:6px}
+
+/* 키오스크 첫 화면: 사진을 꽉 채우고 왼쪽을 어둡게 → 큰 흰 글씨 (리테일 앱 배너 느낌) */
+.kcat{position:relative;border:0;background:#1B2A22;box-shadow:0 12px 28px rgba(27,31,45,.14)}
+.kcat img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.kcat::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,30,22,.86) 0,rgba(15,30,22,.55) 50%,rgba(15,30,22,.08) 100%)}
+.kcat .t{position:relative;z-index:2}
+.kcat b{color:#fff}.kcat small{color:rgba(255,255,255,.85)!important}
+.kcat .t::after{content:"";display:block;width:56px;height:6px;border-radius:3px;background:var(--gold);margin-top:18px}
+.kbanner{background:linear-gradient(120deg,var(--blue50),#fff)!important}

@@ -41,7 +41,7 @@
   </div>
   {% endfor %}
 
-  <div class="detail">
+  <div class="detail glow" style="--bg:url('{{ imgsrc(it) }}')">
     <img class="hero" src="{{ imgsrc(it) }}" alt="">
     <div class="dinfo">
       <div class="price">{{ "{:,}".format(it.price) }}원</div>
@@ -62,7 +62,7 @@
 
   {% include "_cxmap.html" %}
   {% else %}
-  <div class="detail">
+  <div class="detail glow" style="--bg:url('{{ imgsrc(it) }}')">
     <img class="hero" src="{{ imgsrc(it) }}" alt="">
     <div class="dinfo">
       <div class="price">{{ "{:,}".format(it.price) }}원</div>

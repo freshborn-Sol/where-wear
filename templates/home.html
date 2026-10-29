@@ -1,12 +1,31 @@
 {% extends "base.html" %}{% import "_cx.html" as cx with context %}
 {% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
 {% block body %}
-<header class="hd">
+<header class="hd glass">
   <a class="brand" href="/go?at={{at}}"><img class="logo" src="{{ url_for('static', filename='logo/icon.svg') }}" alt="">where:wear</a>
   <span class="here">{{ cx.icon('pin', 14) }}현 위치 · <b>{{ here.name if here else at }}</b></span>
 </header>
 <main class="page">
   {% set autofocus = False %}{% include "_searchbar.html" %}
+
+  {# 배너: 입구 추천존 매대 + 사진으로 찾기 (옆으로 넘김) #}
+  <section class="hbanner" id="hero">
+    {% for h in hero %}
+    <a class="slide" href="/search?at={{at}}&fx={{h.fx}}">
+      <img src="{{ imgsrc(h.rep) }}" alt="">
+      <span class="stag">{{h.tag}}</span>
+      <div class="stxt"><b>{{h.title}}</b><small>{{h.sub}} · {{h.n}}벌</small></div>
+      <span class="sgo">{{ cx.icon('chev', 18) }}</span>
+    </a>
+    {% endfor %}
+    <label class="slide photo">
+      <span class="stag">AI</span>
+      <span class="pbig">{{ cx.icon('camera', 40) }}</span>
+      <div class="stxt"><b>사진 한 장으로 찾기</b><small>비슷한 옷과 위치를 바로 알려 드려요</small></div>
+      <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)">
+    </label>
+  </section>
+  <div class="dots" id="dots">{% for i in range(hero|length + 1) %}<i class="{{ 'on' if loop.first }}"></i>{% endfor %}</div>
   <div class="qchips" id="recentBox" hidden><div class="qh"><b>최근 검색</b><button type="button" onclick="clearRecent()">지우기</button></div><div class="qrow" id="recent"></div></div>
   <div class="qchips trend">
     <div class="qh"><div class="qseg" role="tablist">
@@ -20,13 +39,28 @@
   </div>
 
 
+  {% if ranking %}
+  <section class="sec">
+    <div class="sech"><b>이 매장 인기 TOP {{ ranking|length }}</b><small>최근 7일 조회 · 찜 기준</small></div>
+    <div class="rank hs">
+      {% for it in ranking %}
+      <a class="rcard" href="/item/{{it.sku}}?at={{at}}">
+        <div class="rimg"><img src="{{ imgsrc(it) }}" alt="" loading="lazy"><em>{{loop.index}}</em>
+          {% if it.place %}<span class="rloc">{{ cx.icon('pin', 11) }}{{it.place.fixture_id}}</span>{% endif %}</div>
+        <b>{{it.name}}</b><small>{{it.color}} · {{ "{:,}".format(it.price) }}원</small>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <h2>종류</h2>
   <div class="tabs" role="tablist">
     {% for c in cats %}<button class="tab {{'on' if c == tab}}" data-tab="{{c}}" role="tab">{{c}}</button>{% endfor %}
   </div>
   {% for c in cats %}
   <div class="tiles {{'on' if c == tab}}" data-panel="{{c}}">
-    <a class="tile" href="/search?at={{at}}&cat={{c}}"><span class="ti">{{ cx.icon('search', 22) }}전체 보기</span>
+    <a class="tile all" href="/search?at={{at}}&cat={{c}}"><span class="ti">{{ cx.icon('search', 22) }}전체 보기</span>
       <span class="tl"><b>{{c}} 전체</b><small>{{ tiles[c]|sum(attribute='n') }}개</small></span></a>
     {% for t in tiles[c] %}
     <a class="tile" href="/search?at={{at}}&cat={{c}}&sub={{t.sub}}">
@@ -44,6 +78,8 @@
   r.forEach(q=>{ const a=document.createElement('a'); a.className='qc'; a.textContent=q;
     a.href='/search?at={{at}}&q='+encodeURIComponent(q); box.appendChild(a); }); })();
 function clearRecent(){ try{ localStorage.removeItem('ww_recent'); }catch(e){} document.getElementById('recentBox').hidden=true; }
+(function(){ const h=document.getElementById('hero'), d=[...document.querySelectorAll('#dots i')]; if(!h) return;
+  h.addEventListener('scroll',()=>{ const i=Math.round(h.scrollLeft/(h.firstElementChild.offsetWidth+10)); d.forEach((x,k)=>x.classList.toggle('on',k===i)); },{passive:true}); })();
 document.querySelectorAll('.qseg button').forEach(b => b.onclick = () => {
   document.querySelectorAll('.qseg button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.trend .qrow').forEach(p => p.classList.toggle('on', p.dataset.p === b.dataset.t));

@@ -479,9 +479,32 @@ def go():
     here = one("SELECT * FROM fixtures WHERE id=?", (at,))
     seg = cur_seg()
     popular, rising, by_seg = search_trends(seg)
-    return render_template("home.html", popular=popular, rising=rising, seg=seg, by_seg=by_seg,
+    hero, ranking = home_hero(), home_ranking(at)
+    return render_template("home.html", popular=popular, rising=rising, seg=seg, by_seg=by_seg, hero=hero, ranking=ranking,
                            seg_label=seg_label(seg), at=at, here=here, tiles=subcat_tiles(),
                            tab=request.args.get("tab", "상의"), cats=list(CATS), colors=COLORS)
+
+# ---------- 홈 배너 · 매장 인기 랭킹 ----------
+def home_hero():
+    """입구 추천존(P구역) 매대를 배너로: 신상품 · 할인. 사진은 그 매대에 걸린 옷"""
+    out = []
+    for fx, tag, title, sub in (("P-T1", "NEW", "이번 주 신상품", "입구 바로 앞 신상품 매대"),
+                                ("P-T2", "SALE", "할인 매대", "들어와서 오른쪽 할인 매대")):
+        its = rows("""SELECT i.* FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1
+                      WHERE p.fixture_id=? ORDER BY i.price DESC""", (fx,))
+        if its: out.append({"fx": fx, "tag": tag, "title": title, "sub": sub, "n": len(its), "rep": its[0]})
+    return out
+
+def home_ranking(at, n=10):
+    """이 매장 인기 TOP: 최근 7일 조회 + 찜(×3). 기록이 없으면 재고 많은 순"""
+    since = (now() - datetime.timedelta(days=7)).isoformat(timespec="seconds")
+    score = {r["sku"]: r["n"] for r in rows("""SELECT sku, COUNT(*) n FROM events WHERE kind IN ('view','tag')
+                                               AND sku IS NOT NULL AND ts>=? GROUP BY sku""", (since,))}
+    for r in rows("SELECT sku, COUNT(*) n FROM likes GROUP BY sku"): score[r["sku"]] = score.get(r["sku"], 0) + 3 * r["n"]
+    stock = {r["sku"]: r["n"] for r in rows("SELECT sku, SUM(qty) n FROM stock GROUP BY sku")}
+    items = [it for it in rows("SELECT * FROM items WHERE COALESCE(is_demo,0)=0")]
+    items.sort(key=lambda it: (-score.get(it["sku"], 0), -stock.get(it["sku"], 0), it["sku"]))
+    return decorate(items[:n], at)
 
 # ---------- 인기 · 급상승 검색어 (성별·나이대별) ----------
 SEG_DEFAULT = {   # 검색 기록이 아직 적을 때 보여줄 기본 검색어 (인기, 급상승)
@@ -543,9 +566,12 @@ def search():
         exact_ids = {it["sku"] for it in base if S.is_exact(it, parsed)}
         log_event("search", src=q[:40])
     items = decorate(apply_filters(base, sel), at)
+    fx = request.args.get("fx", "").strip()               # 홈 배너: 특정 매대만 (신상품 · 할인)
+    fxrow = one("SELECT * FROM fixtures WHERE id=?", (fx,)) if fx else None
+    if fxrow: items = [it for it in items if it["place"] and it["place"]["fixture_id"] == fx]
     if not q:
         picked = [v for v in (sel["cat"], sel["sub"], sel["color"], sel["fit"], sel["pattern"]) if v]
-        note = " · ".join(picked) if picked else "전체 상품"
+        note = " · ".join(([fxrow["name"]] if fxrow else []) + picked) if (picked or fxrow) else "전체 상품"
     near = lambda it: (it["place"] is None, (it["walk"] or {}).get("m", 999))
     if exact_ids is not None and exact_ids and len(exact_ids) < len(items):
         more = [it for it in items if it["sku"] not in exact_ids]
