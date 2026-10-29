@@ -8,24 +8,6 @@
 <main class="page">
   {% set autofocus = False %}{% include "_searchbar.html" %}
 
-  {# 배너: 입구 추천존 매대 + 사진으로 찾기 (옆으로 넘김) #}
-  <section class="hbanner" id="hero">
-    {% for h in hero %}
-    <a class="slide" href="/search?at={{at}}&fx={{h.fx}}">
-      <img src="{{ imgsrc(h.rep) }}" alt="">
-      <span class="stag">{{h.tag}}</span>
-      <div class="stxt"><b>{{h.title}}</b><small>{{h.sub}} · {{h.n}}벌</small></div>
-      <span class="sgo">{{ cx.icon('chev', 18) }}</span>
-    </a>
-    {% endfor %}
-    <label class="slide photo">
-      <span class="stag">AI</span>
-      <span class="pbig">{{ cx.icon('camera', 40) }}</span>
-      <div class="stxt"><b>사진 한 장으로 찾기</b><small>비슷한 옷과 위치를 바로 알려 드려요</small></div>
-      <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)">
-    </label>
-  </section>
-  <div class="dots" id="dots">{% for i in range(hero|length + 1) %}<i class="{{ 'on' if loop.first }}"></i>{% endfor %}</div>
   <div class="qchips" id="recentBox" hidden><div class="qh"><b>최근 검색</b><button type="button" onclick="clearRecent()">지우기</button></div><div class="qrow" id="recent"></div></div>
   <div class="qchips trend">
     <div class="qh"><div class="qseg" role="tablist">
@@ -68,6 +50,25 @@
     {% endfor %}
   </div>
   {% endfor %}
+
+  {# 배너: 입구 추천존 매대 + 사진으로 찾기 (옆으로 넘김) #}
+  <section class="hbanner" id="hero">
+    {% for h in hero %}
+    <a class="slide" href="/search?at={{at}}&fx={{h.fx}}">
+      <img src="{{ imgsrc(h.rep) }}" alt="">
+      <span class="stag">{{h.tag}}</span>
+      <div class="stxt"><b>{{h.title}}</b><small>{{h.sub}} · {{h.n}}벌</small></div>
+      <span class="sgo">{{ cx.icon('chev', 18) }}</span>
+    </a>
+    {% endfor %}
+    <label class="slide photo">
+      <span class="stag">AI</span>
+      <span class="pbig">{{ cx.icon('camera', 40) }}</span>
+      <div class="stxt"><b>사진 한 장으로 찾기</b><small>비슷한 옷과 위치를 바로 알려 드려요</small></div>
+      <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)">
+    </label>
+  </section>
+  <div class="dots" id="dots">{% for i in range(hero|length + 1) %}<i class="{{ 'on' if loop.first }}"></i>{% endfor %}</div>
 
   <p class="foot">상품 사진 <a href="/credits?at={{at}}">출처</a></p>
 </main>
