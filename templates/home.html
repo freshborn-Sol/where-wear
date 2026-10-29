@@ -1,92 +1,120 @@
 {% extends "base.html" %}{% import "_cx.html" as cx with context %}
-{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
+{% block styles %}{{ cx.styles() }}<meta name="ww-top" content="#2C302D">{% endblock %}{% block bodyclass %}cx hm{% endblock %}
 {% block body %}
-<header class="hd glass">
-  <a class="brand" href="/go?at={{at}}"><img class="logo" src="{{ url_for('static', filename='logo/icon.svg') }}" alt="">where:wear</a>
-  <span class="here">{{ cx.icon('pin', 14) }}현 위치 · <b>{{ here.name if here else at }}</b></span>
-</header>
-<main class="page">
-  {% set autofocus = False %}{% include "_searchbar.html" %}
+<div class="hm-top">
+  <header class="hm-hd">
+    <a class="hm-brand" href="/go?at={{at}}"><span class="hm-logo"><img src="{{ url_for('static', filename='logo/icon.svg') }}" alt=""></span>where<i>:</i>wear</a>
+    <a class="hm-here" href="/map?at={{at}}">{{ cx.icon('pin', 15) }}<span>{{ here.name if here else '매장 입구' }}</span></a>
+    <a class="hm-bell" href="/info?at={{at}}" aria-label="안내 · 설정">{{ cx.icon('bell', 24) }}</a>
+  </header>
+  {% set sb_dark = True %}{% set sb_ph = '손님, ' ~ (popular[0] if popular else '찾는 옷') ~ ' 어디 있는지 찾으세요?' %}
+  {% include "_searchbar.html" %}
 
-  {# 배너: 입구 추천존 매대 + 사진으로 찾기 (옆으로 넘김) #}
-  <section class="hbanner" id="hero">
-    {% for h in hero %}
-    <a class="slide" href="/search?at={{at}}&fx={{h.fx}}">
-      <img src="{{ imgsrc(h.rep) }}" alt="">
-      <span class="stag">{{h.tag}}</span>
-      <div class="stxt"><b>{{h.title}}</b><small>{{h.sub}} · {{h.n}}벌</small></div>
-      <span class="sgo">{{ cx.icon('chev', 18) }}</span>
+  <section class="hm-hero" id="hero" aria-label="매장 소식">
+    {% set total = slides|length + 1 %}
+    {% for s in slides %}
+    <a class="hsl" href="{{s.href}}">
+      <img src="{{ imgsrc(s.img) }}" alt="">
+      <span class="hs-loc">{{ cx.icon('pin', 14) }}{{s.loc}}</span>
+      <b class="hs-t">{% for line in s.title.split('\n') %}{{line}}{% if not loop.last %}<br>{% endif %}{% endfor %}</b>
+      <small class="hs-tags">{{s.tags}}</small>
+      <em class="hs-n">{{loop.index}} / {{total}}</em>
     </a>
     {% endfor %}
-    <label class="slide photo">
-      <span class="stag">AI</span>
-      <span class="pbig">{{ cx.icon('camera', 40) }}</span>
-      <div class="stxt"><b>사진 한 장으로 찾기</b><small>비슷한 옷과 위치를 바로 알려 드려요</small></div>
+    <label class="hsl photo">
+      <span class="hs-cam">{{ cx.icon('camera', 44) }}</span>
+      <span class="hs-loc">{{ cx.icon('sparkle', 14) }}AI 사진 검색</span>
+      <b class="hs-t">사진 한 장이면<br>매장에서 찾아 드려요</b>
+      <small class="hs-tags">SNS에서 본 그 옷 · 캡처도 OK</small>
+      <em class="hs-n">{{total}} / {{total}}</em>
       <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)">
     </label>
   </section>
-  <div class="dots" id="dots">{% for i in range(hero|length + 1) %}<i class="{{ 'on' if loop.first }}"></i>{% endfor %}</div>
-  <div class="qchips" id="recentBox" hidden><div class="qh"><b>최근 검색</b><button type="button" onclick="clearRecent()">지우기</button></div><div class="qrow" id="recent"></div></div>
-  <div class="qchips trend">
-    <div class="qh"><div class="qseg" role="tablist">
-        <button type="button" class="on" data-t="pop" role="tab">인기 검색어</button>
-        <button type="button" data-t="rise" role="tab">급상승</button></div>
-      <a class="qwho" href="/me?at={{at}}&next={{ request.full_path|urlencode }}">{{ seg_label ~ ' 기준' if seg_label else '전체 손님 기준' }}</a></div>
-    <div class="qrow on" data-p="pop">
-      {% for w in popular %}<a class="qc hot" href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em>{{w}}</a>{% endfor %}</div>
-    <div class="qrow" data-p="rise">
-      {% for w in rising %}<a class="qc hot" href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em>{{w}}<i class="up">▲</i></a>{% endfor %}</div>
-  </div>
+</div>
 
+<main class="page hm-page">
+  <nav class="hm-chips" aria-label="바로가기">
+    {% for c in chips %}
+    <a class="hc" href="{{c.href}}{{ '&' if '?' in c.href else '?' }}at={{at}}">
+      <span class="hc-i {{ 'ico' if c.icon }}">{% if c.icon %}{{ cx.icon(c.icon, 18) }}{% elif c.img %}<img src="{{ imgsrc(c.img) }}" alt="">{% endif %}</span>{{c.label}}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="hm-sec"><b>지금 매장 한눈에 보기</b><a href="/map?at={{at}}">크게 보기 {{ cx.icon('chev', 14) }}</a></div>
+  <section class="hm-mapcard">
+    <div class="mm-top"><span><b>1층</b> · 손님은 {{ here.name if here else '입구' }} 앞</span><em>구역을 눌러 보세요</em></div>
+    <div class="mm" style="aspect-ratio:{{mm.W}}/{{mm.H}}">
+      {% for z in mm.zones %}
+      <a class="mz z{{z.id}} {{'here' if z.id == mm.here_zone}}" href="{{z.href}}&at={{at}}" style="left:{{z.l}}%;top:{{z.t}}%;width:{{z.w}}%;height:{{z.h}}%">
+        <b>{{z.id}}</b><span>{{z.label}}</span></a>
+      {% endfor %}
+      {% for f in mm.fac %}
+      <a class="mf {{ 'off' if f.id == 'STOCK' }}" href="{{ '/map?at=' ~ at ~ '&to=' ~ f.id if f.id != 'STOCK' else '#' }}" style="left:{{f.l}}%;top:{{f.t}}%;width:{{f.w}}%;height:{{f.h}}%">{{f.label}}</a>
+      {% endfor %}
+      {% if mm.ent %}<span class="mm-ent" style="left:{{mm.ent.l}}%;top:{{mm.ent.t}}%;width:{{mm.ent.w}}%">입구</span>{% endif %}
+      {% if mm.here %}<i class="mm-me" style="left:{{mm.here.x}}%;top:{{mm.here.y}}%"><em>여기</em></i>{% endif %}
+    </div>
+    <a class="mm-btn" href="/map?at={{at}}">{{ cx.icon('map', 18) }}매장 지도 크게 보기</a>
+  </section>
+
+  <a class="hm-guide" href="/info?at={{at}}">
+    <div><b>처음 오셨나요? 매장 이용 가이드</b><small>옷 찾기부터 직원 호출까지 1분이면 끝나요</small></div>
+    <span class="hg-i">{{ cx.icon('map', 30) }}</span>
+  </a>
 
   {% if ranking %}
-  <section class="sec">
-    <div class="sech"><b>이 매장 인기 TOP {{ ranking|length }}</b><small>최근 7일 조회 · 찜 기준</small></div>
-    <div class="rank hs">
-      {% for it in ranking %}
-      <a class="rcard" href="/item/{{it.sku}}?at={{at}}">
-        <div class="rimg"><img src="{{ imgsrc(it) }}" alt="" loading="lazy"><em>{{loop.index}}</em>
-          {% if it.place %}<span class="rloc">{{ cx.icon('pin', 11) }}{{it.place.fixture_id}}</span>{% endif %}</div>
-        <b>{{it.name}}</b><small>{{it.color}} · {{ "{:,}".format(it.price) }}원</small>
+  <div class="hm-sec"><b>손님, 이 옷 어때요?</b><a href="/search?at={{at}}">전체보기 {{ cx.icon('chev', 14) }}</a></div>
+  <div class="hm-recs">
+    {% for it in ranking %}
+    {% set fxid = it.place.fixture_id if it.place else '' %}
+    {% set tot = it.sizes|sum(attribute='qty') %}
+    {% set badge = '신상' if fxid == 'P-T1' else ('할인' if fxid == 'P-T2' else ('재고 적음' if tot and tot <= 3 else '')) %}
+    <div class="rc">
+      <a class="rc-img" href="/item/{{it.sku}}?at={{at}}"><img src="{{ imgsrc(it) }}" alt="" loading="lazy">
+        {% if badge %}<span class="rc-badge {{ {'신상':'new','할인':'sale','재고 적음':'low'}[badge] }}">{{badge}}</span>{% endif %}</a>
+      <button type="button" class="rc-like" data-sku="{{it.sku}}" aria-label="찜하기" onclick="hLike(this)">
+        <span class="h0">{{ cx.icon('heart', 18) }}</span><span class="h1">{{ cx.icon('heartfill', 18) }}</span></button>
+      <a class="rc-b" href="/item/{{it.sku}}?at={{at}}">
+        <b class="rc-nm">{{it.name}} {{it.color}}</b>
+        <span class="rc-pr {{ 'sale' if badge == '할인' }}">{{ "{:,}".format(it.price) }}원</span>
+        <span class="rc-loc">{{ cx.icon('pin', 13) }}{{ it.place.fixture_name if it.place else '위치 확인 중' }}</span>
+        <span class="rc-sz">{% for s in it.sizes %}<i class="{{ 'no' if not s.qty and not s.wh else ('wh' if not s.qty else '') }}">{{s.size}}</i>{% endfor %}</span>
       </a>
-      {% endfor %}
     </div>
-  </section>
-  {% endif %}
-
-  <h2>종류</h2>
-  <div class="tabs" role="tablist">
-    {% for c in cats %}<button class="tab {{'on' if c == tab}}" data-tab="{{c}}" role="tab">{{c}}</button>{% endfor %}
-  </div>
-  {% for c in cats %}
-  <div class="tiles {{'on' if c == tab}}" data-panel="{{c}}">
-    <a class="tile all" href="/search?at={{at}}&cat={{c}}"><span class="ti">{{ cx.icon('search', 22) }}전체 보기</span>
-      <span class="tl"><b>{{c}} 전체</b><small>{{ tiles[c]|sum(attribute='n') }}개</small></span></a>
-    {% for t in tiles[c] %}
-    <a class="tile" href="/search?at={{at}}&cat={{c}}&sub={{t.sub}}">
-      <img src="{{ imgsrc(t.rep) }}" alt="" loading="lazy"><span class="tl"><b>{{t.sub}}</b><small>{{t.n}}개</small></span></a>
     {% endfor %}
   </div>
-  {% endfor %}
+  {% endif %}
 
-  <p class="foot">상품 사진 <a href="/credits?at={{at}}">출처</a></p>
+  <div class="hm-sec"><b>다른 손님들은 이걸 찾아요</b><small>{{ seg_label or '전체 손님' }} · {{now_hm}} 기준</small></div>
+  <div class="hm-trendbox">
+    <div class="qseg2" role="tablist">
+      <button type="button" class="on" data-t="pop" role="tab">인기 검색어</button>
+      <button type="button" data-t="rise" role="tab">급상승</button>
+    </div>
+    <ol class="hm-trend on" data-p="pop">
+      {% for w in popular %}<li><a href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em><b>{{w}}</b><span>{{ tloc.get(w) or '' }}</span></a></li>{% endfor %}
+    </ol>
+    <ol class="hm-trend" data-p="rise">
+      {% for w in rising %}<li><a href="/search?at={{at}}&q={{ w|urlencode }}" onclick="saveRecent('{{w}}')"><em>{{loop.index}}</em><b>{{w}}</b><span>{{ tloc.get(w) or '' }}</span><i class="up">▲</i></a></li>{% endfor %}
+    </ol>
+  </div>
+
+  <div class="hm-sec"><b>종류별 찾기</b><a href="/cats?at={{at}}">전체보기 {{ cx.icon('chev', 14) }}</a></div>
+  {% include "_cats.html" %}
+
+  <footer class="hm-foot"><b>where:wear</b> 옷 위치 안내 프로토타입<br>도움이 필요하면 상품 화면의 '찾는 게 없나요?'로 직원을 불러 주세요 · 사진 <a href="/credits?at={{at}}">출처</a></footer>
 </main>
-{{ cx.tabbar('find') }}
+{{ cx.tabbar('home') }}
 <script>
-(function(){ let r=[]; try{ r=JSON.parse(localStorage.getItem('ww_recent')||'[]'); }catch(e){}
-  if(!r.length) return; const box=document.getElementById('recent'); document.getElementById('recentBox').hidden=false;
-  r.forEach(q=>{ const a=document.createElement('a'); a.className='qc'; a.textContent=q;
-    a.href='/search?at={{at}}&q='+encodeURIComponent(q); box.appendChild(a); }); })();
-function clearRecent(){ try{ localStorage.removeItem('ww_recent'); }catch(e){} document.getElementById('recentBox').hidden=true; }
-(function(){ const h=document.getElementById('hero'), d=[...document.querySelectorAll('#dots i')]; if(!h) return;
-  h.addEventListener('scroll',()=>{ const i=Math.round(h.scrollLeft/(h.firstElementChild.offsetWidth+10)); d.forEach((x,k)=>x.classList.toggle('on',k===i)); },{passive:true}); })();
-document.querySelectorAll('.qseg button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.qseg button').forEach(x => x.classList.toggle('on', x === b));
-  document.querySelectorAll('.trend .qrow').forEach(p => p.classList.toggle('on', p.dataset.p === b.dataset.t));
+document.querySelectorAll('.qseg2 button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.qseg2 button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.hm-trend').forEach(p => p.classList.toggle('on', p.dataset.p === b.dataset.t));
 });
-document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === b));
-  document.querySelectorAll('.tiles').forEach(p => p.classList.toggle('on', p.dataset.panel === b.dataset.tab));
-});
+(function(){ const liked = wwLikes.get();
+  document.querySelectorAll('.rc-like').forEach(b => b.classList.toggle('on', liked.includes(b.dataset.sku))); })();
+function hLike(b){ const on = !b.classList.contains('on'); b.classList.toggle('on', on);
+  fetch('/api/like',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:b.dataset.sku,device:WWDEV,on:on})})
+   .then(r=>r.json()).then(d=>{ if(!d.ok) return b.classList.toggle('on', !on); wwLikes.set(d.skus); })
+   .catch(()=>b.classList.toggle('on', !on)); }
 </script>
 {% endblock %}

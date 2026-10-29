@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx gray{% endblock %}
+{% block body %}
+{{ cx.appbar('매장 지도', '/go?at=' ~ at) }}
+<main class="page sm-page">
+  <div class="sm-here">{{ cx.icon('pinfill', 18) }}<span>지금 <b>{{ here.name if here else '매장 입구' }}</b> 앞이에요</span></div>
+  <div class="sm-quick">
+    {% for id, label, ic in [('FIT','피팅룸','door'),('COUNTER','계산대','card'),('P-T1','신상 매대','sparkle'),('P-T2','할인 매대','tag')] %}
+    <a class="sq {{'on' if to == id}}" href="/map?at={{at}}&to={{id}}">{{ cx.icon(ic if ic in ['door','card','sparkle'] else 'box', 17) }}{{label}}</a>
+    {% endfor %}
+  </div>
+  {% if tofx %}
+  <div class="sm-go">
+    <div><small>가는 길</small><b>{{ {'FIT':'피팅룸','COUNTER':'계산대'}.get(to, tofx.name) }}</b>
+      <span>{% if walk %}여기서 약 {{walk.m}}m · 걸어서 약 {{walk.sec}}초{% endif %}</span></div>
+    <a class="sm-x" href="/map?at={{at}}" aria-label="길 안내 끄기">{{ cx.icon('x', 18) }}</a>
+  </div>
+  {% endif %}
+  <div class="sm-map">{% include "_cxmap.html" %}</div>
+  <p class="sm-cap">주황 점이 지금 내 위치{{ ', 점선이 가는 길' if tofx }}이에요. 구역을 누르면 그 구역 옷을 보여 드려요.</p>
+  <div class="sm-zones">
+    {% for z in zones %}
+    <a class="szc z{{z.id}}" href="{{z.href}}&at={{at}}"><b>{{z.id}}</b><span>{{z.label}}<small>{{z.n}}종</small></span>{{ cx.icon('chev', 16) }}</a>
+    {% endfor %}
+  </div>
+</main>
+{{ cx.tabbar('map') }}
+{% endblock %}

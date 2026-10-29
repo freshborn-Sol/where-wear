@@ -472,3 +472,86 @@ details.mv select:first-child{flex:1;min-width:0}
 .kcat b{color:#fff}.kcat small{color:rgba(255,255,255,.85)!important}
 .kcat .t::after{content:"";display:block;width:56px;height:6px;border-radius:3px;background:var(--gold);margin-top:18px}
 .kbanner{background:linear-gradient(120deg,var(--blue50),#fff)!important}
+
+/* PC 휴대폰 틀 안: 홈 인디케이터 자리만큼 아래 여백 */
+html.ww-inframe{--safe:20px}
+
+/* =====================================================================
+   키오스크 v3 — 고객 홈과 같은 디자인 (어두운 머리 · 위치 표시 · 매장 한눈에 보기)
+   ===================================================================== */
+body.kiosk{--dk:#2C302D;--dk2:#3A3F3B;--sale:#D8452E}
+.ktop{background:var(--dk);padding:30px 48px;gap:18px}
+.kbrand{display:flex;align-items:center;gap:14px;color:#fff;font-size:40px;font-weight:900;letter-spacing:-.03em}
+.kbrand i{font-style:normal;color:#9FD3B5;margin:0 2px}
+.kb-logo{width:60px;height:60px;border-radius:18px;background:var(--blue);display:grid;place-items:center;overflow:hidden}
+.kb-logo img{width:60px;height:60px;display:block}
+.khere{margin-left:auto;display:flex;align-items:center;gap:8px;padding:14px 24px 14px 18px;border-radius:40px;background:#fff;
+  font-size:24px;font-weight:700;color:var(--ink)}
+.khere .ic{color:var(--blue)}
+.ktop .klang{margin-left:0;background:transparent;border-color:rgba(255,255,255,.35);color:#fff}
+.ktop .khome{background:transparent;border-color:rgba(255,255,255,.35);color:#fff;margin-left:0}
+.kmain{padding-top:30px}
+
+/* 위치 알약 (사진 위) */
+.kz{position:absolute;z-index:3;display:flex;align-items:center;gap:6px;padding:9px 18px 9px 13px;border-radius:30px;background:#fff;
+  color:var(--ink);font-size:23px;font-weight:800;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.kz .ic{color:var(--blue)}
+.kz.in{position:static;margin-top:14px;box-shadow:none;border:2px solid var(--blue100)}
+
+/* 1단계: 대분류 6칸 (신상 · 세일 포함) */
+.kcats{gap:22px}
+.kcat{height:250px}
+.kcat .kz{right:18px;top:18px}
+.kcat.kp{background:#3A1F1B}
+.kcat.kp::after{background:linear-gradient(90deg,rgba(80,22,14,.88) 0,rgba(80,22,14,.55) 50%,rgba(80,22,14,.08) 100%)}
+.kcat.kp .t::after{background:#FF9C86}
+
+/* 매장 한눈에 보기 */
+.kmapcard{display:flex;flex-direction:column;gap:18px;padding:26px;border-radius:30px;background:#F5F6F4}
+.kmc-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.kmc-h b{font-size:38px;font-weight:900;letter-spacing:-.03em}.kmc-h span{font-size:24px;font-weight:700;color:var(--blue)}
+.kmm{position:relative;width:100%;border-radius:22px;background:#fff;border:2px solid #E5E8E5}
+.kmz,.kmf{position:absolute;border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;gap:2px;font-size:24px;font-weight:800;
+  background:#EEF0EE;border:2px solid #E1E4E1;color:var(--ink);overflow:hidden}
+.kmz b{font-size:32px;font-weight:900;color:var(--blue);line-height:1.1}
+.kmz:active,.kmf:active{background:var(--blue100)}
+.kmz.zA{background:#E2EFE7;border-color:#BBD7C6}
+.kmz.zP{background:#FBEDEE;border-color:#F3D3D6;flex-direction:row;align-items:center;gap:12px;padding:6px 18px}.kmz.zP b{color:#C0392B}
+.kmf{flex-direction:row;align-items:center;justify-content:center;gap:8px;font-size:22px;color:var(--g700);background:#F7F7F5}
+.kmf .ic{color:var(--blue)}
+.kmf.off{background:repeating-linear-gradient(45deg,#F3F3F1 0 8px,#E9EAE7 8px 16px);color:var(--g500)}
+.kmm-me{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:var(--blue);border:6px solid #fff;
+  box-shadow:0 0 0 10px rgba(48,106,80,.22);font-style:normal;z-index:4}
+.kmm-me em{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);padding:6px 14px;border-radius:14px;background:var(--dk);color:#fff;
+  font-style:normal;font-size:22px;font-weight:800;white-space:nowrap}
+.kmc-q{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.kmc-q a{height:96px;display:flex;align-items:center;justify-content:center;gap:12px;border-radius:22px;background:#fff;border:2px solid #E3E6E3;
+  font-size:30px;font-weight:800}
+.kmc-q .ic{color:var(--blue)}
+
+/* 2단계: 세부 종류 사진 위 위치 */
+.kimg{position:relative;display:block;width:100%}
+.kimg>img{display:block}
+.ktile .kz{left:12px;bottom:12px;font-size:21px;padding:7px 14px 7px 10px}
+
+/* 결과 카드 배지 */
+.kbadge{position:absolute;left:18px;top:18px;z-index:3;padding:8px 16px;border-radius:12px;background:#fff;color:var(--ink);
+  font-style:normal;font-size:24px;font-weight:900}
+.kbadge.sale{background:var(--sale);color:#fff}.kbadge.low{background:var(--dk);color:#fff}
+/* v3-2: 첫 화면 한 장에 들어가게 */
+.ktop{padding:26px 48px}
+.khere{white-space:nowrap}
+.kcat{height:228px}
+.kbanner{padding:20px 30px!important}
+.kmc-b{display:grid;grid-template-columns:1fr 200px;gap:16px;align-items:stretch}
+.kmc-q{display:flex;flex-direction:column;gap:14px}
+.kmc-q a{flex:1;height:auto;flex-direction:column;gap:4px;font-size:26px;border-radius:20px}
+.kmc-q a b{font-size:28px;font-weight:900}.kmc-q a small{font-size:21px;font-weight:700;color:var(--g500)}
+.kmc-q a.p{background:#FBEDEE;border-color:#F3D3D6}.kmc-q a.p .ic{color:#C0392B}
+.kmz,.kmf{padding:10px 12px;font-size:21px;border-radius:14px}
+.kmz b{font-size:28px}
+.kmf{flex-direction:column;gap:2px;font-size:19px;line-height:1.15;text-align:center;padding:6px}
+.kmm-me em{left:28px;bottom:auto;top:50%;transform:translateY(-50%)}
+.kcat .kz{top:auto;bottom:18px;right:18px}
+.ktop{box-shadow:0 0 0 100vmax var(--dk);clip-path:inset(0 -100vmax)}
+.ktop .klang,.ktop .khere{white-space:nowrap}.ktop .khere{min-width:0;overflow:hidden;text-overflow:ellipsis}

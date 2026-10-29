@@ -343,6 +343,22 @@ PHRASES.update({
     "거열 박": "Geoyeol Park",
 })
 
+# 키오스크 v3 (어두운 머리 · 매장 한눈에 보기 · 피팅룸/계산대 가는 길)
+PHRASES.update({
+    "현 위치 · 입구": "Here: Entrance", "현 위치": "You are here", "신상 · 세일": "New & Sale", "입구 바로 앞": "By the entrance",
+    "매장 한눈에 보기": "Store at a glance", "구역을 누르면 그 옷을 보여 드려요": "Tap a zone to see its clothes",
+    "피팅룸 가는 길": "Route to fitting rooms", "계산대 가는 길": "Route to checkout", "신상품 매대 가는 길": "Route to new arrivals",
+    "할인 매대 가는 길": "Route to sale table", "옷을 입어 볼 수 있어요": "Try clothes on here", "계산 · 교환 · 환불": "Pay · exchange · refund",
+    "이번 주 새로 들어온 옷": "New in this week", "할인하는 옷": "Clothes on sale", "이 매대 옷 보기": "See clothes on this table",
+    "옷 보기": "See clothes", "재고 적음": "Low stock", "위치 확인 중": "Checking location", "처음 화면으로": "Back to start",
+})
+PATTERNS.insert(0, _p(r"입구에서 약 (\d+)m", lambda m, t: f"About {m[1]} m from the entrance"))
+PATTERNS.insert(0, _p(r"걸어서 (\d+)초", lambda m, t: f"{m[1]} sec walk"))
+_SIDE = {"왼쪽": "left", "오른쪽": "right", "정면": "straight ahead"}
+_DEPTH = {"바로 앞": "near the front", "가운데": "middle", "가장 안쪽": "at the back"}
+PATTERNS.insert(0, _p(r"입구로 들어와서 (왼쪽|오른쪽|정면) (바로 앞|가운데|가장 안쪽)",
+                      lambda m, t: f"From the entrance, {_SIDE[m[1]]}, {_DEPTH[m[2]]}"))
+
 _WORD_RX = re.compile("|".join(sorted(map(re.escape, WORDS), key=len, reverse=True)))
 
 def _words(s):

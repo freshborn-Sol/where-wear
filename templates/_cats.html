@@ -1,0 +1,23 @@
+{# 종류별 찾기: 대분류 탭 + 소분류 사진 타일 (홈 · 카테고리 화면 공통). 필요: tiles, cats, tab, splace, at #}
+<div class="ctabs" role="tablist">
+  {% for c in cats if tiles[c] %}<button type="button" class="ctab {{'on' if c == tab}}" data-tab="{{c}}" role="tab">{{c}}</button>{% endfor %}
+</div>
+{% for c in cats if tiles[c] %}
+<div class="ctiles {{'on' if c == tab}}" data-panel="{{c}}">
+  <a class="ct all" href="/search?at={{at}}&cat={{c}}"><span class="ct-img">{{ cx.icon('search', 26) }}<b>전체 보기</b></span>
+    <span class="ct-t"><b>{{c}} 전체</b><small>{{ tiles[c]|sum(attribute='n') }}개</small></span>
+    <span class="ct-l">{{ {'상의':'A구역','하의':'B구역','아우터':'C구역','신발':'D구역','잡화':'D구역'}.get(c, '') }}</span></a>
+  {% for t in tiles[c] %}{% set fx = splace.get(c ~ '/' ~ t.sub) %}
+  <a class="ct" href="/search?at={{at}}&cat={{c}}&sub={{t.sub}}">
+    <span class="ct-img"><img src="{{ imgsrc(t.rep) }}" alt="" loading="lazy"></span>
+    <span class="ct-t"><b>{{t.sub}}</b><small>{{t.n}}개</small></span>
+    <span class="ct-l">{{ fx if fx else '위치 확인 중' }}</span></a>
+  {% endfor %}
+</div>
+{% endfor %}
+<script>
+document.querySelectorAll('.ctab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.ctab').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.ctiles').forEach(p => p.classList.toggle('on', p.dataset.panel === b.dataset.tab));
+});
+</script>

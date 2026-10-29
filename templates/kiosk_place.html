@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}kiosk{% endblock %}
+{% block body %}
+<div class="kshell">
+{{ ks.ktop(False) }}
+<main class="kmain" style="gap:28px">
+  <h1 class="kh1">{{name}} 가는 길</h1>
+  <div class="kloc"><span class="pc">{{ cx.icon(ic, 40) }}</span>
+    <div><b>{{name}}</b><span>{{desc}}</span></div></div>
+  <div class="kdir">{{ cx.icon('run', 48) }}<div><small>가는 길</small>
+    <b>{{ dirtext }}</b>
+    {% if walk %}<span>입구에서 약 {{walk.m}}m · 걸어서 {{walk.sec}}초</span>{% endif %}</div></div>
+  <div class="kmap">{% include "_cxmap.html" %}</div>
+  {% if fx in ("P-T1", "P-T2") %}<div class="kbtns"><a class="kbtn navy" href="/kiosk?step=result&pz=1">{{ cx.icon("grid", 34) }}이 매대 옷 보기</a></div>{% endif %}
+  <div class="khelp">{{ cx.icon('help', 34) }}<span>못 찾으면 가까운 직원에게 물어보세요</span></div>
+</main>
+{{ ks.knav() }}
+</div>
+{{ ks.kidle(90) }}
+{% endblock %}

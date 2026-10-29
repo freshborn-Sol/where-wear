@@ -480,9 +480,120 @@ def go():
     seg = cur_seg()
     popular, rising, by_seg = search_trends(seg)
     hero, ranking = home_hero(), home_ranking(at)
+    for it in ranking: it["sizes"] = sort_sizes(it["sizes"])
+    tiles = subcat_tiles()
     return render_template("home.html", popular=popular, rising=rising, seg=seg, by_seg=by_seg, hero=hero, ranking=ranking,
-                           seg_label=seg_label(seg), at=at, here=here, tiles=subcat_tiles(),
+                           seg_label=seg_label(seg), at=at, here=here, tiles=tiles,
+                           slides=home_slides(at, hero), chips=home_chips(tiles), mm=mini_map(at),
+                           tloc={w: term_place(w) for w in popular + rising}, splace=sub_places(),
+                           now_hm=now().strftime("%H:%M"),
                            tab=request.args.get("tab", "상의"), cats=list(CATS), colors=COLORS)
+
+# ---------- 홈 (참고 디자인 반영): 배너 슬라이드 · 바로가기 칩 · 한눈에 보는 매장 지도 ----------
+def _zone_of(fx_id):
+    f = one("SELECT zone FROM fixtures WHERE id=?", (fx_id,)) if fx_id else None
+    return f["zone"] if f else None
+
+def _hashtags(fx_ids, n=3):
+    if not fx_ids: return ""
+    q = ",".join("?" * len(fx_ids))
+    subs = rows(f"""SELECT i.subcat, COUNT(*) c FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1
+                    WHERE p.fixture_id IN ({q}) GROUP BY i.subcat ORDER BY c DESC LIMIT {n}""", tuple(fx_ids))
+    return " ".join("#" + r["subcat"] for r in subs)
+
+def home_slides(at, hero):
+    """배너: 신상품 매대 · 할인 매대 · 아우터 구역 (+ 맨 끝 사진으로 찾기). 거리는 지금 QR 자리 기준"""
+    out = []
+    for h in hero:
+        w = walk(at, h["fx"])
+        out.append({"href": f"/search?at={at}&fx={h['fx']}", "img": h["rep"], "tag": "신상" if h["tag"] == "NEW" else "할인",
+                    "title": "이번 주 신상품,\n입구 앞에 모았어요" if h["tag"] == "NEW" else "할인 매대에서\n가볍게 골라 보세요",
+                    "loc": "P구역" + (f" · 여기서 {w['m']}m" if w else ""), "tags": _hashtags([h["fx"]]), "n": h["n"]})
+    cfx = [f["id"] for f in rows("SELECT id FROM fixtures WHERE zone='C'")]
+    if cfx:
+        q = ",".join("?" * len(cfx))
+        rep = one(f"""SELECT i.* FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1 WHERE p.fixture_id IN ({q})
+                      ORDER BY (i.image LIKE 'photos/%') DESC, i.price DESC LIMIT 1""", tuple(cfx))
+        if rep:
+            w = walk(at, "C-H1")
+            out.append({"href": f"/search?at={at}&cat=아우터", "img": rep, "tag": "아우터",
+                        "title": "따뜻한 아우터는\nC구역에 모여 있어요", "loc": "C구역" + (f" · 여기서 {w['m']}m" if w else ""),
+                        "tags": _hashtags(cfx), "n": None})
+    return out
+
+def home_chips(tiles):
+    out = []
+    for c in CATS:
+        ts = tiles.get(c) or []
+        if ts: out.append({"label": c, "href": f"/search?cat={c}", "img": ts[0]["rep"]})
+    rep = lambda fx: one("""SELECT i.* FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1 WHERE p.fixture_id=?
+                            ORDER BY (i.image LIKE 'photos/%') DESC LIMIT 1""", (fx,))
+    out += [{"label": "신상", "href": "/search?fx=P-T1", "img": rep("P-T1")},
+            {"label": "세일", "href": "/search?fx=P-T2", "img": rep("P-T2")},
+            {"label": "피팅룸", "href": "/map?to=FIT", "icon": "door"},
+            {"label": "계산대", "href": "/map?to=COUNTER", "icon": "card"}]
+    return out
+
+ZONE_HREF = {"A": "/search?cat=상의", "B": "/search?cat=하의", "C": "/search?cat=아우터", "D": "/search?cat=신발", "P": "/search?fx=P-T1"}
+ZONE_LABEL = {"P": "신상 · 세일"}
+
+def mini_map(at):
+    """홈 '지금 매장 한눈에 보기': 구역 상자만 간단히 (위치는 실제 도면 좌표를 %로)"""
+    fixtures = rows("SELECT * FROM fixtures")
+    W = max([f["x"] + f["w"] for f in fixtures] + [620]) + 20
+    H = max([f["y"] + f["h"] for f in fixtures] + [470]) + 20
+    pc = lambda r: {"l": round(r["x"] / W * 100, 2), "t": round(r["y"] / H * 100, 2),
+                    "w": round(r["w"] / W * 100, 2), "h": round(r["h"] / H * 100, 2)}
+    zones = [{**z, **pc(z), "label": ZONE_LABEL.get(z["id"], z["name"]), "href": ZONE_HREF.get(z["id"], "/search")}
+             for z in rows("SELECT * FROM zones")]
+    fac = [{**f, **pc(f), "label": {"FIT": "피팅룸", "COUNTER": "계산대", "STOCK": "창고"}[f["id"]]}
+           for f in fixtures if f["id"] in ("FIT", "COUNTER", "STOCK")]
+    ent = next((f for f in fixtures if f["id"] == "ENTRANCE"), None)
+    me = next((f for f in fixtures if f["id"] == at), None) or ent
+    here = {"x": round((me["x"] + me["w"] / 2) / W * 100, 2), "y": round((me["y"] + me["h"] / 2) / H * 100, 2)} if me else None
+    return {"W": W, "H": H, "zones": zones, "fac": fac, "ent": {**ent, **pc(ent)} if ent else None,
+            "here": here, "here_zone": me["zone"] if me else None}
+
+def term_place(q):
+    """인기 검색어 옆 위치(선반 코드): 그 검색어로 가장 잘 맞는 옷이 걸린 곳"""
+    try: hits, _, _ = S.text_search(rows("SELECT * FROM items"), q, limit=5)
+    except Exception: return None
+    for it in hits:
+        pl = placement_of(it["sku"])
+        if pl: return pl["fixture_id"]
+    return None
+
+def sub_places():
+    """소분류마다 가장 많이 걸린 선반 (종류별 찾기 타일 아래 위치 표시)"""
+    out = {}
+    for r in rows("""SELECT i.category, i.subcat, p.fixture_id, COUNT(*) n FROM items i
+                     JOIN placements p ON p.sku=i.sku AND p.active=1
+                     GROUP BY i.category, i.subcat, p.fixture_id ORDER BY n DESC"""):
+        out.setdefault(f"{r['category']}/{r['subcat']}", r["fixture_id"])
+    return out
+
+@app.route("/map")
+def store_map_page():
+    """하단 가운데 '매장지도': 전체 도면 + 시설(피팅룸 · 계산대 · 매대)까지 길 안내"""
+    at = request.args.get("at", "ENTRANCE")
+    to = request.args.get("to", "").strip() or None
+    tofx = one("SELECT * FROM fixtures WHERE id=?", (to,)) if to else None
+    if not tofx: to = None
+    here = one("SELECT * FROM fixtures WHERE id=?", (at,))
+    counts = {r["zone"]: r["n"] for r in rows("""SELECT f.zone, COUNT(DISTINCT p.sku) n FROM placements p
+                                                 JOIN fixtures f ON f.id=p.fixture_id WHERE p.active=1 GROUP BY f.zone""")}
+    zones = [{**z, "label": ZONE_LABEL.get(z["id"], z["name"]), "href": ZONE_HREF.get(z["id"], "/search"), "n": counts.get(z["id"], 0)}
+             for z in rows("SELECT * FROM zones")]
+    return render_template("storemap.html", at=at, here=here, to=to, tofx=tofx, map=map_data(at, to),
+                           walk=walk(at, to) if to else None, zones=zones,
+                           dirtext=direction_text(to) if to else "")
+
+@app.route("/cats")
+def cats_page():
+    """하단 '카테고리': 종류별 찾기만 크게"""
+    at = request.args.get("at", "ENTRANCE")
+    return render_template("cats.html", at=at, tiles=subcat_tiles(), splace=sub_places(),
+                           tab=request.args.get("tab", "상의"), cats=list(CATS))
 
 # ---------- 홈 배너 · 매장 인기 랭킹 ----------
 def home_hero():
@@ -1490,8 +1601,13 @@ def kiosk():
     color = request.args.get("color", "")
     fit = request.args.get("fit", "")
     pattern = request.args.get("pattern", "")
+    pz = request.args.get("pz", "")                     # 신상 · 세일 (입구 P구역 매대)
     items, tiles, colors, kf = [], [], [], {}
-    if step == "sub":
+    if step == "result" and pz:
+        items = decorate(rows("""SELECT i.* FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1
+                                 WHERE p.fixture_id IN ('P-T1','P-T2') ORDER BY p.fixture_id, i.price DESC"""))
+        log_event("kiosk", src="P/신상·세일")
+    elif step == "sub":
         tiles = subcat_tiles().get(cat, [])
     elif step == "color":
         pool = apply_filters(rows("SELECT * FROM items"), {"cat": cat, "sub": sub})
@@ -1504,12 +1620,18 @@ def kiosk():
         fc = facet_counts(base, sel)            # 핏·무늬: 지금 조건 안에 실제로 있는 값만 버튼으로
         kf = {k: fc.get(k, []) for k in ("fit", "pattern")}
         log_event("kiosk", src=f"{cat}/{sub}/{color}")
-    catinfo = {}
+    catinfo, mm, czone = {}, None, cat_zones()
     if step == "cat":                                    # 첫 화면 타일: 대분류별 상품 수 + 대표 사진
         for c, ts_ in subcat_tiles().items():
             if ts_: catinfo[c] = {"n": sum(t["n"] for t in ts_), "rep": ts_[0]["rep"]}
+        p_rep = one("""SELECT i.* FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1
+                       WHERE p.fixture_id IN ('P-T1','P-T2') ORDER BY (i.image LIKE 'photos/%') DESC, p.fixture_id LIMIT 1""")
+        p_n = one("""SELECT COUNT(DISTINCT p.sku) n FROM placements p WHERE p.active=1 AND p.fixture_id IN ('P-T1','P-T2')""")["n"]
+        if p_n: catinfo["신상 · 세일"] = {"n": p_n, "rep": p_rep, "pz": True}
+        mm = mini_map("ENTRANCE")
     return render_template("kiosk.html", step=step, cat=cat, sub=sub, color=color, catinfo=catinfo,
-                           fit=fit, pattern=pattern, kf=kf,
+                           fit=fit, pattern=pattern, kf=kf, pz=pz, mm=mm, czone=czone,
+                           splace=sub_places() if step == "sub" else {},
                            cats=list(CATS), tiles=tiles, kcolors=colors, items=items)
 
 @app.route("/kiosk/item/<sku>")
@@ -1519,6 +1641,28 @@ def kiosk_item(sku):
     fx = it["place"]["fixture_id"] if it["place"] else None
     return render_template("kiosk_item.html", it=it, map=map_data("ENTRANCE", fx), flag=loc_flag(it),
                            dirtext=direction_text(fx) if fx else "", walk=walk("ENTRANCE", fx))
+
+KIOSK_PLACES = {"FIT": ("피팅룸", "door", "옷을 입어 볼 수 있어요"), "COUNTER": ("계산대", "card", "계산 · 교환 · 환불"),
+                "P-T1": ("신상품 매대", "sparkle", "이번 주 새로 들어온 옷"), "P-T2": ("할인 매대", "tag", "할인하는 옷")}
+
+@app.route("/kiosk/place/<fx>")
+def kiosk_place(fx):
+    """키오스크 '매장 한눈에 보기'에서 피팅룸 · 계산대 · 매대를 누르면: 입구에서 가는 길"""
+    if fx not in KIOSK_PLACES or not one("SELECT id FROM fixtures WHERE id=?", (fx,)):
+        return redirect("/kiosk")
+    name, ic, desc = KIOSK_PLACES[fx]
+    log_event("kiosk", src=f"place/{fx}")
+    return render_template("kiosk_place.html", fx=fx, name=name, ic=ic, desc=desc, map=map_data("ENTRANCE", fx),
+                           dirtext=direction_text(fx), walk=walk("ENTRANCE", fx))
+
+def cat_zones():
+    """대분류마다 옷이 가장 많이 걸린 구역 (키오스크 타일 위 'A구역' 표시)"""
+    out = {}
+    for r in rows("""SELECT i.category, f.zone, COUNT(*) n FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1
+                     JOIN fixtures f ON f.id=p.fixture_id WHERE f.zone IS NOT NULL AND f.zone!='P'
+                     GROUP BY i.category, f.zone ORDER BY n DESC"""):
+        out.setdefault(r["category"], r["zone"])
+    return out
 
 @app.route("/kiosk/print/<sku>")
 def kiosk_print(sku):

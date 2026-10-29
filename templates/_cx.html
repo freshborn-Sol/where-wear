@@ -41,7 +41,13 @@
   'run': '<circle cx="13" cy="4" r="2"/><path d="m4 22 4-8 3 2 1 6M9 12l2-5 4 2 2 3h3M9 12l-3 1-2 3"/>',
   'minus': '<path d="M5 12h14"/>',
   'plus': '<path d="M12 5v14M5 12h14"/>',
-  'x': '<path d="M18 6 6 18M6 6l12 12"/>'
+  'x': '<path d="M18 6 6 18M6 6l12 12"/>',
+  'tag': '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor"/>',
+  'door': '<path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><path d="M4 21h16"/><circle cx="14.5" cy="12" r=".8" fill="currentColor"/>',
+  'card': '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>',
+  'map': '<path d="m9 4-6 2.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4Z"/><path d="M9 4v13M15 6.5v13"/>',
+  'grid': '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  'sliders': '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>'
 } %}
 
 {% macro icon(n, s=20) -%}
@@ -69,11 +75,12 @@ window.wwLikes={get(){try{return JSON.parse(localStorage.getItem('ww_likes')||'[
 
 {% macro tabbar(active) -%}
 {% set a = at if (at is defined and at) else cx_at %}
-<nav class="tabbar" aria-label="메뉴">
-  <a class="tab-i {{'on' if active=='find'}}" href="/go?at={{a}}">{{ icon('search', 24) }}<span>검색</span></a>
+<nav class="tabbar tb2" aria-label="메뉴">
+  <a class="tab-i {{'on' if active in ('find','home')}}" href="/go?at={{a}}">{{ icon('home', 24) }}<span>홈</span></a>
+  <a class="tab-i {{'on' if active=='cats'}}" href="/cats?at={{a}}">{{ icon('grid', 24) }}<span>카테고리</span></a>
+  <a class="tab-i fab {{'on' if active=='map'}}" href="/map?at={{a}}"><span class="fab-b">{{ icon('pinfill', 30) }}</span><span>매장지도</span></a>
   <a class="tab-i {{'on' if active=='like'}}" id="likeTab" href="/likes?at={{a}}"><span class="tb-ic">{{ icon('heart', 24) }}<b class="tb-n" id="likeN" hidden></b></span><span>찜</span></a>
-  <a class="tab-i {{'on' if active=='me'}}" href="/me?at={{a}}&next={{ request.full_path|urlencode }}">{{ icon('user', 24) }}<span>MY</span></a>
-  <a class="tab-i {{'on' if active=='info'}}" href="/info?at={{a}}">{{ icon('info', 24) }}<span>안내</span></a>
+  <a class="tab-i {{'on' if active in ('me','info')}}" href="/me?at={{a}}&next={{ request.full_path|urlencode }}">{{ icon('user', 24) }}<span>MY</span></a>
 </nav>
 <script>(()=>{const t=document.getElementById('likeTab'); if(t&&window.WWDEV) t.href+='&d='+WWDEV; wwLikes.set(wwLikes.get());})();
 /* MY의 성별·나이 → 쿠키 ww_seg (예: F20). 인기·급상승 검색어를 비슷한 손님 기준으로 보여 주는 데만 씀 */

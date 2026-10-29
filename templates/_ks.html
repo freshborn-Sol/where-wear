@@ -13,8 +13,8 @@
 {# ---------- 키오스크 ---------- #}
 {% macro ktop(back=True) -%}
 <header class="ktop">
-  <a href="/kiosk" class="klogo-a"><img class="klogo" src="{{ url_for('static', filename='logo/logo.svg') }}" alt="where:wear"></a>
-  <span class="ksub">옷 찾기</span>
+  <a href="/kiosk" class="kbrand"><span class="kb-logo"><img src="{{ url_for('static', filename='logo/icon.svg') }}" alt=""></span>where<i>:</i>wear</a>
+  <span class="khere">{{ cx.icon('pinfill', 26) }}현 위치 · 입구</span>
   <a class="klang" href="/lang?m=k&to={{ 'ko' if LANG == 'en' else 'en' }}&next={{ request.full_path|urlencode }}">{{ cx.icon('globe', 26) }}<span>{{ '한국어' if LANG == 'en' else 'English' }}</span></a>
   {% if back %}<a class="khome" href="/kiosk">{{ cx.icon('home', 28) }}처음으로</a>{% endif %}
 </header>

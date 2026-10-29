@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ cx.styles() }}{% endblock %}{% block bodyclass %}cx{% endblock %}
+{% block body %}
+{{ cx.appbar('카테고리', '/go?at=' ~ at) }}
+<main class="page hm-page">
+  {% include "_cats.html" %}
+</main>
+{{ cx.tabbar('cats') }}
+{% endblock %}

@@ -2,6 +2,17 @@
 {% import "_cx.html" as cxs %}
 <form id="pf" action="/search/photo" method="post" enctype="multipart/form-data">
   <input type="hidden" name="at" value="{{at}}"></form>
+{% if sb_dark is defined and sb_dark %}
+<form class="searchbox dark" action="/search" onsubmit="saveRecent(this.q.value)">
+  <input type="hidden" name="at" value="{{at}}">
+  <label class="sb">
+    <input name="q" value="{{ q or '' }}" placeholder="{{ sb_ph if sb_ph is defined and sb_ph else '어떤 옷을 찾으세요?' }}" enterkeyhint="search">
+    <span class="cam" title="사진으로 찾기" aria-label="사진으로 찾기">{{ cxs.icon('camera', 23) }}
+      <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)"></span>
+    <button class="sgo" aria-label="찾기">{{ cxs.icon('search', 23) }}</button>
+  </label>
+</form>
+{% else %}
 <form class="searchbox" action="/search" onsubmit="saveRecent(this.q.value)">
   <input type="hidden" name="at" value="{{at}}">
   <label class="sb">{{ cxs.icon('search', 20) }}
@@ -11,6 +22,7 @@
   </label>
   <button>찾기</button>
 </form>
+{% endif %}
 <div id="busy" class="busy" aria-live="polite">
   <div class="scan"><img id="busyImg" alt="">
     <svg class="br" viewBox="0 0 244 310" fill="none" stroke="#E8B653" stroke-width="5" stroke-linecap="round"><path d="M3 30V3h27M214 3h27v27M3 280v27h27M214 307h27v-27"/></svg>

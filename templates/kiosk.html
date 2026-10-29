@@ -8,19 +8,49 @@
   {{ ks.kstep(0) }}
   <div><h1 class="kh1">무엇을 찾으세요?</h1></div>
   <div class="kcats">
-    {% for c in cats if catinfo.get(c) %}{% set ci = catinfo[c] %}
-      <a class="kcat" href="/kiosk?step=sub&cat={{c}}"><div class="t"><b>{{c}}</b><small>옷 {{ci.n}}종</small></div>
-        {% if ci.rep %}<img src="{{ imgsrc(ci.rep) }}" alt="">{% endif %}</a>
+    {% for c in cats + ['신상 · 세일'] if catinfo.get(c) %}{% set ci = catinfo[c] %}
+      <a class="kcat {{ 'kp' if ci.pz }}" href="{{ '/kiosk?step=result&pz=1' if ci.pz else '/kiosk?step=sub&cat=' ~ c }}">
+        {% if ci.rep %}<img src="{{ imgsrc(ci.rep) }}" alt="">{% endif %}
+        <div class="t"><b>{{c}}</b><small>옷 {{ci.n}}종</small></div>
+        <span class="kz">{{ cx.icon('pinfill', 22) }}{% if ci.pz %}입구 바로 앞{% elif czone.get(c) %}{{ czone[c] }}구역{% else %}위치 확인 중{% endif %}</span></a>
     {% endfor %}
   </div>
+
+  {% if mm %}
+  {% set zcat = {} %}{% for c in cats if czone.get(c) and czone[c] not in zcat %}{% set _ = zcat.update({czone[c]: c}) %}{% endfor %}
+  {% set ZL = {'P': '신상 · 세일'} %}
+  <section class="kmapcard">
+    <div class="kmc-h"><b>매장 한눈에 보기</b><span>구역을 누르면 그 옷을 보여 드려요</span></div>
+    <div class="kmc-b">
+    <div class="kmm" style="aspect-ratio:{{mm.W}}/{{mm.H}}">
+      {% for z in mm.zones %}
+      {% set zh = '/kiosk?step=result&pz=1' if z.id == 'P' else ('/kiosk?step=sub&cat=' ~ zcat[z.id] if zcat.get(z.id) else '/kiosk') %}
+      <a class="kmz z{{z.id}}" href="{{zh}}" style="left:{{z.l}}%;top:{{z.t}}%;width:{{z.w}}%;height:{{z.h}}%">
+        <b>{{z.id}}</b><span>{{ ZL.get(z.id, z.name) }}</span></a>
+      {% endfor %}
+      {% for f in mm.fac %}
+      {% if f.id == 'STOCK' %}<span class="kmf off" style="left:{{f.l}}%;top:{{f.t}}%;width:{{f.w}}%;height:{{f.h}}%">창고</span>
+      {% else %}<a class="kmf" href="/kiosk/place/{{f.id}}" style="left:{{f.l}}%;top:{{f.t}}%;width:{{f.w}}%;height:{{f.h}}%">{{ cx.icon('door' if f.id == 'FIT' else 'card', 30) }}{{f.label}}</a>{% endif %}
+      {% endfor %}
+      {% if mm.here %}<i class="kmm-me" style="left:{{mm.here.x}}%;top:{{mm.here.y}}%"><em>현 위치</em></i>{% endif %}
+    </div>
+      <div class="kmc-q">
+        <a href="/kiosk/place/FIT">{{ cx.icon('door', 40) }}<b>피팅룸</b><small>가는 길</small></a>
+        <a href="/kiosk/place/COUNTER">{{ cx.icon('card', 40) }}<b>계산대</b><small>가는 길</small></a>
+        <a href="/kiosk?step=result&pz=1" class="p">{{ cx.icon('tag', 40) }}<b>신상 · 세일</b><small>옷 보기</small></a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
   <div class="kbanner">{{ cx.icon('printer', 52) }}<div><b>찾은 위치는 종이 지도로 뽑아 갈 수 있어요</b></div></div>
 {% elif step == 'sub' %}
   {{ ks.kstep(1) }}
   <h1 class="kh1">{{cat}} · 어떤 종류인가요?</h1>
   <div class="ktiles">
-    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><div class="big"><b>전체</b><span>모든 {{cat}}</span></div><b>잘 모르겠어요</b><small>{{ tiles|sum(attribute='n') }}종</small></a>
+    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><div class="big"><b>전체</b><span>모든 {{cat}}</span>{% if czone.get(cat) %}<span class="kz in">{{ cx.icon('pinfill', 20) }}{{czone[cat]}}구역</span>{% endif %}</div><b>잘 모르겠어요</b><small>{{ tiles|sum(attribute='n') }}종</small></a>
     {% for t in tiles %}
-      <a class="ktile" href="/kiosk?step=color&cat={{cat}}&sub={{t.sub}}"><img src="{{ imgsrc(t.rep) }}" alt=""><b>{{t.sub}}</b><small>{{t.n}}종</small></a>
+      {% set sp = splace.get(cat ~ '/' ~ t.sub) %}
+      <a class="ktile" href="/kiosk?step=color&cat={{cat}}&sub={{t.sub}}"><span class="kimg"><img src="{{ imgsrc(t.rep) }}" alt="">{% if sp %}<span class="kz">{{ cx.icon('pinfill', 20) }}{{ sp[0] }}구역 {{ sp.split('-',1)[1] if '-' in sp else '' }}</span>{% endif %}</span><b>{{t.sub}}</b><small>{{t.n}}종</small></a>
     {% endfor %}
   </div>
 {% elif step == 'color' %}
@@ -34,8 +64,9 @@
   </div>
 {% else %}
   {% set base = '/kiosk?step=result&cat=' ~ cat ~ '&sub=' ~ sub ~ '&color=' ~ color %}
-  {{ ks.kstep(2) }}
-  <h1 class="kh1">{{ color or '모든 색' }} {{ sub or cat }}<small>{{items|length}}개</small></h1>
+  {% if pz %}<h1 class="kh1">신상 · 세일<small>{{items|length}}개</small></h1>
+  {% else %}{{ ks.kstep(2) }}
+  <h1 class="kh1">{{ color or '모든 색' }} {{ sub or cat }}<small>{{items|length}}개</small></h1>{% endif %}
   <p class="klead">옷 사진을 누르면 있는 곳을 크게 보여드려요</p>
   {% if kf.fit|length > 1 or kf.pattern|length > 1 or fit or pattern %}
   <section class="knarrow">
@@ -55,7 +86,9 @@
   {% if not items %}<p class="kempty">지금은 해당하는 옷이 없어요.</p>{% endif %}
   <div class="kresults">
     {% for it in items %}
-      <a class="kcard" href="/kiosk/item/{{it.sku}}"><img src="{{ imgsrc(it) }}" alt=""><b>{{it.name}}</b>
+      {% set fxid = it.place.fixture_id if it.place else '' %}{% set tot = it.sizes|sum(attribute='qty') %}
+      {% set badge = '신상' if fxid == 'P-T1' else ('할인' if fxid == 'P-T2' else ('재고 적음' if tot and tot <= 3 else '')) %}
+      <a class="kcard" href="/kiosk/item/{{it.sku}}"><span class="kimg"><img src="{{ imgsrc(it) }}" alt="">{% if badge %}<em class="kbadge {{ {'신상':'new','할인':'sale','재고 적음':'low'}[badge] }}">{{badge}}</em>{% endif %}</span><b>{{it.name}}</b>
         <span class="pr">{{ "{:,}".format(it.price) }}원</span>
         {% if it.place %}<span class="lc">{{ cx.icon('pin', 30) }}{{it.place.zone}}구역 · {{ it.place.fixture_name.split(' ', 1)[1] if ' ' in it.place.fixture_name else it.place.fixture_name }}</span>
         {% else %}<span class="lc none">위치 미등록</span>{% endif %}
@@ -67,6 +100,7 @@
 {% if step == 'cat' %}
 {% elif step == 'sub' %}{{ ks.knav('/kiosk', '종류 다시 고르기') }}
 {% elif step == 'color' %}{{ ks.knav('/kiosk?step=sub&cat=' ~ cat, '세부 종류 다시') }}
+{% elif pz %}{{ ks.knav() }}
 {% else %}{{ ks.knav('/kiosk?step=color&cat=' ~ cat ~ '&sub=' ~ sub, '색 다시 고르기') }}{% endif %}
 </div>
 {% if step != 'cat' %}{{ ks.kidle(90) }}{% endif %}
