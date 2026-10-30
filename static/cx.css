@@ -578,3 +578,6 @@ html.ww-inframe{--safe:20px}
 
 /* 매장지도 버튼 안 로고가 원래 크기(512px)로 커지지 않게 */
 .tb2 .fab .fab-b{overflow:hidden}.tb2 .fab .fab-b img{width:100%;height:100%;display:block;object-fit:cover}
+
+/* 아래 탭 글씨(홈 · 카테고리 · 찜 · MY): 회색을 더 진하게 */
+.tb2 .tab-i:not(.on):not(.fab)>span:last-child{color:#4A5260;font-weight:600}
