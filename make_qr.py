@@ -39,7 +39,7 @@ h1{{font-size:15pt;margin:0 0 8px}} p.sub{{color:#666;font-size:10pt;margin:0 0 
 .card img{{width:100%;max-width:{qr}mm}}
 .id{{font-weight:800;font-size:{idsz}pt;margin-top:4px}}
 .nm{{font-size:{nmsz}pt;color:#444}}
-.hint{{font-size:9pt;color:#306A50;margin-top:3px}}
+.hint{{font-size:9pt;color:#1677E8;margin-top:3px}}
 </style></head><body><h1>{title}</h1><p class="sub">{sub}</p>
 <div class="grid">{cards}</div></body></html>"""
 

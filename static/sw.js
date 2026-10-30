@@ -5,7 +5,7 @@ self.addEventListener('push', e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: '새 신고', body: e.data && e.data.text() }; }
   e.waitUntil(self.registration.showNotification(d.title || 'where:wear 신고 접수', {
     body: d.body || '', tag: d.tag || 'ww', renotify: true, requireInteraction: true,
-    icon: '/static/logo/icon-192.png?v=g2', badge: '/static/logo/icon-192.png?v=g2',
+    icon: '/static/logo/icon-192.png?v=b1', badge: '/static/logo/icon-192.png?v=b1',
     vibrate: [200, 100, 200], data: { url: d.url || '/staff/reports' }
   }));
 });

@@ -1,7 +1,7 @@
 /* where:wear 키오스크 · 직원 화면 — 피그마 where:wear_KIOSK / where-wear_STAFF 기준
    (고객 QR 화면은 cx.css) */
-:root{--blue:#306A50;--blue-d:#23523D;--navy:#306A50;--blue50:#EDF4F0;--blue100:#DDEBE3;--btx:#2A5E46;
-  --gold:#E8B653;--goldD:#C9952B;--gold50:#FBF3E2;
+:root{--blue:#1677E8;--blue-d:#0E5FC4;--navy:#1677E8;--blue50:#EAF4FF;--blue100:#D6EAFF;--btx:#0F62C9;
+  --gold:#3DD6CF;--goldD:#12A8A0;--gold50:#E6FBF9;
   --ok:#1D7A46;--ok50:#EAF6EF;--amber:#A1660A;--amb50:#FEF4E0;--red:#D93025;--red50:#FDECEA;--orange:#E8590C;
   --ink:#1B1F2D;--g700:#485366;--g500:#8A94A5;--g400:#AFB7C6;--g300:#D7DCE6;--g200:#E3E7EE;--g100:#F1F3F7;--g50:#F7F9FC;
   --dark:#0F1726;--safe:env(safe-area-inset-bottom)}
@@ -385,7 +385,7 @@ details.mv select:first-child{flex:1;min-width:0}
 .fxcount{margin-top:8px;padding:8px 12px;border-radius:10px;background:var(--ok50);color:var(--ok);font-size:13px;font-weight:700}
 .regres{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;border:2px solid var(--g200);background:#fff;animation:rrin .25s ease}
 @keyframes rrin{from{transform:scale(.96);opacity:.4}to{transform:none;opacity:1}}
-.regres.ok{border-color:#C9952B;background:var(--ok50)}
+.regres.ok{border-color:#12A8A0;background:var(--ok50)}
 .regres.bad{flex-direction:column;align-items:flex-start;gap:4px;border-color:var(--red);background:var(--red50);animation:rrshake .35s}
 @keyframes rrshake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .regres.undo{flex-direction:column;align-items:flex-start;gap:2px;background:var(--g50)}
@@ -420,7 +420,7 @@ details.mv select:first-child{flex:1;min-width:0}
 .icats a small{font-weight:500;color:var(--g500)}.icats a.on{background:var(--navy);border-color:var(--navy);color:#fff}.icats a.on small{color:#fff;opacity:.8}
 .ilist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .ilist a{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 8px;border-radius:14px;background:#fff;border:1px solid var(--g200)}
-.ilist li.just a{border-color:#C9952B;background:var(--ok50)}
+.ilist li.just a{border-color:#12A8A0;background:var(--ok50)}
 .ilist img{width:46px;height:56px;border-radius:8px;object-fit:cover;background:var(--g100);flex:none}
 .ib{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.ib b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ib .im{font-size:11.5px;color:var(--g500)}.ib .il{display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:var(--btx)}.ib .il em{font-style:normal;color:var(--red)}
@@ -465,9 +465,9 @@ details.mv select:first-child{flex:1;min-width:0}
 .slang a{display:flex;align-items:center;justify-content:center;gap:6px}
 
 /* 키오스크 첫 화면: 사진을 꽉 채우고 왼쪽을 어둡게 → 큰 흰 글씨 (리테일 앱 배너 느낌) */
-.kcat{position:relative;border:0;background:#1B2A22;box-shadow:0 12px 28px rgba(27,31,45,.14)}
+.kcat{position:relative;border:0;background:#0B2447;box-shadow:0 12px 28px rgba(27,31,45,.14)}
 .kcat img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.kcat::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,30,22,.86) 0,rgba(15,30,22,.55) 50%,rgba(15,30,22,.08) 100%)}
+.kcat::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,26,54,.86) 0,rgba(6,26,54,.55) 50%,rgba(6,26,54,.08) 100%)}
 .kcat .t{position:relative;z-index:2}
 .kcat b{color:#fff}.kcat small{color:rgba(255,255,255,.85)!important}
 .kcat .t::after{content:"";display:block;width:56px;height:6px;border-radius:3px;background:var(--gold);margin-top:18px}
@@ -479,10 +479,10 @@ html.ww-inframe{--safe:20px}
 /* =====================================================================
    키오스크 v3 — 고객 홈과 같은 디자인 (어두운 머리 · 위치 표시 · 매장 한눈에 보기)
    ===================================================================== */
-body.kiosk{--dk:#2C302D;--dk2:#3A3F3B;--sale:#D8452E}
+body.kiosk{--dk:#2A2F38;--dk2:#3A3F3B;--sale:#D8452E}
 .ktop{background:var(--dk);padding:30px 48px;gap:18px}
 .kbrand{display:flex;align-items:center;gap:14px;color:#fff;font-size:40px;font-weight:900;letter-spacing:-.03em}
-.kbrand i{font-style:normal;color:#9FD3B5;margin:0 2px}
+.kbrand i{font-style:normal;color:#9CCBFA;margin:0 2px}
 .kb-logo{width:60px;height:60px;border-radius:18px;background:var(--blue);display:grid;place-items:center;overflow:hidden}
 .kb-logo img{width:60px;height:60px;display:block}
 .khere{margin-left:auto;display:flex;align-items:center;gap:8px;padding:14px 24px 14px 18px;border-radius:40px;background:#fff;
@@ -507,7 +507,7 @@ body.kiosk{--dk:#2C302D;--dk2:#3A3F3B;--sale:#D8452E}
 .kcat.kp .t::after{background:#FF9C86}
 
 /* 매장 한눈에 보기 */
-.kmapcard{display:flex;flex-direction:column;gap:18px;padding:26px;border-radius:30px;background:#F5F6F4}
+.kmapcard{display:flex;flex-direction:column;gap:18px;padding:26px;border-radius:30px;background:#F5F7FA}
 .kmc-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .kmc-h b{font-size:38px;font-weight:900;letter-spacing:-.03em}.kmc-h span{font-size:24px;font-weight:700;color:var(--blue)}
 .kmm{position:relative;width:100%;border-radius:22px;background:#fff;border:2px solid #E5E8E5}
@@ -515,13 +515,13 @@ body.kiosk{--dk:#2C302D;--dk2:#3A3F3B;--sale:#D8452E}
   background:#EEF0EE;border:2px solid #E1E4E1;color:var(--ink);overflow:hidden}
 .kmz b{font-size:32px;font-weight:900;color:var(--blue);line-height:1.1}
 .kmz:active,.kmf:active{background:var(--blue100)}
-.kmz.zA{background:#E2EFE7;border-color:#BBD7C6}
+.kmz.zA{background:#DEEBFA;border-color:#B8D3F2}
 .kmz.zP{background:#FBEDEE;border-color:#F3D3D6;flex-direction:row;align-items:center;gap:12px;padding:6px 18px}.kmz.zP b{color:#C0392B}
 .kmf{flex-direction:row;align-items:center;justify-content:center;gap:8px;font-size:22px;color:var(--g700);background:#F7F7F5}
 .kmf .ic{color:var(--blue)}
 .kmf.off{background:repeating-linear-gradient(45deg,#F3F3F1 0 8px,#E9EAE7 8px 16px);color:var(--g500)}
 .kmm-me{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:var(--blue);border:6px solid #fff;
-  box-shadow:0 0 0 10px rgba(48,106,80,.22);font-style:normal;z-index:4}
+  box-shadow:0 0 0 10px rgba(22,119,232,.22);font-style:normal;z-index:4}
 .kmm-me em{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);padding:6px 14px;border-radius:14px;background:var(--dk);color:#fff;
   font-style:normal;font-size:22px;font-weight:800;white-space:nowrap}
 .kmc-q{display:grid;grid-template-columns:1fr 1fr;gap:16px}

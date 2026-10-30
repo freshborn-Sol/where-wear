@@ -7,11 +7,11 @@
   {% for f in map.fixtures %}
     {% set on = (f.id == map.target) %}
     <rect x="{{f.x}}" y="{{f.y}}" width="{{f.w}}" height="{{f.h}}" rx="5"
-          fill="{{ '#306A50' if on else '#e8edf4' }}" stroke="{{ '#23523D' if on else '#c6d0dd' }}"/>
+          fill="{{ '#1677E8' if on else '#e8edf4' }}" stroke="{{ '#0E5FC4' if on else '#c6d0dd' }}"/>
     <text x="{{f.x + f.w/2}}" y="{{f.y + f.h/2 + 5}}" class="fx {{'on' if on else ''}}">{{f.id}}</text>
   {% endfor %}
   {% if map.path %}
-    <polyline points="{{map.path}}" fill="none" stroke="#C9952B" stroke-width="5"
+    <polyline points="{{map.path}}" fill="none" stroke="#12A8A0" stroke-width="5"
               stroke-dasharray="10 7" stroke-linecap="round"/>
   {% endif %}
   {% for f in map.fixtures if f.id == map.at %}
