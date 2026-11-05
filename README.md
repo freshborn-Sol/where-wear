@@ -26,22 +26,31 @@ python app.py                 # http://localhost:5001/go?at=A-H1
 - 사진으로 찾기(AI)를 쓰려면 [Google AI Studio](https://aistudio.google.com/apikey)에서 받은 Gemini 키를 `gemini_key.txt`에 넣으세요. 키는 `.gitignore`로 제외되어 저장소에 없습니다. 키가 없으면 사진의 대표 색으로 찾습니다.
 - 발표용 예시 데이터: `/demo`
 - macOS: `서버켜기.command` 더블클릭
+- PC로 열면 휴대폰 · 키오스크 모양 틀 안에 보입니다. 틀 없이 보려면 주소 끝에 `?noframe=1`
 
 ---
 
 ## 한눈에 보기
 
-| 손님 QR · 홈 | 사진으로 찾기 (AI) | 위치 + 2D 길 안내 | English | 직원 신고함 |
+**손님 (매장 QR)** — 앱 설치 없이 휴대폰으로 바로 열림
+
+| 홈 | 사진으로 찾기 (AI) | 위치 + 2D 길 안내 | 매장 지도 | English |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screens/qr_home.jpg" width="160"> | <img src="docs/screens/qr_photo.jpg" width="160"> | <img src="docs/screens/qr_item.jpg" width="160"> | <img src="docs/screens/qr_item_en.jpg" width="160"> | <img src="docs/screens/staff_reports.jpg" width="160"> |
-| 매장 QR을 찍으면<br>앱 없이 바로 열림 | Vision AI가 옷 특징을 뽑고<br>가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단"<br>+ 경로 · 사이즈별 재고 | 휴대폰 언어에 맞춰<br>영어 화면 | 손님 신고 · 호출 확인<br>+ 한 번에 도는 경로 |
+| <img src="docs/screens/qr_home.jpg" width="160"> | <img src="docs/screens/qr_photo.jpg" width="160"> | <img src="docs/screens/qr_item.jpg" width="160"> | <img src="docs/screens/qr_map.jpg" width="160"> | <img src="docs/screens/qr_item_en.jpg" width="160"> |
+| 지금 내 자리 · 이번 주 배너<br>· 매장 한눈에 보기 · 추천 | Vision AI가 옷 특징을 뽑고<br>가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단"<br>+ 경로 · 사이즈별 재고 | 피팅룸 · 계산대 · 매대까지<br>거리와 걸리는 시간 | 휴대폰 언어에 맞춰<br>영어 화면 |
 
-| 키오스크 (40대 이상) | 종이 지도 (80mm 감열지) |
-|:---:|:---:|
-| <img src="docs/screens/kiosk_item.jpg" width="474"> | <img src="docs/screens/kiosk_print.jpg" width="356"> |
-| 큰 글씨 · 글자 입력 없이 3번 터치 | 도면 + 꺾는 곳마다 번호 안내 (왼쪽 → 오른쪽 순서) |
+**키오스크 (입구 · 40대 이상)** 와 **직원**
 
-> 화면은 모두 이 저장소의 코드를 실행해 캡처했습니다. 신고함 숫자는 시연 모드(`/demo`)의 예시 데이터입니다.
+| 키오스크 첫 화면 | 키오스크 위치 | 종이 지도 (80mm 감열지) | 직원 등록 | 직원 신고함 |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="docs/screens/kiosk_home.jpg" width="170"> | <img src="docs/screens/kiosk_item.jpg" width="170"> | <img src="docs/screens/kiosk_print.jpg" width="250"> | <img src="docs/screens/staff_register.jpg" width="140"> | <img src="docs/screens/staff_reports.jpg" width="140"> |
+| 큰 글씨 · 글자 입력 없이 터치만<br>종류마다 구역 표시 · 매장 한눈에 보기 | 문장 길 안내 + 도면<br>창고에만 있는 사이즈는 가져다 드림 | 도면 + 꺾는 곳마다 번호 안내<br>(왼쪽 → 오른쪽 순서) | 선반 QR → 옷 태그<br>연속 스캔으로 위치 등록 | 손님 신고 · 호출 확인<br>+ 한 번에 도는 경로 |
+
+**PC · 노트북에서 열면** — 고객 · 직원 화면은 휴대폰 틀, 키오스크는 32인치 세로형(1080×1920) 틀 안에서 스크롤해 볼 수 있습니다 (`?noframe=1`이면 틀 없이).
+
+<p align="center"><img src="docs/screens/pc_frames.jpg" width="720"></p>
+
+> 화면은 모두 이 저장소의 코드를 실행해 캡처했습니다 (2026.11). 신고함 숫자는 시연 모드(`/demo`)의 예시 데이터, 사진으로 찾기는 실제 Gemini 응답을 저장해 둔 결과입니다.
 
 ---
 
@@ -121,13 +130,16 @@ python app.py                 # http://localhost:5001/go?at=A-H1
 
 | 주소 | 누구 | 내용 |
 |---|---|---|
-| `/go?at=A-H1` | 손님 (QR) | 글자 검색 · 사진으로 찾기(AI) · 종류 타일 · 인기 · 급상승 검색어 |
-| `/search` | 손님 | 종류 · 색 · 핏 · 무늬 필터, 딱 맞는 옷은 가까운 순 |
+| `/go?at=A-H1` | 손님 (QR) | 홈 — 글자 · 사진(AI) 검색, 이번 주 배너(구역 · 거리), 종류 바로가기, 매장 한눈에 보기, 추천 옷, 인기 · 급상승 검색어 |
+| `/search` · `/cats` | 손님 | 종류 · 색 · 핏 · 무늬 필터(딱 맞는 옷은 가까운 순) · 종류별 사진 타일과 진열 위치 |
 | `/item/<sku>` | 손님 | 구역 · 집기 · 단 위치, 2D 길 안내, 사이즈별 매장 · 창고 재고, **찾았어요! / 찾는 게 없나요?** |
+| `/map` | 손님 | 매장 지도 — 피팅룸 · 계산대 · 신상 · 할인 매대까지 길 안내 (거리 · 걸리는 시간) |
 | `/likes` · `/me` | 손님 | 찜목록(구역 순으로 모아 보기) · 내 사이즈(휴대폰에만 저장) |
-| `/kiosk` | 키오스크 | 큰 글씨 · 3번 터치 · 문장 길 안내 · 80mm 종이 지도 출력 |
+| `/kiosk` | 키오스크 | 큰 글씨 · 터치만으로 종류 → 세부 종류 → 색, 구역 표시 · 신상 · 세일 칸 · 매장 한눈에 보기 |
+| `/kiosk/place/<FIT·COUNTER>` | 키오스크 | 피팅룸 · 계산대 가는 길 |
+| `/kiosk/print/<sku>` | 키오스크 | 80mm 감열지 종이 지도 출력 (옷 QR 포함) |
 | `/staff` | 직원 | 선반 QR → 옷 태그 연속 스캔 등록, 사진 한 장으로 상품 등록(AI가 특징 입력) |
-| `/staff/reports` | 직원 | 기다리는 손님 · 위치 고칠 것, 잠금화면 알림 · 2분 미응답 재알림 |
+| `/staff/reports` | 직원 | 기다리는 손님 · 위치 고칠 것 · 한 번에 도는 길, 잠금화면 알림 · 2분 미응답 재알림 |
 | `/staff/summary` | 점장 | 찾은 비율 · 할 일 · 자주 못 찾는 자리 지도 |
 | `/lang` | 공통 | 손님 · 키오스크 · 직원 화면별 한국어 / English 전환 |
 
@@ -142,6 +154,7 @@ app.py            웹 서버 (손님 · 키오스크 · 직원 화면 + API)
 vision.py         사진 → Gemini → 특징(JSON) → 비슷한 옷 순위
 search.py         글자 검색 (한국어 · 영어 색 · 종류 · 핏 사전)
 i18n.py           영어 화면
+static/frame.js   PC에서 열면 휴대폰 · 키오스크 모양 틀로 보여 주기
 store_map.py      매장 도면 (5개 구역 · 집기 21개 · 피팅룸 · 창고 · 계산대)
 seed.py           가상 매장 데이터 · 색상표
 webpush.py        직원 잠금화면 알림 (Web Push)

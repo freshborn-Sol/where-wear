@@ -29,7 +29,7 @@ WORDS = {
     "무지": "Solid", "스트라이프": "Stripe", "체크": "Check", "로고·그래픽": "Logo/Graphic", "꽃무늬": "Floral", "기타": "Other",
     "핏": "Fit", "무늬": "Pattern", "패턴": "Pattern", "핏·무늬": "Fit & Pattern",
     # 단
-    "상단": "Upper", "중단": "Middle", "하단": "Lower", "상": "Up", "중": "Mid", "하": "Low",
+    "신상품": "New arrivals", "신상": "New", "상단": "Upper", "중단": "Middle", "하단": "Lower", "상": "Up", "중": "Mid", "하": "Low",
     # 상품명 낱말
     "3팩": "3-Pack", "UV": "UV", "감탄팬츠": "Comfort Pants", "경량": "Light", "골지": "Ribbed", "그래픽": "Graphic",
     "기모": "Fleece-lined", "긴팔": "Long-sleeve", "나일론": "Nylon", "다운": "Down", "더비": "Derby", "데님": "Denim",
@@ -371,6 +371,30 @@ def _words(s):
         out.append(_WORD_RX.sub(lambda m: " " + WORDS[m.group(0)] + " ", tok))
     r = re.sub(r"\s+", " ", " ".join(out)).strip()
     return re.sub(r"\s+([)\],.])", r"\1", re.sub(r"([(\[])\s+", r"\1", r))
+
+
+# QR v3 홈 · 매장지도 · 카테고리 (2026.11)
+PHRASES.update({
+    "이번 주 신상품,": "New this week,", "입구 앞에 모았어요": "all by the entrance",
+    "할인 매대에서": "Pick something light", "가볍게 골라 보세요": "from the sale table",
+    "따뜻한 아우터는": "Warm outerwear is", "C구역에 모여 있어요": "all in Zone C",
+    "AI 사진 검색": "AI photo search", "사진 한 장이면": "One photo is all it takes —",
+    "매장에서 찾아 드려요": "we'll find it in store", "SNS에서 본 그 옷 · 캡처도 OK": "Seen it on social media? Screenshots work too",
+    "세일": "Sale", "지금 매장 한눈에 보기": "The store at a glance", "크게 보기": "Bigger", "1층": "1F",
+    "구역을 눌러 보세요": "Tap a zone", "여기": "Here", "매장 지도 크게 보기": "Open the big store map",
+    "처음 오셨나요? 매장 이용 가이드": "First time here? How to use this store",
+    "옷 찾기부터 직원 호출까지 1분이면 끝나요": "From finding clothes to calling staff — done in a minute",
+    "손님, 이 옷 어때요?": "How about these?", "전체보기": "See all", "다른 손님들은 이걸 찾아요": "What other shoppers look for",
+    "옷 위치 안내 프로토타입": "in-store clothing guide prototype",
+    "도움이 필요하면 상품 화면의 '찾는 게 없나요?'로 직원을 불러 주세요 · 사진": "Need help? Tap 'Can't find it?' on an item to call staff · Photo",
+    "홈": "Home", "카테고리": "Categories", "매장지도": "Map", "매장 지도": "Store map", "지금": "You are", "앞이에요": "now",
+    "주황 점이 지금 내 위치, 점선이 가는 길이에요. 구역을 누르면 그 구역 옷을 보여 드려요.": "The orange dot is you and the dotted line is the route. Tap a zone to see its clothes.",
+})
+PATTERNS.insert(0, _p(r"· 손님은 (.+) 앞", lambda m, t: f"· You are at {t(m[1])}"))
+PHRASES["전체 손님"] = "All shoppers"
+PATTERNS.insert(0, _p(r"손님, (.+) 어디 있는지 찾으세요\?", lambda m, t: f"Looking for {t(m[1]).lower()}?"))
+PATTERNS.insert(0, _p(r"(\d+:\d+) 기준", lambda m, t: f"as of {m[1]}"))
+PATTERNS.insert(0, _p(r"여기서 약 (\d+)m", lambda m, t: f"about {m[1]} m from here"))
 
 def tr(s):
     """한 덩어리 글자를 영어로. 앞뒤 공백은 그대로 둔다."""
