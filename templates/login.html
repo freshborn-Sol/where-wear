@@ -4,10 +4,14 @@
 {{ cx.appbar('로그인' if mode == 'login' else '회원가입', back='/me?at=' ~ at ~ '&next=' ~ (nxt|urlencode)) }}
 <main class="page">
   <div class="lgbrand"><img src="{{ url_for('static', filename='logo/icon.svg') }}" alt=""><div><b>where<i>:</i>wear</b>
-    <small>{{ '다른 매장에서도 내 사이즈 불러오기' if mode == 'login' else '아이디 하나로 내 사이즈를 저장해 두세요' }}</small></div></div>
+    {% if mode == 'login' %}<small>다른 매장에서도 내 사이즈 불러오기</small>{% endif %}</div></div>
   {% if err %}<p class="lgerr">{{ cx.icon('alert', 16) }}<span>{{ err }}</span></p>{% endif %}
   <form method="post" class="meform" id="lf" autocomplete="on">
     <input type="hidden" name="next" value="{{ nxt }}">
+    {% if mode == 'signup' %}
+    <label class="fld"><span>닉네임<small>1~12자 · ‘~님’으로 불러요</small></span>
+      <span class="inp"><input name="nickname" value="{{ request.form.get('nickname', '') }}" required maxlength="12" autocomplete="nickname"></span></label>
+    {% endif %}
     <label class="fld"><span>아이디<small>영어 · 숫자 4~20자</small></span>
       <span class="inp"><input name="username" value="{{ request.form.get('username', '') }}" required minlength="4" maxlength="20" pattern="[A-Za-z0-9_]{4,20}" autocapitalize="off" autocomplete="username"></span></label>
     <label class="fld"><span>비밀번호{% if mode == 'signup' %}<small>8자 이상</small>{% endif %}</span>

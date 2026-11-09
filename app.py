@@ -100,6 +100,8 @@ def ensure_schema():
     # 손님 로그인 (QR): 비밀번호는 해시로만 저장, profile = MY 정보(키·몸무게·내 사이즈·설정) JSON
     con.execute("""CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE COLLATE NOCASE,
                    pw TEXT, created TEXT, profile TEXT)""")
+    try: con.execute("ALTER TABLE users ADD COLUMN nickname TEXT")   # 닉네임 ('~님'으로 부를 이름)
+    except sqlite3.OperationalError: pass
     con.commit(); con.close()
 ensure_schema()
 
@@ -196,8 +198,8 @@ def helpers():
     me_user, me_profile = None, None
     if not request.path.startswith("/staff") and session.get("uid"):
         try:
-            u = one("SELECT username, profile FROM users WHERE id=?", (session["uid"],))
-            if u: me_user, me_profile = u["username"], json.loads(u["profile"] or "null")
+            u = one("SELECT username, nickname, profile FROM users WHERE id=?", (session["uid"],))
+            if u: me_user, me_profile = u["nickname"] or u["username"], json.loads(u["profile"] or "null")
         except Exception: pass
     sname, snames = "", []
     if request.path.startswith("/staff"):
@@ -1525,15 +1527,17 @@ def signup():
     if request.method == "POST":
         f = request.form
         name, pw = (f.get("username") or "").strip(), f.get("password") or ""
-        if not USER_RX.fullmatch(name): err = "아이디는 영어 · 숫자 · _ 로 4~20자예요"
+        nick = " ".join((f.get("nickname") or "").split())
+        if not 1 <= len(nick) <= 12: err = "닉네임은 1~12자로 적어 주세요"
+        elif not USER_RX.fullmatch(name): err = "아이디는 영어 · 숫자 · _ 로 4~20자예요"
         elif len(pw) < 8: err = "비밀번호는 8자 이상으로 해 주세요"
         elif pw != f.get("password2"): err = "비밀번호가 서로 달라요"
         elif one("SELECT 1 x FROM users WHERE username=?", (name,)): err = "이미 있는 아이디예요"
         else:
             try: prof = clean_profile(json.loads(f.get("profile") or "null"))   # 이 휴대폰에 저장해 둔 MY 정보를 그대로 가져감
             except ValueError: prof = {}
-            uid = db().execute("INSERT INTO users (username, pw, created, profile) VALUES (?,?,?,?)",
-                               (name, generate_password_hash(pw), ts(), json.dumps(prof, ensure_ascii=False))).lastrowid
+            uid = db().execute("INSERT INTO users (username, nickname, pw, created, profile) VALUES (?,?,?,?,?)",
+                               (name, nick, generate_password_hash(pw), ts(), json.dumps(prof, ensure_ascii=False))).lastrowid
             db().commit()
             session.clear(); session.permanent = True; session["uid"] = uid
             return redirect(nxt)
@@ -1553,9 +1557,9 @@ def api_me():
         prof = clean_profile((request.get_json(force=True) or {}).get("profile"))
         db().execute("UPDATE users SET profile=? WHERE id=?", (json.dumps(prof, ensure_ascii=False), uid)); db().commit()
         return jsonify(ok=True, login=True, profile=prof)
-    u = one("SELECT username, profile FROM users WHERE id=?", (uid,))
+    u = one("SELECT username, nickname, profile FROM users WHERE id=?", (uid,))
     if not u: session.clear(); return jsonify(ok=False, login=False)
-    return jsonify(ok=True, login=True, user=u["username"], profile=json.loads(u["profile"] or "null"))
+    return jsonify(ok=True, login=True, user=u["nickname"] or u["username"], profile=json.loads(u["profile"] or "null"))
 
 @app.route("/me")
 def me():
