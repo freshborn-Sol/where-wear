@@ -36,7 +36,7 @@
       <img src="{{ url_for('static', filename=img) }}" alt="">
       <div class="side">
         {% if err %}<div class="warnmsg"><b>{{ cx.icon('alert', 14) }}AI 분석 실패</b>{{ err.replace('AI 분석 실패: ', '') }}</div>
-        {% elif a.desc %}<div class="aiq"><b>{{ cx.icon('sparkle', 14) }}AI 분석 결과</b>“{{a.desc}}”</div>{% endif %}
+        {% elif a.desc %}<div class="aiq"><b>{{ cx.icon('image', 14) }}AI 분석 결과</b>“{{a.desc}}”</div>{% endif %}
         <small style="font-size:12px;color:var(--g500)">{{ '칸을 채우고 저장하세요' if err else '틀린 칸만 고치고 저장하세요' }}</small>
         <span class="locchip">{{ cx.icon('pin', 13) }}위치: {{fx}} {{lv}}</span>
       </div>
@@ -72,7 +72,7 @@
 </main>
 {{ ks.stabs('ai') }}
 </div>
-<div id="busy" class="sbusy"><div><span class="spin"></span><b>🤖 AI가 옷을 분석하고 있어요…</b><span>종류 · 색 · 무늬 · 핏을 채우는 중이에요</span></div></div>
+<div id="busy" class="sbusy"><div><span class="spin"></span><b>AI가 옷을 분석하고 있어요…</b><span>종류 · 색 · 무늬 · 핏을 채우는 중이에요</span></div></div>
 <script>function busy(){document.getElementById('busy').style.display='flex'}
 window.addEventListener('pageshow',()=>document.getElementById('busy').style.display='none');</script>
 {% endblock %}

@@ -7,7 +7,7 @@
     <a class="hm-here" href="/map?at={{at}}">{{ cx.icon('pin', 15) }}<span>{{ here.name if here else '매장 입구' }}</span></a>
     <a class="hm-bell" href="/info?at={{at}}" aria-label="안내 · 설정">{{ cx.icon('bell', 24) }}</a>
   </header>
-  {% set sb_dark = True %}{% set sb_ph = '손님, ' ~ (popular[0] if popular else '찾는 옷') ~ ' 어디 있는지 찾으세요?' %}
+  {% set sb_dark = True %}{% set sb_ph = '옷 이름이나 색으로 찾기' %}
   {% include "_searchbar.html" %}
 
   <section class="hm-hero" id="hero" aria-label="매장 소식">
@@ -23,9 +23,9 @@
     {% endfor %}
     <label class="hsl photo">
       <span class="hs-cam">{{ cx.icon('camera', 44) }}</span>
-      <span class="hs-loc">{{ cx.icon('sparkle', 14) }}AI 사진 검색</span>
+      <span class="hs-loc">{{ cx.icon('camera', 14) }}사진으로 찾기</span>
       <b class="hs-t">사진 한 장이면<br>매장에서 찾아 드려요</b>
-      <small class="hs-tags">SNS에서 본 그 옷 · 캡처도 OK</small>
+      <small class="hs-tags">SNS에서 본 옷 · 캡처 사진도 돼요</small>
       <em class="hs-n">{{total}} / {{total}}</em>
       <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)">
     </label>
@@ -58,12 +58,12 @@
   </section>
 
   <a class="hm-guide" href="/info?at={{at}}">
-    <div><b>처음 오셨나요? 매장 이용 가이드</b><small>옷 찾기부터 직원 호출까지 1분이면 끝나요</small></div>
+    <div><b>매장 이용 가이드</b><small>옷 찾는 법 · 직원 부르는 법</small></div>
     <span class="hg-i">{{ cx.icon('map', 30) }}</span>
   </a>
 
   {% if ranking %}
-  <div class="hm-sec"><b>손님, 이 옷 어때요?</b><a href="/search?at={{at}}">전체보기 {{ cx.icon('chev', 14) }}</a></div>
+  <div class="hm-sec"><b>지금 많이 보는 옷</b><a href="/search?at={{at}}">전체보기 {{ cx.icon('chev', 14) }}</a></div>
   <div class="hm-recs">
     {% for it in ranking %}
     {% set fxid = it.place.fixture_id if it.place else '' %}

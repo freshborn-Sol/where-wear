@@ -6,7 +6,7 @@
   <section class="aiq">
     <img src="{{ url_for('static', filename=qimg) }}" alt="올린 사진">
     <div>
-      <div class="aiq-h">{{ cx.icon('sparkle', 15) }}AI가 본 특징
+      <div class="aiq-h">{{ cx.icon('image', 15) }}AI가 본 특징
         <small>{% if q._cached %}· 저장된 결과{% else %}· {{ (q._ms/1000)|round(1) }}초{% endif %}</small></div>
       <div class="tags">
         <span class="tg">{{q.category}}</span><span class="tg">{{q.subcat}}</span>

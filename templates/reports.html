@@ -114,7 +114,7 @@
     <li><span class="chip {{ 'r' if r.resolution == '재고 없음' else 'ok' }}">{{ r.resolution }}</span>{{ r.name or r.sku }} · {{ r.fixture_id or '-' }}<span class="sp"></span><small>{% if r.resolved_by %}<b class="by">{{ r.resolved_by }}</b> · {% endif %}{{ (r.resolved_at or '')[11:16] }}</small></li>
   {% else %}<li class="empty-l">아직 없어요</li>{% endfor %}
   </ul>
-  <a class="linkrow" href="/staff/summary">📊 점장 요약 보기 (최근 7일){{ cx.icon('chev', 16) }}</a>
+  <a class="linkrow" href="/staff/summary">점장 요약 보기 (최근 7일){{ cx.icon('chev', 16) }}</a>
 </main>
 {{ ks.stabs('rep') }}
 </div>
@@ -129,7 +129,7 @@
     document.getElementById('newreq').hidden = false;
     fresh.forEach(i => document.querySelector('.wcard[data-id="'+i+'"]').classList.add('new'));
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    document.title = '🔔 새 요청 · 신고함';
+    document.title = '새 요청 · 신고함';
   }
   try{ localStorage.setItem('ww_seen', JSON.stringify(ids)); localStorage.setItem('ww_seen_init', '1'); }catch(e){}
   pushInit();
