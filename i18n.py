@@ -365,7 +365,7 @@ PHRASES.update({
     "옷 이름이나 색으로 찾기": "Search by name or color", "매장 이용 가이드": "Store guide", "옷 찾는 법 · 직원 부르는 법": "How to find items · how to call staff",
     "지금 많이 보는 옷": "Popular right now", "사진으로 찾기": "Search by photo", "SNS에서 본 옷 · 캡처 사진도 돼요": "Seen it online? Screenshots work too",
     "‘찾았어요’를 누르면 위치 정보가 더 정확해져요": "Tap ‘Found it’ to keep locations accurate",
-    "첫 화면으로 가려면 '찾았어요!'를 누르세요.": "Tap 'Found it!' to go back to the start.", "첫 화면으로": "Back to start", "처음으로": "Back to start", "내 사이즈 저장": "Save my size", "찾았어요": "Found it", "고마워요": "Thanks",
+    "첫 화면으로 가려면 '찾았어요!'를 누르세요.": "Tap 'Found it!' to go back to the start.", "첫 화면으로": "Back to start", "처음으로": "Back to start", "내 사이즈 저장": "Save my size", "다른 매장에서도 내 사이즈 불러오기": "Load your size at any store", "찾았어요": "Found it", "고마워요": "Thanks",
     "직원이 가고 있어요": "Staff is on the way", "한 번에 발표 준비": "One-click demo setup", "AI가 옷을 분석하고 있어요…": "AI is analyzing the item…",
     "점장 요약 보기 (최근 7일)": "Manager summary (last 7 days)", "새 요청 · 신고함": "New request · Requests",
     "발표 시연 모드 (시연 상황 만들기 · 지우기)": "Demo mode (create · clear demo data)",

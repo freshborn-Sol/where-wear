@@ -4,7 +4,7 @@
 {{ cx.appbar('로그인' if mode == 'login' else '회원가입', back='/me?at=' ~ at ~ '&next=' ~ (nxt|urlencode)) }}
 <main class="page">
   <div class="lgbrand"><img src="{{ url_for('static', filename='logo/icon.svg') }}" alt=""><div><b>where<i>:</i>wear</b>
-    <small>{{ '로그인하면 다른 휴대폰 · 다른 매장에서도 내 사이즈를 불러와요' if mode == 'login' else '아이디 하나로 내 사이즈를 저장해 두세요' }}</small></div></div>
+    <small>{{ '다른 매장에서도 내 사이즈 불러오기' if mode == 'login' else '아이디 하나로 내 사이즈를 저장해 두세요' }}</small></div></div>
   {% if err %}<p class="lgerr">{{ cx.icon('alert', 16) }}<span>{{ err }}</span></p>{% endif %}
   <form method="post" class="meform" id="lf" autocomplete="on">
     <input type="hidden" name="next" value="{{ nxt }}">
@@ -20,8 +20,7 @@
     <button class="btn primary">{{ '로그인' if mode == 'login' else '가입하고 로그인' }}</button>
   </form>
   <p class="foot">{% if mode == 'login' %}처음이세요? <a href="/signup?at={{at}}&next={{ nxt|urlencode }}">회원가입</a>
-    {% else %}이미 아이디가 있어요 · <a href="/login?at={{at}}&next={{ nxt|urlencode }}">로그인</a>{% endif %}<br>
-    <span style="font-weight:500">로그인하지 않아도 모든 기능을 쓸 수 있어요</span></p>
+    {% else %}이미 아이디가 있어요 · <a href="/login?at={{at}}&next={{ nxt|urlencode }}">로그인</a>{% endif %}</p>
 </main>
 {{ cx.tabbar('me') }}
 {% if mode == 'signup' %}<script>try{ document.getElementById('prof').value = localStorage.getItem('ww_body') || ''; }catch(e){}</script>{% endif %}
