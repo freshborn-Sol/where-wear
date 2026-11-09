@@ -396,6 +396,25 @@ PATTERNS.insert(0, _p(r"손님, (.+) 어디 있는지 찾으세요\?", lambda m,
 PATTERNS.insert(0, _p(r"(\d+:\d+) 기준", lambda m, t: f"as of {m[1]}"))
 PATTERNS.insert(0, _p(r"여기서 약 (\d+)m", lambda m, t: f"about {m[1]} m from here"))
 
+
+# 2026.11 피드백 반영: 말로 찾기 · 키오스크 이름으로 찾기 · 지도 사진 저장 · 휴대폰으로 받기
+PHRASES.update({
+    "말로 찾기": "Voice search", "‘찾았어요’를 누르면 보다 정확한 서비스를 제공해드려요!": "Tap 'Found it!' to help us keep locations accurate!", "검색": "Search", "말씀해 주세요": "Go ahead, I'm listening", "그만하기": "Stop",
+    '예) "검정 후드티", "흰 운동화"': 'e.g. "black hoodie", "white sneakers"', '예) "검정 후드티"': 'e.g. "black hoodie"',
+    "마이크 권한을 허용해 주세요 (설정 → 브라우저 → 마이크)": "Please allow microphone access (Settings → Browser → Microphone)",
+    "잘 못 들었어요. 다시 눌러 주세요": "Didn't catch that. Tap again", "마이크를 쓸 수 없어요. 글자로 찾아 주세요": "Microphone unavailable. Please type instead",
+    "‘찾았어요’를 누르면 이 위치가 맞다고 기록돼, 다음 손님 안내가 더 정확해져요": "Tapping 'Found it!' confirms this spot, so directions get more accurate for the next shopper",
+    "지도 사진으로 저장 · 카톡으로 보내기": "Save map as photo · Share", "사진을 길게 눌러": "Press and hold the photo to",
+    "하거나": "or", "하세요": "", "저장": "save", "공유": "share", "사진 내려받기": "Download photo", "지도 사진을 만들지 못했어요": "Couldn't create the map photo",
+    "키오스크에서 받은 위치예요 · 아래": "Sent from the kiosk · Tap", "을 누르면 사진첩이나 카카오톡으로 보낼 수 있어요": "below to save it or share it",
+    "이름으로 찾기": "Search by name", "글자 · 말로": "Type or speak", "찾기": "Search", "예) 검정 후드티 · 청바지": "e.g. black hoodie · jeans",
+    "많이 찾는 옷": "Popular searches", "누르면 바로 찾아요": "Tap to search", "쌍자음": "Shift", "띄어쓰기": "Space", "다시 찾기": "Search again",
+    "옷 고르기": "Pick", "색 · 핏 · 무늬": "Color · Fit · Pattern", "찾은 옷": "results", "세부 종류 다시": "Back to types",
+    "휴대폰으로 받기": "Send to my phone", "지도 사진으로 저장": "Save map as photo", "휴대폰 카메라로 찍어 주세요": "Scan with your phone camera",
+    "이 옷의 위치와 지도가 휴대폰에 열려요": "This item's location and map open on your phone", "을 누르면 사진첩에 저장하거나": "to save it to your photos or",
+    "카카오톡으로 보낼 수 있어요": "send it via KakaoTalk", "‘지도 사진으로 저장’": "'Save map as photo'", "닫기": "Close",
+})
+
 def tr(s):
     """한 덩어리 글자를 영어로. 앞뒤 공백은 그대로 둔다."""
     if not s or not H.search(s): return s
@@ -512,3 +531,107 @@ def json_obj(o):
     if isinstance(o, dict): return {k: (tr(v) if k in JSON_KEYS and isinstance(v, str) else json_obj(v)) for k, v in o.items()}
     if isinstance(o, list): return [json_obj(v) for v in o]
     return o
+
+# 2026.11 직원 피드백: 직원 이름 · 피팅룸 반납 · 동선 토글 · 바쁨 모드(대형) · 옷 삭제
+PHRASES.update({
+    "김준구": "Kim Jun-gu", "류한솔": "Ryu Han-sol", "이준혁": "Lee Jun-hyeok",
+    "이름 고르기": "Pick name", "누가 쓰는 휴대폰인가요?": "Who is using this phone?",
+    "신고함에 누가 가는지 · 누가 처리했는지 이름으로 남아요": "The inbox shows who is going and who handled it",
+    "로그인 없이 이 휴대폰에만 저장돼요": "Saved on this phone only — no login", "로그인 없이 이 휴대폰에만": "Saved on this phone only — no login",
+    "저장돼요": "", "다른 이름 직접 입력": "Type another name", "확인": "OK", "직원 이름": "Staff name", "이 휴대폰": "This phone",
+    "아직 안 골랐어요": "Not picked yet", "고르기": "Pick", "바꾸기": "Change", "고르기 목록 (쉼표로 나눠요)": "Name list (comma-separated)",
+    "신고함에서 누가 가는지 · 누가 처리했는지 이 이름으로 남아요": "This name shows in the inbox when you go or handle a request",
+    "피팅룸 반납": "Fitting room returns", "제자리로 돌려놓을 옷": "Items to put back", "제자리": "Back to",
+    "피팅룸에서 반납받은 옷 · 걸면서 아래에서 찍어요": "Returned at the fitting room · scan below as you hang them",
+    "위치 없는 옷": "Items without a location", "안내할 위치가 아직 없어요 · 자주 찾는 옷부터": "No location to guide yet · most viewed first",
+    "위치 없는 옷이 없어요.": "Every item has a location.", "찍어서 등록": "Scan to register",
+    "반납받은 옷 태그를 찍어요": "Scan the tag of returned items",
+    "위치는 그대로 두고, 손님 화면에 「피팅룸에 반납된 옷이 있어요」가 떠요. 옷을 제자리에 다시 걸 때": "The location stays the same, and shoppers see 'Some were returned to the fitting room'. When you hang it back, scan the shelf QR → item tag on the",
+    "화면에서 선반 QR → 옷 태그를 찍으면 표시가 사라져요.": "screen and the notice disappears.",
+    "직접 입력": "Manual entry", "반납": "Return", "스캔 없이 처리": "Done without scan", "방금 반납": "Just returned",
+    "제자리에 걸 때": "When hanging it back, scan the shelf QR → item tag on the",
+    "화면에서 선반 QR → 옷 태그를 찍으면 목록과 손님 화면 표시가 사라져요": "screen to clear it from this list and the shopper screen",
+    "돌려놓을 옷이 없어요.": "Nothing to put back.", "위치 없음 · 등록 화면에서 찍어 주세요": "No location · scan it on the Register screen",
+    "손님이 입어 보고 피팅룸에 두고 간 옷 · 위치는 그대로예요": "Tried on and left at the fitting room · location unchanged",
+    "고칠 위치": "To fix", "위치만 보기": "Pins only", "동선 보기": "Show route", "한 번에 도는 길": "One-trip route",
+    "아직 아무도 안 갔어요": "No one on it yet", "제가 갈게요": "I'll go", "제가 할게요": "I'll take it", "내가 처리 중": "You're on it",
+    "처리 중": "on it", "내가": "You:", "손님 화면에도 떠요": "shown on the customer screen", "상품 삭제": "Item deleted", "위치 이동": "Moved",
+    "약": "About", "가장 적게 걷는 순서예요 (아래 목록도 이 순서)": "Shortest walking order (the list below follows it)",
+    "대형 매장은 바쁨 모드를 쓰지 않아요": "Large stores don't use busy mode",
+    "피팅룸에 반납된 옷이 있어요": "Some were returned to the fitting room",
+    "행거에 없으면 피팅룸 직원에게 물어보세요": "If it's not on the rack, ask the fitting room staff",
+    "지금 손님이 많아 직원이 조금 늦을 수 있어요": "It's busy right now — staff may take a little longer",
+    "지금 손님이 많아요": "It's busy right now", "직원이 조금 늦을 수 있어요 · 급하면 계산대에 말씀해 주세요": "Staff may be a little late · ask at the checkout if urgent",
+    "삭제한 옷": "Deleted", "삭제한 옷이 없어요": "No deleted items", "되살리기": "Restore", "되돌리기": "Undo", "방금 삭제": "Just deleted",
+    "삭제한 옷은 손님 화면 · 검색 · 키오스크에 나오지 않아요 · 되살리면 재고와 위치도 그대로 돌아와요": "Deleted items don't appear on shopper screens, search or the kiosk · restoring brings back stock and location",
+    "손님 화면에서 빠져요": "removed from shopper screens", "이 옷 삭제": "Delete this item",
+    "더 이상 팔지 않는 옷 · 잘못 등록한 옷 · 되살릴 수 있어요": "No longer sold · registered by mistake · can be restored",
+    "이 옷을 삭제할까요? 손님 화면 · 검색 · 키오스크에서 빠져요. 옷 목록 「삭제한 옷」에서 되살릴 수 있어요.": "Delete this item? It will be removed from shopper screens, search and the kiosk. You can restore it from Items → Deleted.",
+    "입어 보기만 하고 안 산 옷": "Tried on but not bought", "아직 없어요 · 피팅룸 반납을 찍으면 쌓여요": "None yet · builds up as you scan fitting room returns",
+    "두 글자 이상 입력하면 아래에 나와요 · 누르면 바로 반납": "Type 2+ letters to see items · tap to return",
+    "사이즈 요청": "Size request", "키오스크 앞": "at the kiosk", "직원이 위치 확인 중이에요": "Staff are checking this location", "보통이에요": "Fair",
+})
+PATTERNS[:0] = [
+    _p(r"제자리로 돌려놓을 옷 (\d+)벌", lambda m, t: f"{m[1]} items to put back"),
+    _p(r"손님이 '없어요'한 옷 (\d+)벌은 신고함에서 고쳐요", lambda m, t: f"{m[1]} items shoppers couldn't find are fixed in the inbox"),
+    _p(r"(\d+)분 전 반납", lambda m, t: f"Returned {m[1]} min ago"),
+    _p(r"고칠 선반 (\d+)곳", lambda m, t: f"{m[1]} shelves to fix"),
+    _p(r"피팅룸 반납 (\d+)벌", lambda m, t: f"{m[1]} fitting room returns"),
+    _p(r"기다리는 손님 (\d+)명", lambda m, t: f"{m[1]} customers waiting"),
+    _p(r"손님 화면에 '직원이 조금 늦을 수 있어요'가 떠요", lambda m, t: "shoppers see 'Staff may take a little longer'"),
+    _p(r"늘 바빠서 계산대 안내로 바꾸지 않고, 기다리는 손님이 (\d+)명 이상이면 손님 화면에 '직원이 조금 늦을 수 있어요'를 띄워요\.",
+       lambda m, t: f"They're always busy, so instead of sending shoppers to the checkout, shoppers see 'Staff may take a little longer' when {m[1]}+ are waiting."),
+    _p(r"(\d+)(분|시간|일) 전 삭제", lambda m, t: f"Deleted {m[1]} {dict(분='min', 시간='h', 일='d')[m[2]]} ago"),
+    _p(r"(.+) \((.+)\) 삭제했어요", lambda m, t: f"Deleted {t(m[1])} ({t(m[2])})"),
+    _p(r"(\S+) 되살렸어요", lambda m, t: f"Restored {m[1]}"),
+    _p(r"(\S+) 가는 중", lambda m, t: f"{t(m[1])} is going"),
+    _p(r"(\S+) 처리 중", lambda m, t: f"{t(m[1])} is on it"),
+]
+JS_SUBS.update({
+    "두 글자 이상 입력하면 아래에 나와요 · 누르면 바로 반납": "Type 2+ letters to see items · tap to return", "<span>반납</span>": "<span>Return</span>",
+    "찾지 못했어요": "Not found", "✓ 반납 받았어요": "✓ Return recorded", "방금 반납": "Just returned", "제자리 <em></em>": "Back to <em></em>",
+    "<em class=\"no\">위치 없음 · 등록 화면에서 찍어 주세요</em>": "<em class=\"no\">No location · scan it on the Register screen</em>",
+    "바코드를 다시 찍거나 아래 \\'직접 입력\\'에서 이름으로 찾아 주세요": "Scan again or search by name in \\'Manual entry\\' below",
+    "선반 QR이에요": "That's a shelf QR", "피팅룸 반납은 옷 태그만 찍어요 · 제자리에 걸 때는 등록 화면에서 찍어 주세요": "Scan item tags only here · scan on the Register screen when hanging it back",
+    "제자리 → ": "Back to → ", "위치 없음 · 등록 화면에서 찍어 주세요": "No location · scan it on the Register screen",
+    "위치는 그대로 · 손님 화면에 피팅룸 반납 표시": "Location unchanged · fitting room notice on shopper screen",
+    ").<br>아래 \\'직접 입력\\'을 눌러 주세요.": ").<br>Tap \\'Manual entry\\' below.", "벌": "",
+})
+JS_RAW.update({"' · 피팅룸 반납 표시 지움'": "' · fitting room notice cleared'", "'벌)'": "')'"})
+
+# 2026.11.09 손님 피드백: 찾았어요 되돌리기 · 처음 화면 · 로그인 · 내 사이즈 · 지도 다운로드
+PHRASES.update({
+    "‘찾았어요!’를 누르면 정확도가 상승합니다!": "Tap 'Found it!' to improve accuracy!",
+    "찾았어요! 위치 정확도에 반영했어요": "Found it! This helps keep locations accurate", "잘못 눌렀어요": "Tapped by mistake",
+    "되돌리기": "Undo", "처음 화면으로": "Back to home", "다음부터 ‘찾았어요!’ 누르면 바로 처음 화면으로": "Next time, go straight home after 'Found it!'",
+    "↩ 되돌리기": "↩ Undo", "찾았어요!": "Found it!", "되돌렸어요 · 다시 찾으면 눌러 주세요": "Undone · tap again when you find it",
+    "되돌릴 수 없어요": "Can't undo", "되돌렸어요": "Undone",
+    "로그인": "Log in", "회원가입": "Sign up", "로그아웃": "Log out", "가입하고 로그인": "Sign up & log in",
+    "로그인하면 다른 휴대폰 · 다른 매장에서도 내 사이즈를 불러와요": "Log in to use your sizes on any phone, in any store",
+    "아이디 하나로 내 사이즈를 저장해 두세요": "Save your sizes with one ID",
+    "아이디": "ID", "영어 · 숫자 4~20자": "4–20 letters or numbers", "비밀번호": "Password", "8자 이상": "8+ characters",
+    "비밀번호 확인": "Confirm password", "예) hansol01": "e.g. hansol01",
+    "이 휴대폰에 적어 둔": "Your", "키 · 몸무게 · 내 사이즈": "height · weight · sizes",
+    "가 있으면 그대로 계정에 옮겨져요. 비밀번호는 암호화해서 저장해요.": "saved on this phone move to your account. Passwords are stored encrypted.",
+    "처음이세요?": "New here?", "이미 아이디가 있어요": "Already have an ID", "로그인하지 않아도 모든 기능을 쓸 수 있어요": "Every feature works without logging in",
+    "아이디 또는 비밀번호가 맞지 않아요": "Wrong ID or password", "여러 번 틀려서 5분 동안 잠겼어요": "Too many tries — locked for 5 minutes",
+    "아이디는 영어 · 숫자 · _ 로 4~20자예요": "IDs are 4–20 letters, numbers or _", "비밀번호는 8자 이상으로 해 주세요": "Use 8 or more characters",
+    "비밀번호가 서로 달라요": "Passwords don't match", "이미 있는 아이디예요": "That ID is taken",
+    "로그인됨 · 어느 휴대폰에서나 같은 정보를 불러와요": "Logged in · same info on any phone",
+    "로그인하고 내 사이즈 저장": "Log in to save your sizes", "다른 휴대폰에서도 내 사이즈를 불러와요 · 안 해도 돼요": "Use your sizes on other phones · optional",
+    "내 계정": "Your account", "에 저장돼요 · 다른 사람에게 보이지 않아요": "stores this · nobody else can see it",
+    "로그인하지 않으면": "Without logging in, it's saved on", "내 사이즈": "My size", "추천 사이즈": "Suggested size",
+    "알면 바로 골라 주세요": "pick if you know", "모름": "Not sure", "신발 · 발 사이즈": "Shoes · foot size", "선택": "optional",
+    "사이즈를 모르면": "Don't know your size?", "키 · 몸무게로 추천해요": "we'll suggest one from height · weight", "성별 · 나이": "Gender · age",
+    "설정": "Settings", "‘찾았어요!’ 누르면 처음 화면으로": "Go home after 'Found it!'",
+    "옷을 찾고 나면 바로 첫 화면으로 돌아가요": "Return to the home screen once you find it", "키 · 몸무게를 같이 적어 주세요": "Please enter both height and weight",
+    "내 사이즈 등록": "Add my size", "몸무게로 추천해요": "weight → suggested size", "이미 아이디가 있어요 ·": "Already have an ID? ·", "하고 바로 보기": "to see it right here", "지도 다운로드": "Download map",
+})
+PATTERNS.insert(0, _p(r"([A-Za-z0-9_]{4,20})님", lambda m, t: f"Hi, {m[1]}"))
+JS_SUBS.update({"초 뒤 처음 화면으로 가요": " s until home", "\">내 사이즈</a>를 적으면 바로 보여 드려요": "\">Add your size</a> to see it here",
+                "\">내 사이즈 등록</a>하고 바로 보기": "\">Add my size</a> to see it right here"})
+
+# 설명으로 찾기 (음성 · 글자)
+PHRASES.update({'예) "검정 후드티", "모자 달린 회색 옷"': 'e.g. "black hoodie", "gray top with a hood"',
+                '예) "검정 후드티", "허리 고무줄 바지"': 'e.g. "black hoodie", "pants with an elastic waist"',
+                "설명을 알아듣고 찾았어요": "Found from your description"})

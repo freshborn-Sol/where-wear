@@ -13,6 +13,7 @@
 {% endmacro %}
 {{ cx.appbar(it.name, 'javascript:history.back()', 'heart') }}
 <main class="page item">
+  {% if src == 'kiosk' and it.place %}<p class="fromk">{{ cx.icon('phone', 16) }}<span>키오스크에서 받은 위치예요 · 아래 <b>지도 사진으로 저장</b>을 누르면 사진첩이나 카카오톡으로 보낼 수 있어요</span></p>{% endif %}
   {% if src == 'tag' %}
   {% set floor_n = hsizes|sum(attribute='qty') %}{% set wh_n = hsizes|sum(attribute='wh') %}
   <section class="stockcard {{ 'fromtag' if src=='tag' }}" aria-label="사이즈별 재고">
@@ -57,10 +58,12 @@
     <div class="trust">
       <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}</div>
       {% if flag and flag[0] == 'warn' %}<div class="lflag warn">{{ cx.icon('alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
+      {% if fitret %}<div class="lflag fit">{{ cx.icon('door', 16) }}<span><b>피팅룸에 반납된 옷이 있어요</b> · 행거에 없으면 피팅룸 직원에게 물어보세요</span></div>{% endif %}
     </div>
   {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
 
   {% include "_cxmap.html" %}
+  {% if it.place %}<button type="button" class="mapsave {{ 'hl' if src == 'kiosk' }}" id="mapSave" onclick="saveMap()">{{ cx.icon('download', 19) }}<span>지도 사진으로 저장 · 카톡으로 보내기</span></button>{% endif %}
   {% else %}
   <div class="detail glow" style="--bg:url('{{ imgsrc(it) }}')">
     <img class="hero" src="{{ imgsrc(it) }}" alt="">
@@ -78,10 +81,12 @@
     <div class="trust">
       <div class="fr {{it.fresh[1]}}">{{ cx.icon('clock', 15) }}{{it.fresh[0]}}</div>
       {% if flag and flag[0] == 'warn' %}<div class="lflag warn">{{ cx.icon('alert', 16) }}<span>{{flag[1]}}</span></div>{% endif %}
+      {% if fitret %}<div class="lflag fit">{{ cx.icon('door', 16) }}<span><b>피팅룸에 반납된 옷이 있어요</b> · 행거에 없으면 피팅룸 직원에게 물어보세요</span></div>{% endif %}
     </div>
   {% else %}<div class="locbox none">아직 위치가 등록되지 않았어요</div>{% endif %}
 
   {% include "_cxmap.html" %}
+  {% if it.place %}<button type="button" class="mapsave {{ 'hl' if src == 'kiosk' }}" id="mapSave" onclick="saveMap()">{{ cx.icon('download', 19) }}<span>지도 사진으로 저장 · 카톡으로 보내기</span></button>{% endif %}
   {% set floor_n = hsizes|sum(attribute='qty') %}{% set wh_n = hsizes|sum(attribute='wh') %}
   <section class="stockcard {{ 'fromtag' if src=='tag' }}" aria-label="사이즈별 재고">
     <div class="sc-h">{% if src=='tag' %}<span class="sc-tag">{{ cx.icon('qr', 14) }}옷 태그로 확인</span>{% endif %}
@@ -113,11 +118,28 @@
   <p class="foot"><a href="/credits?at={{at}}">상품 사진 출처</a></p>
 </main>
 
-<div class="findbar">
+<div class="findbar {{ 'withnote' if it.place }}">
+  {% if it.place %}<p class="fnote">{{ cx.icon('info', 13) }}‘찾았어요!’를 누르면 정확도가 상승합니다!</p>{% endif %}
   {% if it.place %}<button class="fbtn found" id="foundBtn" onclick="foundIt()">{{ cx.icon('check', 20) }}<span>찾았어요!</span></button>{% endif %}
   <button class="fbtn red" onclick="openHelp()">{{ cx.icon('help', 20) }}<span>찾는 게 없나요?</span></button>
 </div>
 <p id="msg" class="msg"></p>
+<!-- '찾았어요' 누른 뒤: 되돌리기 · 처음 화면으로 (설정하면 3초 뒤 자동으로 처음 화면) -->
+<div id="fsheet" class="fsheet" role="status" aria-live="polite">
+  <div class="fs-t">{{ cx.icon('checkcircle', 22) }}<div><b>찾았어요! 위치 정확도에 반영했어요</b><small id="fsAuto"></small></div>
+    <button type="button" class="fs-x" onclick="fsClose()" aria-label="닫기">{{ cx.icon('close', 18) }}</button></div>
+  <div class="fs-b"><button type="button" class="fs-undo" onclick="foundUndo()">{{ cx.icon('back', 16) }}잘못 눌렀어요</button>
+    <a class="fs-home" href="/go?at={{at}}" onclick="fsStop()">{{ cx.icon('home', 16) }}처음 화면으로</a></div>
+  <label class="fs-opt"><input type="checkbox" id="fsPref" onchange="setFoundHome(this.checked)">다음부터 ‘찾았어요!’ 누르면 바로 처음 화면으로</label>
+</div>
+
+<!-- 지도 사진: 공유가 안 되는 브라우저(카카오톡 안 브라우저 등)는 사진을 띄워 길게 눌러 저장 -->
+<div id="mapShot" class="mapshot" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="ms-in"><img id="mapShotImg" alt="지도 사진">
+    <p>사진을 길게 눌러 <b>저장</b>하거나 <b>공유</b>하세요</p>
+    <div class="ms-btns"><a class="btn primary" id="mapShotDl" download="where-wear-지도.png">{{ cx.icon('download', 18) }}사진 내려받기</a>
+      <button class="btn" onclick="$('#mapShot').classList.remove('on')">닫기</button></div></div>
+</div>
 
 <!-- '찾는 게 없나요?' 바텀시트 -->
 <div id="help" class="sheet" onclick="if(event.target===this)closeHelp()">
@@ -152,6 +174,7 @@
         {% if busy %}
           <p class="busynote">{{ cx.icon('alert', 15) }}직원이 바빠요 · 계산대에 말씀해 주세요</p>
         {% else %}
+        {% if crowd %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 손님이 많아 직원이 조금 늦을 수 있어요</p>{% endif %}
         <p class="sh-q" style="font-size:13px;font-weight:500;color:var(--g700)">사이즈를 고르면 직원이 찾아 드려요</p>
         <div class="szpick">{% for z in hsizes if z.qty or z.wh %}<button class="szb" data-sz="{{z.size}}" onclick="pickWait('{{z.size}}')">{{z.size}}<small>{% if z.qty %}{{z.qty}}벌{% else %}창고 {{z.wh}}{% endif %}</small></button>{% endfor %}</div>
         <button class="btn primary" id="waitBtn" onclick="askStaff()" disabled>직원에게 찾아 달라고 하기</button>
@@ -172,9 +195,11 @@
     </div>
     <p class="ans ok" id="tMsg">직원에게 알렸어요. 이 자리에서 잠시만 기다려 주세요.</p>
     <p class="shint" id="tTime"></p>
+    {% if crowd %}<p class="shint">지금 손님이 많아 직원이 조금 늦을 수 있어요</p>{% endif %}
   </section>
 
   <section data-p="call" hidden>
+    {% if crowd %}<p class="busynote">{{ cx.icon('alert', 15) }}지금 손님이 많아 직원이 조금 늦을 수 있어요</p>{% endif %}
     {% if busy %}
       <p class="ans no"><span><b>직원이 바빠요 · 계산대로 와 주세요</b></span></p>
     {% else %}
@@ -216,16 +241,40 @@ const DEV=(()=>{ try{ let d=localStorage.getItem('ww_dev'); if(!d){ d=Math.rando
      .catch(()=>paint(!on)); };
 })();
 let RID=null, WAIT_SZ='', POLL=null;
+/* 찾았어요 → 되돌리기 · 처음 화면으로. '처음 화면으로 바로'는 MY 설정(found_home) 또는 아래 체크로 고름 */
+let FOUND_ID=null, FS_TIMER=null;
+function foundHome(){ const p=loadBody(); return !!(p&&p.found_home); }
+function setFoundHome(on){ let p=loadBody()||{}; p.found_home=on;
+  try{ localStorage.setItem('ww_body', JSON.stringify(p)); }catch(e){}
+  if(ME_LOGIN) fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:p})});
+  ME_PROFILE=ME_LOGIN?p:ME_PROFILE; if(on) fsAuto(); else fsStop(); }
+function fsStop(){ clearInterval(FS_TIMER); FS_TIMER=null; $('#fsAuto').textContent=''; }
+function fsAuto(){ fsStop(); let n=3; const el=$('#fsAuto'); el.textContent=n+'초 뒤 처음 화면으로 가요';
+  FS_TIMER=setInterval(()=>{ n--; if(n<=0){ fsStop(); location.href='/go?at='+AT; } else el.textContent=n+'초 뒤 처음 화면으로 가요'; },1000); }
+function fsClose(){ fsStop(); $('#fsheet').classList.remove('on'); }
 function foundIt(){
-  const b=$('#foundBtn'); if(!b||b.disabled) return;
+  const b=$('#foundBtn'); if(!b) return;
+  if(FOUND_ID) return foundUndo();                       // 누른 뒤에는 버튼이 '취소'로 바뀜
+  if(b.dataset.busy) return; b.dataset.busy='1';
   fetch('/api/found',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:SKU,fixture:FX,device:DEV})})
-   .then(r=>r.json()).then(d=>{ b.disabled=true; b.querySelector('span').textContent='고마워요!'; toast(d.message); });
+   .then(r=>r.json()).then(d=>{ delete b.dataset.busy; if(!d.ok) return;
+     FOUND_ID=d.id; b.classList.add('done'); b.querySelector('span').textContent='되돌리기';
+     $('#msg').classList.remove('show'); $('#fsPref').checked=foundHome(); $('#fsheet').classList.add('on');
+     if(foundHome()) fsAuto(); })
+   .catch(()=>{ delete b.dataset.busy; });
+}
+function foundUndo(){
+  if(!FOUND_ID) return; fsStop();
+  fetch('/api/found/undo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:FOUND_ID,device:DEV})})
+   .then(r=>r.json()).then(d=>{ if(!d.ok){ toast(d.message||'되돌릴 수 없어요'); return; }
+     FOUND_ID=null; const b=$('#foundBtn'); b.classList.remove('done'); b.querySelector('span').textContent='찾았어요!';
+     $('#fsheet').classList.remove('on'); toast('되돌렸어요 · 다시 찾으면 눌러 주세요'); });
 }
 function notHere(){
   post('none','').then(d=>{
     RID=d.id;
     $('#nMsg').textContent=d.message+(d.delisted?' (이 위치는 안내에서 내렸어요)':'');
-    const rec=(loadBody()&&typeof recommend==='function')?recommend(loadBody()).size:null;   // 추천 사이즈가 있으면 미리 선택
+    const rec=(hasSize(loadBody())&&typeof recommend==='function')?recommend(loadBody()).size:null;   // 추천 사이즈가 있으면 미리 선택
     if(rec && document.querySelector(`.nstock .szb[data-sz="${rec}"]`)) pickWait(rec);
   });
 }
@@ -264,15 +313,21 @@ function showSize(sz){
   document.querySelectorAll('.szres').forEach(x=>x.hidden = x.dataset.size!==sz);
 }
 const ORDER=['XS','S','M','L','XL','XXL'];
-function loadBody(){ try{ return JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){ return null; } }
+/* MY 정보: 로그인했으면 계정에 저장된 것, 아니면 이 휴대폰에 저장된 것 */
+const ME_LOGIN={{ 'true' if me_user else 'false' }}; let ME_PROFILE={{ me_profile|tojson }};
+function loadBody(){ if(ME_LOGIN && ME_PROFILE) return ME_PROFILE; try{ return JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){ return null; } }
+function hasSize(p){ return !!(p && ((p.h && p.w) || p.top || p.bottom || p.foot)); }
 function recommend(p){
   const list = ITEM.sizes.map(s=>s.size);
   const meLink='/me?at='+AT+'&next='+encodeURIComponent(location.pathname+location.search);
   if(list.every(x=>/^\d+$/.test(x))){                         // 신발(mm)
     if(!p.foot) return {msg:'신발은 <a href="'+meLink+'">발 사이즈</a>를 입력하면 추천해요'};
     const pick = list.map(Number).sort((a,b)=>a-b).find(x=>x>=p.foot) || Math.max(...list.map(Number));
-    return {size:String(pick), why:`발 ${p.foot}mm 기준`};
+    return {size:String(pick), why:`발 ${p.foot}mm 기준`, mine:list.includes(String(p.foot))};
   }
+  const my = ITEM.cat==='하의' ? p.bottom : p.top;               // MY에 적은 '내 사이즈'가 있으면 그대로
+  if(my && ORDER.includes(my)) return {size:my, why:'MY에 저장한 내 사이즈', mine:true};
+  if(!(p.h && p.w)) return {msg:'<a href="'+meLink+'">내 사이즈</a>를 적으면 바로 보여 드려요'};
   const ih=[160,168,176,183].filter(t=>p.h>=t).length;        // 키 → XS(0)~XL(4)
   const iw=[50,60,70,80].filter(t=>p.w>=t).length;            // 몸무게 → XS~XL
   let idx = ITEM.cat==='하의' ? Math.max(iw, ih-1) : Math.max(ih, iw);
@@ -292,14 +347,64 @@ function recommend(p){
   const meLink='/me?at='+AT+'&next='+encodeURIComponent(location.pathname+location.search);
   if(ITEM.sizes.every(s=>s.size==='F')){ box.hidden=true; return; }   // 잡화(프리 사이즈)는 추천 없음
   box.hidden=false;
-  if(!p){ box.innerHTML=USER_IC+' <a href="'+meLink+'">키·몸무게 등록</a>하고 추천 사이즈 보기'; return; }
+  if(!hasSize(p)){ box.innerHTML=USER_IC+' <a href="'+meLink+'">내 사이즈 등록</a>하고 바로 보기'; return; }
   const r=recommend(p);
   if(!r.size){ box.innerHTML=r.msg||''; box.hidden=!r.msg; return; }
   const st=ITEM.sizes.find(s=>s.size===r.size), q=st?st.qty:0, w=st?st.wh:0;
   document.querySelectorAll('.sz').forEach(b=>b.classList.toggle('mine', b.dataset.size===r.size));
   box.classList.add(q?'ok':(w?'wh':'no'));
-  box.innerHTML = `${USER_IC}추천 사이즈 <b>${r.size}</b> · ${q?`매장 ${q}벌`:(w?`<b>창고에 ${w}벌</b>`:'<b>지금 없어요</b>')}<a class="recedit" href="${meLink}">수정</a><small hidden>${r.why}</small>`;
+  box.innerHTML = `${USER_IC}${r.mine?'내 사이즈':'추천 사이즈'} <b>${r.size}</b> · ${q?`매장 ${q}벌`:(w?`<b>창고에 ${w}벌</b>`:'<b>지금 없어요</b>')}<a class="recedit" href="${meLink}">수정</a><small hidden>${r.why}</small>`;
   if(!q) showSize(r.size);
 })();
+
+/* 지도 사진으로 저장 · 카톡으로 보내기: 화면의 도면 + 옷 이름 · 위치 · 가는 길을 사진 한 장(PNG)으로.
+   휴대폰 공유 창(사진 저장 · 카카오톡)이 되면 공유, 안 되면 사진을 띄워 길게 눌러 저장 */
+const MAPINFO={{ {'name': it.name, 'meta': it.color ~ ((' · ' ~ it.fit) if it.fit else '') ~ ' · ' ~ "{:,}".format(it.price) ~ '원',
+  'loc': (it.place.fixture_name if it.place else ''), 'level': ((it.place.level ~ ((' · ' ~ LV[it.place.level]) if LV.get(it.place.level) else '')) if it.place else ''),
+  'walk': ((('여기서 ' ~ walk.m ~ 'm · 걸어서 약 ' ~ walk.sec ~ '초') if walk.m > 8 else '바로 근처예요') if walk else '')}|tojson }};
+let mapFile=null, mapBusy=null;
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function buildMap(){
+  if(mapBusy) return mapBusy;
+  mapBusy=(async()=>{
+    const src=document.querySelector('main svg.map'); if(!src) throw new Error('no map');
+    try{ await document.fonts.ready; }catch(e){}
+    const vb=(src.getAttribute('viewBox')||'0 0 900 760').split(/[ ,]+/).map(Number);
+    const W=1080, P=48, mw=W-P*2, mh=Math.round(mw*vb[3]/vb[2]);
+    const cl=src.cloneNode(true); cl.setAttribute('xmlns','http://www.w3.org/2000/svg'); cl.setAttribute('width',mw); cl.setAttribute('height',mh);
+    const img=new Image(); img.decoding='async';
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(cl));
+    await new Promise((ok,no)=>{ img.onload=ok; img.onerror=no; });
+    const F='"Noto Sans KR","Apple SD Gothic Neo",sans-serif', blue=getComputedStyle(document.body).getPropertyValue('--blue').trim()||'#1677E8';
+    const top=356, H=top+mh+150, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const g=cv.getContext('2d');
+    g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+    g.fillStyle=blue; g.font='800 30px '+F; g.fillText('where:wear', P, 70);
+    g.fillStyle='#8A94A5'; g.font='500 24px '+F; g.textAlign='right'; g.fillText('매장 안 옷 위치 안내', W-P, 70); g.textAlign='left';
+    g.fillStyle='#1B1F2D'; g.font='800 46px '+F; g.fillText(MAPINFO.name, P, 136, mw);
+    g.fillStyle='#485366'; g.font='500 28px '+F; g.fillText(MAPINFO.meta, P, 180, mw);
+    roundRect(g,P,206,mw,124,22); g.fillStyle=blue; g.fill();
+    g.fillStyle='#fff'; g.font='800 40px '+F; g.fillText(MAPINFO.loc, P+30, 262, mw-60);
+    g.font='500 26px '+F; g.fillText([MAPINFO.level, MAPINFO.walk].filter(Boolean).join('   ·   '), P+30, 304, mw-60);
+    g.drawImage(img, P, top, mw, mh);
+    g.fillStyle='#485366'; g.font='700 28px '+F; g.fillText('● 지금 위치  →  점선을 따라가면 도착이에요', P, top+mh+62, mw);
+    g.fillStyle='#8A94A5'; g.font='500 22px '+F; g.fillText(new Date().toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})+' 기준 · 옷이 다른 곳에 있으면 직원에게 물어보세요', P, top+mh+104, mw);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    mapFile=new File([blob],'where-wear-지도-'+SKU+'.png',{type:'image/png'});
+    return mapFile;
+  })();
+  return mapBusy;
+}
+function showShot(f){ const u=URL.createObjectURL(f); $('#mapShotImg').src=u; $('#mapShotDl').href=u; $('#mapShot').classList.add('on'); }
+async function saveMap(){
+  try{
+    const f=mapFile||await buildMap();
+    if(navigator.canShare&&navigator.canShare({files:[f]})){
+      try{ await navigator.share({files:[f], title:'where:wear 지도', text:MAPINFO.name+' · '+MAPINFO.loc}); return; }
+      catch(e){ if(e&&e.name==='AbortError') return; }
+    }
+    showShot(f);
+  }catch(e){ toast('지도 사진을 만들지 못했어요'); }
+}
+if(document.getElementById('mapSave')) setTimeout(()=>buildMap().catch(()=>{}), 900);   // 미리 만들어 두면 누르자마자 공유 창이 떠요
 </script>
 {% endblock %}

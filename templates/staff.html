@@ -2,15 +2,10 @@
 {% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
 {% block body %}
 <div class="sshell">
-{{ ks.sbar('등록', right=('<a class="amb" href="#priority">진열 점검 ' ~ check_days ~ '일 전</a>') if check_days >= CHECK_DAYS else None) }}
+{{ ks.sbar('등록') }}
 <main class="swrap">
   {{ ks.regseg('scan') }}
-  {% if check_days >= CHECK_DAYS %}
-  <form class="checkbar" method="post" action="/staff/checked">
-    {{ cx.icon('bell', 22) }}<div><b>진열 점검할 때예요</b><small>마지막 점검 {{check_days}}일 전</small></div>
-    <button class="sbtn sm">점검 완료</button>
-  </form>
-  {% endif %}
+  {% if fit_n %}<a class="fitbar" href="/staff/fitting#list">{{ cx.icon('door', 20) }}<div><b>제자리로 돌려놓을 옷 {{fit_n}}벌</b><small>피팅룸에서 반납받은 옷 · 걸면서 아래에서 찍어요</small></div>{{ cx.icon('chev', 16) }}</a>{% endif %}
 
   <!-- ① 선반 고르기 전 -->
   <div class="card" id="stepA">
@@ -52,33 +47,24 @@
   <div class="sh2">최근 등록</div>
   <ul id="log" class="slog"><li class="none">아직 등록한 옷이 없어요</li></ul>
 
-  {% set PG = [('report', "'없어요' 신고", '손님이 못 찾았다고 한 옷'), ('noloc', '위치 없음', '안내할 위치가 아직 없는 옷'), ('old', '오래된 위치', CHECK_DAYS ~ '일 넘게 다시 안 찍은 옷')] %}
-  <div class="sh2" id="priority">다시 찍을 옷<small>{{ priority|length }}벌</small></div>
-  {% if not priority %}<div class="empty">지금은 다시 찍을 옷이 없어요.</div>{% else %}
-  <div class="icats" id="pcats">
-    <a href="#" class="on" data-g="">전체 <small>{{ priority|length }}</small></a>
-    {% for k, t, d in PG %}{% set n = priority|selectattr('group', 'equalto', k)|list|length %}{% if n %}<a href="#" class="{{ 'none' if k == 'report' }}" data-g="{{k}}">{{t}} <small>{{n}}</small></a>{% endif %}{% endfor %}
-  </div>
-  {% for k, t, d in PG %}{% set its = priority|selectattr('group', 'equalto', k)|list %}{% if its %}
-  <section class="pgrp" data-g="{{k}}">
-    <div class="shelfh"><b>{{t}}</b><span>{{d}}</span><small>{{its|length}}벌</small></div>
-    {% for p in its %}
+  <div class="sh2" id="priority">위치 없는 옷<small>{{ priority|length }}벌</small></div>
+  <p class="ssub">안내할 위치가 아직 없어요 · 자주 찾는 옷부터</p>
+  {% if fix_n %}<a class="linkrow tofix" href="/staff/reports#fix">{{ cx.icon('bell', 16) }}손님이 '없어요'한 옷 {{fix_n}}벌은 신고함에서 고쳐요{{ cx.icon('chev', 16) }}</a>{% endif %}
+  {% if not priority %}<div class="empty">위치 없는 옷이 없어요.</div>{% else %}
+  <section class="pgrp">
+    {% for p in priority %}
     <div class="prio{{ ' more' if loop.index > 5 }}">
       <img src="{{ url_for('static', filename=p.image) if p.image else '' }}" alt="">
       <div class="pb">
         <div class="nm">{{p.name}} <small>({{p.color}})</small></div>
-        <div class="wh {{ 'none' if not p.place }}">{% if p.place %}지금 안내 위치: {{p.place.fixture_id}} {{p.place.level}}{% else %}위치 없음{% endif %}</div>
-        <div class="why">{% for w in p.why if not (w == '위치 없음' and not p.place) %}<span class="chip {{ 'r' if ('없어요' in w or '위치 없음' in w) else ('a' if '등록' in w else '') }}">{{w}}</span>{% endfor %}</div>
-        <div class="pa">
-          {% if p.place %}<form method="post" action="/staff/confirm/{{p.sku}}"><button class="sbtn sm okl">그대로 맞아요</button></form>{% endif %}
-          <button class="sbtn sm" onclick="pick('{{p.sku}}')">{{ cx.icon('scan', 14) }}다시 찍기</button>
-        </div>
+        <div class="wh none">위치 없음</div>
+        <div class="why">{% for w in p.why if w != '위치 없음' %}<span class="chip">{{w}}</span>{% endfor %}</div>
+        <div class="pa"><button class="sbtn sm" onclick="pick('{{p.sku}}')">{{ cx.icon('scan', 14) }}찍어서 등록</button></div>
       </div>
     </div>
     {% endfor %}
-    {% if its|length > 5 %}<button type="button" class="pmore" onclick="this.parentNode.classList.add('all')">{{ its|length - 5 }}벌 더 보기</button>{% endif %}
+    {% if priority|length > 5 %}<button type="button" class="pmore" onclick="this.parentNode.classList.add('all')">{{ priority|length - 5 }}벌 더 보기</button>{% endif %}
   </section>
-  {% endif %}{% endfor %}
   {% endif %}
 </main>
 {{ ks.stabs('reg') }}
@@ -86,11 +72,6 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-// 다시 찍을 옷: 목록(신고 / 위치 없음 / 오래된 위치)별로 보기
-document.querySelectorAll('#pcats a').forEach(a => a.onclick = e => { e.preventDefault();
-  document.querySelectorAll('#pcats a').forEach(x => x.classList.toggle('on', x === a));
-  document.querySelectorAll('.pgrp').forEach(g => { g.hidden = !!a.dataset.g && g.dataset.g !== a.dataset.g;
-    g.classList.toggle('all', !!a.dataset.g); }); });
 // 선반 QR(…/go?at=A-H1)을 찍으면 선반이 정해지고, 그 뒤 찍는 코드는 옷으로 본다.
 // 옷 태그 QR(…/item/UQ001?src=tag)이나 시즌 바코드(880…)도 같은 상품으로 인식.
 const FXN = {{ fixtures|map(attribute='id')|list|tojson }}, FXNAME = {{ fixtures|map(attribute='name')|list|tojson }};
@@ -147,7 +128,7 @@ function reg(code){
       box.querySelector('.rr-n').textContent = d.name + ' · ' + d.colors + (d.count > 1 ? ' (' + d.count + '색)' : '');
       box.querySelector('.rr-to').textContent = '→ ' + d.fixture_name + ' · ' + d.level;
       const same = d.prev && d.prev.split(' ')[0] === d.fixture;
-      box.querySelector('.rr-p').textContent = (!d.prev ? '처음 등록' : same ? '같은 선반 · 위치 확인 시각만 새로' : '예전 위치 ' + d.prev + '에서 옮김') + ' · 사이즈 ' + d.sizes + '종 함께';
+      box.querySelector('.rr-p').textContent = (!d.prev ? '처음 등록' : same ? '같은 선반 · 위치 확인 시각만 새로' : '예전 위치 ' + d.prev + '에서 옮김') + ' · 사이즈 ' + d.sizes + '종 함께' + (d.rehung ? ' · 피팅룸 반납 표시 지움' : '');
       let left = 10; const ub = box.querySelector('.rr-u'), em = ub.querySelector('em');
       undoTimer = setInterval(() => { left--; em.textContent = left; if (left <= 0) { clearInterval(undoTimer); ub.remove(); } }, 1000);
       ub.onclick = () => { clearInterval(undoTimer);

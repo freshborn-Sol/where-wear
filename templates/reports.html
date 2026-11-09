@@ -12,6 +12,9 @@
 <div class="sshell">
 {{ ks.sbar('신고함', back='/staff', live=True) }}
 <main class="swrap">
+  {% if large %}
+  {% if waiting|length >= CROWD_N %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>기다리는 손님 {{waiting|length}}명 · 손님 화면에 '직원이 조금 늦을 수 있어요'가 떠요</span></div>{% endif %}
+  {% else %}
   <div class="busybar {{'on' if busy}}">
     <div class="bt"><b>{{ '바쁨 모드 켜짐' if busy else '바쁨 모드 꺼짐' }}</b><small>직원 {{staff_count}}명{{ ' · 자동으로 켜졌어요' if busy and busy_mode=='auto' else ' 근무 중' }}</small></div>
     <form method="post" action="/staff/busy">
@@ -19,12 +22,14 @@
     </form>
   </div>
   {% if busy %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>손님에게 계산대로 안내 중이에요</span></div>{% endif %}
+  {% endif %}
   <div class="newreq" id="newreq" hidden>{{ cx.icon('bell', 20) }}<b>새 손님 요청이 들어왔어요</b><span>아래 빨간 카드부터 확인하세요</span></div>
   <div class="pushbar" id="pushbar"><button type="button" class="sndbtn" id="pushbtn" onclick="togglePush()">{{ cx.icon('bell', 15) }}<span>잠금화면 신고 알림 켜기</span></button>
     <small id="pushhint"></small></div>
   <div class="rsum">
     <a class="urgent" href="#wait">손님 대기 <b>{{ waiting|length }}</b></a>
-    <a class="fix" href="#fix">위치 고칠 것 <b>{{ groups.values()|map('length')|sum }}</b><small>· 선반 {{ groups|length }}곳</small></a>
+    <a class="fix" href="#fix">고칠 위치 <b>{{ groups.values()|map('length')|sum }}</b></a>
+    <a class="fit" href="#fitting">피팅룸 반납 <b>{{ rets|length }}</b></a>
   </div>
 
   <!-- ① 지금 가야 할 곳 -->
@@ -37,9 +42,9 @@
       <div class="wtop"><b class="{{ 'size' if w.kind == 'size' }}">{{ w.label }}</b>{% if w.escalated_at and w.wait_state == 'waiting' %}<span class="esc">전체 알림 보냄</span>{% endif %}<span class="timer" data-at="{{w.wait_at}}">{{ cx.icon('clock', 12) }}<em>{{ '방금' if w.mins < 1 else w.mins ~ '분째' }}</em></span></div>
       <div class="wloc">{{ cx.icon('pin', 13) }}{% if w.fixture_id == 'ENTRANCE' %}매장 입구 · 키오스크 앞{% else %}{{ w.zone or '' }}구역 · {{ w.fixture_id or '-' }} {{ (w.fixture_name or '').split(' ', 1)[1] if ' ' in (w.fixture_name or '') else '' }} 앞{% endif %}</div>
       <div class="witem">{{ w.name }} ({{ w.color }}){% if w.size %} <span class="chip n">{{ w.size }}</span>{% endif %}{% if w.detail and w.kind != 'none' %} · {{ w.detail }}{% endif %}</div>
-      <form method="post" action="/staff/reports/{{w.id}}/wait" class="wact">
+      <form method="post" action="/staff/reports/{{w.id}}/wait" class="wact needname">
         {% if w.wait_state == 'waiting' %}<button name="act" value="going" class="sbtn sm blue">가는 중</button>
-        {% else %}<span class="going">{{ cx.icon('run', 14) }}가는 중 · 손님 화면에도 떠요</span>{% endif %}
+        {% else %}<span class="going">{{ cx.icon('run', 14) }}{% if w.staff %}<b>{{ '내가' if w.staff == staff_name else w.staff }}</b> 가는 중{% else %}가는 중{% endif %} · 손님 화면에도 떠요</span>{% endif %}
         <button name="act" value="served" class="sbtn sm ok">전달 완료</button>
         {% if w.kind != 'call' %}<button name="act" value="nostock" class="sbtn sm red">재고 없음</button>{% endif %}
       </form>
@@ -52,24 +57,34 @@
   <p class="ssub">선반에 한 번 가서 한꺼번에 고쳐요</p>
   {% if not groups %}<div class="empty">고칠 위치가 없어요.</div>{% endif %}
   {% if route %}
-  <div class="froute">
-    <form method="get" class="frow"><b>{{ cx.icon('run', 16) }}한 번에 도는 길</b>
-      <label>출발 <select name="from" onchange="this.form.submit()">{% for k, lab in starts %}<option value="{{k}}" {{'selected' if k==start}}>{{lab}}</option>{% endfor %}</select></label></form>
+  <div class="froute {{ 'rt' if show_route }}" id="froute">
+    <div class="frow"><b>{{ cx.icon('pin', 16) }}고칠 선반 {{route|length}}곳</b>
+      <button type="button" class="sbtn sm line rtbtn" onclick="toggleRoute()">{{ cx.icon('run', 14) }}<span class="off">동선 보기</span><span class="on">위치만 보기</span></button></div>
     <div class="fmap">{% include "_cxmap.html" %}</div>
-    <div class="forder"><span class="fst">{{ dict(starts).get(start, start) }}</span>{% for fx in route %}<i>→</i><span><em>{{loop.index}}</em>{{fx}}</span>{% endfor %}</div>
-    <small>{{route|length}}곳 · 약 {{meters}}m · 가장 적게 걷는 순서예요 (아래 목록도 이 순서)</small>
+    <div class="rt-only">
+      <form method="get" class="frow"><b>{{ cx.icon('run', 16) }}한 번에 도는 길</b>
+        <label>출발 <select name="from" onchange="this.form.submit()">{% for k, lab in starts %}<option value="{{k}}" {{'selected' if k==start}}>{{lab}}</option>{% endfor %}</select></label></form>
+      <div class="forder"><span class="fst">{{ dict(starts).get(start, start) }}</span>{% for fx in route %}<i>→</i><span><em>{{loop.index}}</em>{{fx}}</span>{% endfor %}</div>
+      <small>약 {{meters}}m · 가장 적게 걷는 순서예요 (아래 목록도 이 순서)</small>
+    </div>
   </div>
   {% endif %}
   {% for fx, items in groups.items() %}
   <div class="fgroup">
     <div class="fhead">{% if fx in route %}<em class="fno">{{ route.index(fx) + 1 }}</em>{% endif %}<b>{{ fx }}</b>{{ items[0].fixture_name or '' }}<span class="chip a">{{ items|length }}건</span></div>
+    {% set who = claims.get(fx) %}
+    <form method="post" action="/staff/reports/claim" class="fclaim needname"><input type="hidden" name="fixture" value="{{ items[0].fixture_id or '' }}">
+      {% if who and who == staff_name %}<span class="claimed me">{{ cx.icon('run', 14) }}내가 처리 중</span>
+      {% elif who %}<span class="claimed">{{ cx.icon('run', 14) }}<b>{{ who }}</b> 처리 중</span><button class="sbtn sm line">제가 할게요</button>
+      {% else %}<span class="claimed none">아직 아무도 안 갔어요</span><button class="sbtn sm blue">제가 갈게요</button>{% endif %}
+    </form>
     {% for x in items %}
     <div class="fitem">
       <img src="{{ url_for('static', filename=x.image) if x.image else '' }}" alt="">
       <div class="fbody">
         <div class="t">{{ x.name }} ({{ x.color }}) <span>· {{ x.level or '' }}</span></div>
         <div class="m">신고 {{ x.n }}명 · 첫 신고 {{ x.since }}분 전 {% if not x.active %}<span class="chip r">안내에서 내려감</span>{% endif %}</div>
-        <form method="post" action="/staff/reports/fix" class="fact">
+        <form method="post" action="/staff/reports/fix" class="fact needname">
           <input type="hidden" name="sku" value="{{x.sku}}"><input type="hidden" name="fixture" value="{{x.fixture_id or ''}}">
           <div class="sbtns">
             <button name="act" value="reregister" class="sbtn sm ok">찾아서 재등록</button>
@@ -88,10 +103,15 @@
   </div>
   {% endfor %}
 
+  <!-- ③ 피팅룸 반납 → 제자리로 -->
+  <div class="sh2" id="fitting"><span class="dot b"></span>제자리로 돌려놓을 옷<small>피팅룸 반납 {{ rets|length }}벌</small></div>
+  <p class="ssub">손님이 입어 보고 피팅룸에 두고 간 옷 · 위치는 그대로예요</p>
+  {{ ks.fitlist(rets, '/staff/reports#fitting') }}
+
   <div class="sh2">처리 기록</div>
   <ul class="hlog">
   {% for r in history %}
-    <li><span class="chip {{ 'r' if r.resolution == '재고 없음' else 'ok' }}">{{ r.resolution }}</span>{{ r.name or r.sku }} · {{ r.fixture_id or '-' }}<span class="sp"></span><small>{{ (r.resolved_at or '')[11:16] }}</small></li>
+    <li><span class="chip {{ 'r' if r.resolution == '재고 없음' else 'ok' }}">{{ r.resolution }}</span>{{ r.name or r.sku }} · {{ r.fixture_id or '-' }}<span class="sp"></span><small>{% if r.resolved_by %}<b class="by">{{ r.resolved_by }}</b> · {% endif %}{{ (r.resolved_at or '')[11:16] }}</small></li>
   {% else %}<li class="empty-l">아직 없어요</li>{% endfor %}
   </ul>
   <a class="linkrow" href="/staff/summary">📊 점장 요약 보기 (최근 7일){{ cx.icon('chev', 16) }}</a>
@@ -143,6 +163,10 @@ setInterval(() => document.querySelectorAll('.timer[data-at]').forEach(t => {
   const s = Math.max(0, (Date.now() - new Date(t.dataset.at)) / 1000), m = Math.floor(s / 60);
   t.querySelector('em').textContent = m ? m + '분 ' + String(Math.floor(s % 60)).padStart(2, '0') + '초째' : Math.floor(s) + '초째';
   t.closest('.wcard').classList.toggle('late', m >= 5); }), 1000);
-setInterval(()=>{ const a=document.activeElement; if(!(a && a.tagName==='SELECT') && !document.querySelector('details.mv[open]')) location.reload(); }, 8000);
+// 고칠 곳 지도: 기본은 위치(번호)만, '동선 보기'를 누르면 도는 길 · 출발점 · 순서 (이 휴대폰에 기억)
+function toggleRoute(){ const f = document.getElementById('froute'); f.classList.toggle('rt');
+  try{ localStorage.setItem('ww_route', f.classList.contains('rt') ? '1' : ''); }catch(e){} }
+try{ if (localStorage.getItem('ww_route')) document.getElementById('froute')?.classList.add('rt'); }catch(e){}
+setInterval(()=>{ const a=document.activeElement; if(!(a && (a.tagName==='SELECT' || a.tagName==='INPUT')) && !document.querySelector('details.mv[open]') && !document.querySelector('.spick.on')) location.reload(); }, 8000);
 </script>
 {% endblock %}

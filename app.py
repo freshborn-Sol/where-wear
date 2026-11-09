@@ -12,7 +12,8 @@ import datetime, json, os, re, sqlite3, time, uuid
 from collections import Counter, deque
 from urllib.parse import urlencode
 from pathlib import Path
-from flask import Flask, g, jsonify, redirect, render_template, request, url_for
+from flask import Flask, g, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import search as S
 import i18n
@@ -25,6 +26,20 @@ UPLOADS = BASE / "static" / "uploads"
 STORE_NAME = os.environ.get("WW_STORE", "유니클로 명동점")   # 고객 화면(안내)에 보이는 매장 이름
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024     # 사진 15MB까지
+
+def _secret():
+    """로그인 세션 서명용 열쇠: 처음 실행할 때 flask_secret.key 로 만들어 두고 계속 씀 (*.key 는 깃허브에 안 올라감)"""
+    if os.environ.get("WW_SECRET"): return os.environ["WW_SECRET"]
+    f = BASE / "flask_secret.key"
+    if not f.exists():
+        import secrets
+        f.write_text(secrets.token_hex(32))
+    return f.read_text().strip()
+app.secret_key = _secret()
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
+                  PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30))
+
+DEFAULT_STAFF = "김준구,류한솔,이준혁"      # 직원 이름 고르기 기본 명단 (설정에서 바꿈)
 
 def ensure_schema():
     """예전 store.db를 지우지 않고, AI 사진검색에 필요한 칸만 덧붙인다."""
@@ -41,7 +56,9 @@ def ensure_schema():
                      ("wait_state", "TEXT DEFAULT ''"),   # '' / waiting / going / served / nostock / expired
                      ("wait_at", "TEXT"), ("served_at", "TEXT"),
                      ("resolution", "TEXT"), ("resolved_at", "TEXT"),
-                     ("escalated_at", "TEXT")]:     # 2분 동안 아무도 안 받아서 전체 직원에게 다시 알린 시각
+                     ("escalated_at", "TEXT"),      # 2분 동안 아무도 안 받아서 전체 직원에게 다시 알린 시각
+                     ("staff", "TEXT"),             # 가는 중 / '제가 갈게요'를 누른 직원 이름
+                     ("resolved_by", "TEXT")]:      # 처리한 직원 이름
         if col not in rcols:
             con.execute(f"ALTER TABLE reports ADD COLUMN {col} {typ}")
     if "seg" not in {r[1] for r in con.execute("PRAGMA table_info(events)")}:
@@ -68,12 +85,21 @@ def ensure_schema():
     # ④⑪ 매장 설정 / ⑦ 진열 점검일
     con.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     for k, v in [("store_type", "대형"), ("staff_count", "4"), ("kiosk", "1"), ("busy", "auto"),
-                 ("last_check", datetime.date.today().isoformat())]:
+                 ("last_check", datetime.date.today().isoformat()), ("staff_names", DEFAULT_STAFF)]:
         con.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (k, v))
     # ⑩ 사용률 지표
     con.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, sku TEXT, src TEXT, ts TEXT)")
     # 찜목록: 로그인 없이 휴대폰별 익명 id(device)로 저장
     con.execute("CREATE TABLE IF NOT EXISTS likes (device TEXT, sku TEXT, ts TEXT, PRIMARY KEY (device, sku))")
+    # 피팅룸 반납: 반납받을 때 태그 찍기(returned_at) → 제자리에 걸 때 선반에서 다시 찍기(rehung_at). 위치(placements)는 그대로
+    con.execute("""CREATE TABLE IF NOT EXISTS fitting_returns (id INTEGER PRIMARY KEY AUTOINCREMENT, sku TEXT,
+                   fixture_id TEXT, level TEXT, returned_at TEXT, returned_by TEXT, rehung_at TEXT, rehung_by TEXT,
+                   demo INTEGER DEFAULT 0)""")
+    # 직원이 지운 옷: 되살릴 수 있게 상품·재고·바코드를 통째로 보관
+    con.execute("CREATE TABLE IF NOT EXISTS deleted_items (sku TEXT PRIMARY KEY, data TEXT, deleted_at TEXT, deleted_by TEXT)")
+    # 손님 로그인 (QR): 비밀번호는 해시로만 저장, profile = MY 정보(키·몸무게·내 사이즈·설정) JSON
+    con.execute("""CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE COLLATE NOCASE,
+                   pw TEXT, created TEXT, profile TEXT)""")
     con.commit(); con.close()
 ensure_schema()
 
@@ -102,13 +128,25 @@ def setting(k, default=""):
     return r["value"] if r else default
 def set_setting(k, v):
     db().execute("INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (k, str(v)))
+def is_large(): return setting("store_type", "대형") == "대형"
+CROWD_N = 3                          # 대형 매장: 기다리는 손님이 이만큼 넘으면 손님 화면에 '조금 늦을 수 있어요'
+def waiting_n(): return one("SELECT COUNT(*) n FROM reports WHERE wait_state IN ('waiting','going')")["n"]
 def is_busy():
-    """바쁨 모드: 켜기/끄기, 자동이면 '직원 2명 이하' 또는 '기다리는 손님 수 ≥ 직원 수'"""
+    """바쁨 모드: 켜기/끄기, 자동이면 '직원 2명 이하' 또는 '기다리는 손님 수 ≥ 직원 수'
+       대형 매장은 늘 바빠서 바쁨 모드를 쓰지 않음 (대신 붐빔 안내 crowd)"""
+    if is_large(): return False
     mode = setting("busy", "auto")
     if mode in ("on", "off"): return mode == "on"
     staff = int(setting("staff_count", "4") or 4)
     waiting = one("SELECT COUNT(*) n FROM reports WHERE wait_state IN ('waiting','going')")["n"]
     return staff <= 2 or waiting >= staff
+
+def cur_staff():
+    """이 휴대폰을 쓰는 직원 이름 (로그인 없음 · 직원 화면에서 한 번 고르면 쿠키 ww_staff 에 저장)"""
+    from urllib.parse import unquote
+    return unquote(request.cookies.get("ww_staff") or "").strip()[:12]
+def staff_names():
+    return [n.strip() for n in setting("staff_names", DEFAULT_STAFF).split(",") if n.strip()]
 
 # ---------- ⑩ 사용률 기록 ----------
 def cur_seg():
@@ -149,11 +187,24 @@ def helpers():
         return "/search?" + urlencode(a)
     try: busy = is_busy()
     except Exception: busy = False
-    staff_badge = 0
-    if request.path.startswith("/staff"):                 # 직원 탭바 '신고함' 숫자 = 기다리는 손님 수
-        try: staff_badge = one("SELECT COUNT(*) n FROM reports WHERE wait_state IN ('waiting','going')")["n"]
-        except Exception: staff_badge = 0
+    staff_badge, crowd = 0, False
+    try:
+        wn = waiting_n()
+        crowd = is_large() and wn >= CROWD_N               # 대형 매장 붐빔 안내
+        if request.path.startswith("/staff"): staff_badge = wn   # 직원 탭바 '신고함' 숫자 = 기다리는 손님 수
+    except Exception: pass
+    me_user, me_profile = None, None
+    if not request.path.startswith("/staff") and session.get("uid"):
+        try:
+            u = one("SELECT username, profile FROM users WHERE id=?", (session["uid"],))
+            if u: me_user, me_profile = u["username"], json.loads(u["profile"] or "null")
+        except Exception: pass
+    sname, snames = "", []
+    if request.path.startswith("/staff"):
+        try: sname, snames = cur_staff(), staff_names()
+        except Exception: pass
     return dict(imgsrc=imgsrc, with_args=with_args, store_name=STORE_NAME, busy=busy, staff_badge=staff_badge,
+                crowd=crowd, staff_name=sname, staff_names=snames, me_user=me_user, me_profile=me_profile,
                 cx_at=request.args.get("at") or "ENTRANCE")   # 고객 화면 탭바·링크용 현재 QR 위치
 
 # ---------- 위치 + 갱신 시각 ----------
@@ -664,6 +715,26 @@ def search_trends(seg, n=6):
     rising += [w for w in dr if w not in rising and w not in popular[:3]][:n - len(rising)]
     return popular, rising, bool(seg)
 
+def smart_search(items, q, limit=999):
+    """글자 · 음성 검색: ① 단어 사전(이름 + 생김새 설명) ② 그래도 종류를 모르겠으면 Gemini가 설명을 해석
+       → (결과, 알아들은 조건, 안내 문구)"""
+    res, parsed, note = S.text_search(items, q, limit=limit)
+    if parsed["subs"] or (not any(parsed.values()) and res):       # 종류를 알아들었거나 상품 이름으로 찾음
+        return res, parsed, note
+    if any(parsed.values()) and len(q.replace(" ", "")) <= 6:      # '블랙', '검정 바지'처럼 짧은 말은 AI 없이
+        return res, parsed, note
+    try: a = V.interpret(q)
+    except Exception: a = None
+    if not a or a.get("none") or not (a.get("subcat") or a.get("category")):
+        return res, parsed, note
+    p2 = {"colors": [a["color"]] if a.get("color") else parsed["colors"], "subs": [a["subcat"]] if a.get("subcat") else [],
+          "cats": [a["category"]] if a.get("category") and not a.get("subcat") else [], "fits": [a["fit"]] if a.get("fit") else parsed["fits"]}
+    scored = sorted(((S.score_item(it, p2), it) for it in items), key=lambda t: -t[0])
+    res2 = [it for sc, it in scored if sc > 0][:limit]
+    if not res2: return res, parsed, note
+    words = " · ".join(v for v in (a.get("color"), a.get("subcat") or a.get("category"), a.get("fit")) if v)
+    return res2, p2, f"설명을 알아듣고 찾았어요 · {words}"
+
 @app.route("/search")
 def search():
     at = request.args.get("at", "ENTRANCE")
@@ -673,7 +744,7 @@ def search():
     note = ""
     exact_ids = None
     if q:
-        base, parsed, note = S.text_search(base, q, limit=999)
+        base, parsed, note = smart_search(base, q)
         exact_ids = {it["sku"] for it in base if S.is_exact(it, parsed)}
         log_event("search", src=q[:40])
     items = decorate(apply_filters(base, sel), at)
@@ -748,7 +819,7 @@ def item(sku):
     log_event("tag" if src == "tag" else "view", sku, src or None)     # ⑨ 옷 태그 QR로 들어왔는지
     fx = it["place"]["fixture_id"] if it["place"] else None
     return render_template("item.html", src=src, at=at, it=it, map=map_data(at, fx), walk=walk(at, fx),
-                           flag=loc_flag(it), similar=similar_items(it), **help_data(it))
+                           flag=loc_flag(it), fitret=fitting_open(sku), similar=similar_items(it), **help_data(it))
 
 SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL"]
 
@@ -833,9 +904,9 @@ def expire_waits():
                     WHERE wait_state IN ('waiting','going') AND wait_at < ?""", (ts(), cut))
     db().commit()
 
-def close_loc_reports(sku, fx, resolution):
-    q = "UPDATE reports SET done=1, resolution=?, resolved_at=? WHERE sku=? AND kind='none' AND done=0"
-    args = [resolution, ts(), sku]
+def close_loc_reports(sku, fx, resolution, by=None):
+    q = "UPDATE reports SET done=1, resolution=?, resolved_at=?, resolved_by=COALESCE(?, staff) WHERE sku=? AND kind='none' AND done=0"
+    args = [resolution, ts(), by or None, sku]
     if fx: q += " AND fixture_id=?"; args.append(fx)
     db().execute(q, args)
 
@@ -996,14 +1067,34 @@ def found():
     """손님이 '찾았어요' → 이 위치가 맞다는 확인 + 같은 자리 신고는 취소"""
     d = request.get_json(force=True)
     sku, fx = d.get("sku"), d.get("fixture")
+    p = one("SELECT confirmed_at FROM placements WHERE sku=? AND fixture_id=? AND active=1", (sku, fx))
+    closed = [r["id"] for r in rows("""SELECT id FROM reports WHERE sku=? AND fixture_id=? AND kind='none' AND done=0
+                                         AND wait_state IN ('', 'expired')""", (sku, fx))]
     db().execute("UPDATE placements SET confirmed_at=? WHERE sku=? AND fixture_id=? AND active=1", (ts(), sku, fx))
-    db().execute("""UPDATE reports SET done=1, resolution='손님이 찾음', resolved_at=?
-                    WHERE sku=? AND fixture_id=? AND kind='none' AND done=0 AND wait_state IN ('', 'expired')""",
-                 (ts(), sku, fx))
-    db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,device,done,resolution,resolved_at)
-                    VALUES (?,?,'found',?,?,1,'손님이 찾음',?)""", (sku, fx, ts(), d.get("device"), ts()))   # 점장 요약용 기록
+    if closed:
+        db().execute(f"UPDATE reports SET done=1, resolution='손님이 찾음', resolved_at=? WHERE id IN ({','.join('?' * len(closed))})",
+                     [ts()] + closed)
+    undo = json.dumps({"prev": p["confirmed_at"] if p else None, "closed": closed})   # 되돌리기에 쓸 이전 상태
+    rid = db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,device,done,resolution,resolved_at,detail)
+                          VALUES (?,?,'found',?,?,1,'손님이 찾음',?,?)""", (sku, fx, ts(), d.get("device"), ts(), undo)).lastrowid   # 점장 요약용 기록
     db().commit()
-    return jsonify(ok=True, message="고마워요!")
+    return jsonify(ok=True, id=rid, message="고마워요!")
+
+@app.route("/api/found/undo", methods=["POST"])
+def found_undo():
+    """'찾았어요'를 잘못 눌렀을 때: 확인 시각 · 취소된 신고 · 기록을 누르기 전으로 되돌림 (같은 휴대폰 · 30분 안)"""
+    d = request.get_json(force=True)
+    r = one("SELECT * FROM reports WHERE id=? AND kind='found'", (d.get("id"),))
+    if not r or (r["device"] or "") != (d.get("device") or "") or mins_since(r["created_at"]) > 30:
+        return jsonify(ok=False, message="되돌릴 수 없어요"), 400
+    try: u = json.loads(r["detail"] or "{}")
+    except ValueError: u = {}
+    db().execute("UPDATE placements SET confirmed_at=? WHERE sku=? AND fixture_id=? AND active=1", (u.get("prev"), r["sku"], r["fixture_id"]))
+    for cid in u.get("closed") or []:
+        db().execute("UPDATE reports SET done=0, resolution=NULL, resolved_at=NULL WHERE id=? AND resolution='손님이 찾음'", (cid,))
+    db().execute("DELETE FROM reports WHERE id=?", (r["id"],))
+    db().commit()
+    return jsonify(ok=True, message="되돌렸어요")
 
 # ---------- 직원 화면 ----------
 # ---------- 찜목록 ----------
@@ -1041,33 +1132,26 @@ def likes():
 
 @app.route("/staff")
 def staff():
-    last = setting("last_check") or datetime.date.today().isoformat()
-    days = (datetime.date.today() - datetime.date.fromisoformat(last)).days
+    fix_n = one("SELECT COUNT(DISTINCT sku) n FROM reports WHERE kind='none' AND done=0")["n"]   # 손님 '없어요' → 신고함에서 고침
     return render_template("staff.html",
                            fixtures=shelves(),
                            items=rows("SELECT sku, name, color, subcat FROM items ORDER BY name, color"),
-                           priority=priority_list(limit=None), check_days=days, CHECK_DAYS=CHECK_DAYS,
+                           priority=priority_list(limit=None), fix_n=fix_n,
+                           fit_n=one("SELECT COUNT(*) n FROM fitting_returns WHERE rehung_at IS NULL")["n"],
                            samples=rows("""SELECT b.code, b.season, i.sku, i.name, i.color FROM barcodes b JOIN items i ON i.sku=b.sku
                                            WHERE i.sku IN ('UQ003','UQ004','UQ073') ORDER BY i.sku, b.season"""))
 
 def priority_list(limit=10):
-    """⑦ 다시 찍을 옷: 자주 찾는데(조회·검색) 위치가 오래됐거나 신고가 있는 옷부터"""
+    """⑦ 다시 찍을 옷 = 안내할 위치가 없는 옷 (자주 찾는 옷부터).
+       손님이 '없어요'라고 한 옷은 신고함 '위치 고칠 것'에서만 처리해 두 곳에 겹쳐 나오지 않게 함"""
     since = (now() - datetime.timedelta(days=7)).isoformat(timespec="seconds")
     out = []
     for it in rows("SELECT sku, name, color, image FROM items"):
-        p = placement_of(it["sku"])
+        if placement_of(it["sku"]): continue
+        if one("SELECT 1 x FROM reports WHERE sku=? AND kind='none' AND done=0", (it["sku"],)): continue
         views = one("SELECT COUNT(*) n FROM events WHERE sku=? AND kind IN ('view','tag') AND ts>=?", (it["sku"], since))["n"]
-        reps = one("SELECT COUNT(*) n FROM reports WHERE sku=? AND kind='none' AND done=0", (it["sku"],))["n"]
-        age = (now() - datetime.datetime.fromisoformat(p["updated_at"])).days if p else 99
-        if not p or age >= CHECK_DAYS or reps:
-            why = []
-            if reps: why.append(f"'없어요' {reps}건")
-            if not p: why.append("위치 없음")
-            elif age >= CHECK_DAYS: why.append(f"{age}일 전 등록")
-            if views: why.append(f"최근 7일 조회 {views}회")
-            grp = "report" if reps else ("noloc" if not p else "old")     # 목록 나눔: 신고 / 위치 없음 / 오래된 위치
-            out.append({**it, "place": p, "age": age, "views": views, "reps": reps, "why": why, "group": grp,
-                        "score": reps * 5 + views * 2 + min(age, 60) / 10 + (3 if not p else 0)})
+        why = ["위치 없음"] + ([f"최근 7일 조회 {views}회"] if views else [])
+        out.append({**it, "place": None, "views": views, "why": why, "group": "noloc", "score": views})
     out.sort(key=lambda x: -x["score"])
     return out[:limit] if limit else out
 
@@ -1077,7 +1161,7 @@ def staff_confirm(sku):
     p = placement_of(sku)
     if p:
         db().execute("UPDATE placements SET updated_at=?, updated_by='staff-check' WHERE id=?", (ts(), p["id"]))
-        close_loc_reports(sku, p["fixture_id"], "재등록")
+        close_loc_reports(sku, p["fixture_id"], "재등록", cur_staff())
         db().commit()
     return redirect(url_for("staff") + "#priority")
 
@@ -1107,14 +1191,17 @@ def register():
         db().execute("UPDATE placements SET active=0 WHERE sku=?", (t["sku"],))   # 이전 위치는 내림
         nid = db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active)"
                            " VALUES (?,?,?,?,?,1)", (t["sku"], fx, lv, ts(), "staff")).lastrowid
-        close_loc_reports(t["sku"], None, "재등록")                              # 관련 위치 신고 처리
+        close_loc_reports(t["sku"], None, "재등록", cur_staff())                 # 관련 위치 신고 처리
         undo.append([nid, old["id"] if old else None])
+    # 피팅룸에서 반납받은 옷을 제자리에 다시 걸며 찍음 → 반납 표시 1벌 지움 (찍은 그 옷만)
+    fr = one("SELECT id FROM fitting_returns WHERE sku=? AND rehung_at IS NULL ORDER BY returned_at LIMIT 1", (it["sku"],))
+    if fr: db().execute("UPDATE fitting_returns SET rehung_at=?, rehung_by=? WHERE id=?", (ts(), cur_staff() or "staff", fr["id"]))
     db().commit()
     sizes = rows("SELECT size FROM stock WHERE sku=?", (it["sku"],))
     colors = " · ".join(t["color"] for t in targets)
     note = f" (시즌 바코드 {season} → 같은 상품으로 인식)" if season else ""
     fxr = one("SELECT name FROM fixtures WHERE id=?", (fx,))
-    return jsonify(ok=True, count=len(targets), undo=undo, name=it["name"], colors=colors, sizes=len(sizes),
+    return jsonify(ok=True, count=len(targets), undo=undo, name=it["name"], colors=colors, sizes=len(sizes), rehung=bool(fr),
                    fixture=fx, fixture_name=fxr["name"] if fxr else fx, level=lv, prev=prev_fx, season=season,
                    image=url_for("static", filename=it["image"]) if it.get("image") else "",
                    message=f"{it['name']} [{colors}] 사이즈 {len(sizes)}종 → {fx} {lv}{note}")
@@ -1136,7 +1223,7 @@ def register_undo():
 # ---------- 직원: 실물 옷을 사진으로 등록 (전시회용) ----------
 def next_demo_sku():
     n = one("SELECT COUNT(*) c FROM items WHERE sku LIKE 'EX%'")["c"]
-    while one("SELECT 1 FROM items WHERE sku=?", (f"EX{n+1:03d}",)): n += 1
+    while one("SELECT 1 FROM items WHERE sku=?", (f"EX{n+1:03d}",)) or one("SELECT 1 FROM deleted_items WHERE sku=?", (f"EX{n+1:03d}",)): n += 1
     return f"EX{n+1:03d}"
 
 def staff_ai_ctx(**kw):
@@ -1186,7 +1273,17 @@ def staff_items():
     elif cat:
         items = [i for i in items if i["category"] == cat]
     counts = Counter(r["category"] for r in rows("SELECT category FROM items"))
+    trash = []
+    for r in rows("SELECT * FROM deleted_items ORDER BY deleted_at DESC"):
+        d = json.loads(r["data"]); trash.append({**d["item"], "deleted_at": r["deleted_at"], "deleted_by": r["deleted_by"],
+                                                  "ago": mins_since(r["deleted_at"])})
+    if view == "trash":
+        items = []
+        if q: trash = [t for t in trash if all(w in f"{t['sku']} {t['name']} {t['color']} {t['subcat']}".lower() for w in q.lower().split())]
+    deleted = request.args.get("deleted")
     return render_template("staff_items.html", items=items, groups=groups, shelves_n=shelves_n, view=view, fx=fx,
+                           trash=trash, deleted=next((t for t in trash if t["sku"] == deleted), None) if deleted else None,
+                           restored=request.args.get("restored"),
                            zones=zones, zone=zone, lv=lv, nonecount=sum(1 for i in items if not i["place"]) if view == "shelf" else 0,
                            q=q, cat=cat, cats=[(c, counts[c]) for c in CATS if counts[c]],
                            total=sum(counts.values()), saved=request.args.get("saved"))
@@ -1215,7 +1312,7 @@ def staff_item_edit(sku):
             db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,))
             db().execute("INSERT INTO placements (sku,fixture_id,level,updated_at,updated_by,active) VALUES (?,?,?,?,?,1)",
                          (sku, fx, lv, ts(), "staff-edit"))
-            close_loc_reports(sku, None, "위치 이동")
+            close_loc_reports(sku, None, "위치 이동", cur_staff())
         db().commit()
         back = request.args.get("back") or "/staff/items"
         if not back.startswith("/staff/items"): back = "/staff/items"
@@ -1224,6 +1321,91 @@ def staff_item_edit(sku):
     it["sizes"] = sort_sizes(it["sizes"])
     return render_template("staff_item_edit.html", it=it, fixtures=shelves(), colors=COLORS, cats=list(CATS), V=V,
                            fits=["오버핏", "레귤러핏", "슬림핏", "크롭"], back=request.args.get("back", "/staff/items"))
+
+@app.route("/staff/items/<sku>/delete", methods=["POST"])
+def staff_item_delete(sku):
+    """옷 삭제: 손님 화면·검색·키오스크에서 빠짐. 상품·재고·바코드는 deleted_items 에 보관해 되살릴 수 있음"""
+    it = one("SELECT * FROM items WHERE sku=?", (sku,))
+    if not it: return redirect(url_for("staff_items"))
+    p = placement_of(sku)
+    data = {"item": it, "stock": rows("SELECT * FROM stock WHERE sku=?", (sku,)),
+            "barcodes": rows("SELECT * FROM barcodes WHERE sku=?", (sku,)), "placement": p["id"] if p else None}
+    db().execute("INSERT OR REPLACE INTO deleted_items VALUES (?,?,?,?)", (sku, json.dumps(data, ensure_ascii=False), ts(), cur_staff()))
+    for t in ("stock", "barcodes"): db().execute(f"DELETE FROM {t} WHERE sku=?", (sku,))
+    db().execute("UPDATE placements SET active=0 WHERE sku=?", (sku,))
+    db().execute("""UPDATE reports SET done=1, resolution='상품 삭제', resolved_at=?, resolved_by=?,
+                      wait_state=CASE WHEN wait_state IN ('waiting','going') THEN 'expired' ELSE wait_state END
+                    WHERE sku=? AND (done=0 OR wait_state IN ('waiting','going'))""", (ts(), cur_staff() or None, sku))
+    db().execute("UPDATE fitting_returns SET rehung_at=?, rehung_by='상품 삭제' WHERE sku=? AND rehung_at IS NULL", (ts(), sku))
+    db().execute("DELETE FROM items WHERE sku=?", (sku,))
+    db().commit()
+    return redirect(url_for("staff_items", deleted=sku))
+
+@app.route("/staff/items/<sku>/restore", methods=["POST"])
+def staff_item_restore(sku):
+    """삭제한 옷 되살리기: 상품·재고·바코드와 마지막 위치를 그대로 돌려놓음"""
+    d = one("SELECT * FROM deleted_items WHERE sku=?", (sku,))
+    if d and not one("SELECT 1 x FROM items WHERE sku=?", (sku,)):
+        data = json.loads(d["data"])
+        def put(table, r, verb="INSERT"):
+            cols = list(r)
+            db().execute(f"{verb} INTO {table} ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})", [r[c] for c in cols])
+        put("items", data["item"])
+        for r in data.get("stock", []): put("stock", r)
+        for r in data.get("barcodes", []): put("barcodes", r, "INSERT OR IGNORE")
+        if data.get("placement") and not one("SELECT 1 x FROM placements WHERE sku=? AND active=1", (sku,)):
+            db().execute("UPDATE placements SET active=1 WHERE id=?", (data["placement"],))
+        db().execute("DELETE FROM deleted_items WHERE sku=?", (sku,))
+        db().commit()
+    return redirect(url_for("staff_items", restored=sku) + f"#i-{sku}")
+
+# ---------- 직원: 피팅룸 반납 ----------
+def fitting_open(sku):
+    """피팅룸에 반납돼 아직 제자리에 다시 걸지 않은 벌 수"""
+    return one("SELECT COUNT(*) n FROM fitting_returns WHERE sku=? AND rehung_at IS NULL", (sku,))["n"]
+
+def open_returns():
+    """제자리로 돌려놓을 옷 (선반 순서 → 오래된 것부터)"""
+    rs = rows("""SELECT fr.*, i.name, i.color, i.image, f.name fixture_name FROM fitting_returns fr
+                 JOIN items i ON i.sku=fr.sku LEFT JOIN fixtures f ON f.id=fr.fixture_id
+                 WHERE fr.rehung_at IS NULL ORDER BY fr.fixture_id IS NULL, fr.fixture_id, fr.returned_at""")
+    for r in rs: r["mins"] = mins_since(r["returned_at"])
+    return rs
+
+@app.route("/staff/fitting")
+def staff_fitting():
+    return render_template("fitting.html", rets=open_returns(),
+                           items=rows("SELECT sku, name, color, subcat FROM items ORDER BY name, color"))
+
+@app.route("/api/fitting/return", methods=["POST"])
+def fitting_return():
+    """피팅룸 반납: 옷 태그를 찍으면 기록만 남김. 위치는 그대로, 손님 화면에 '피팅룸에 반납된 옷이 있어요'"""
+    code = (request.get_json(force=True) or {}).get("sku", "")
+    it, _ = resolve_code(code)
+    if not it: return jsonify(ok=False, message=f"모르는 코드: {code}"), 400
+    p = placement_of(it["sku"])
+    rid = db().execute("INSERT INTO fitting_returns (sku,fixture_id,level,returned_at,returned_by) VALUES (?,?,?,?,?)",
+                       (it["sku"], p["fixture_id"] if p else None, p["level"] if p else None, ts(), cur_staff() or None)).lastrowid
+    db().commit()
+    return jsonify(ok=True, id=rid, sku=it["sku"], name=it["name"], color=it["color"], n=fitting_open(it["sku"]),
+                   fixture=p["fixture_id"] if p else "", level=p["level"] if p else "",
+                   fixture_name=p["fixture_name"] if p else "",
+                   image=url_for("static", filename=it["image"]) if it.get("image") else "",
+                   message=f"{it['name']} ({it['color']}) 반납 → 제자리 {p['fixture_id'] + ' ' + p['level'] if p else '위치 없음'}")
+
+@app.route("/api/fitting/undo", methods=["POST"])
+def fitting_undo():
+    rid = (request.get_json(force=True) or {}).get("id")
+    db().execute("DELETE FROM fitting_returns WHERE id=? AND rehung_at IS NULL", (rid,)); db().commit()
+    return jsonify(ok=True, message="되돌렸어요")
+
+@app.route("/staff/fitting/<int:rid>/done", methods=["POST"])
+def fitting_done(rid):
+    """스캔이 안 될 때만: 제자리에 걸었다고 직접 처리"""
+    db().execute("UPDATE fitting_returns SET rehung_at=?, rehung_by=? WHERE id=? AND rehung_at IS NULL",
+                 (ts(), cur_staff() or "staff", rid)); db().commit()
+    back = request.form.get("back") or "/staff/fitting"
+    return redirect(back if back.startswith("/staff") else "/staff/fitting")
 
 @app.route("/staff/ai")
 def staff_ai():
@@ -1292,6 +1474,89 @@ def info():
     here = one("SELECT * FROM fixtures WHERE id=?", (at,))
     return render_template("info.html", at=at, here=here)
 
+# ---------- 손님 로그인 · 내 사이즈 저장 ----------
+USER_RX = re.compile(r"[A-Za-z0-9_]{4,20}")
+_FAILS = {}                                   # 로그인 실패 기록 (아이디·IP별) → 5번 틀리면 5분 잠금
+PROFILE_KEYS = {"h": int, "w": int, "foot": int, "age": int, "pref": str, "g": str, "top": str, "bottom": str, "found_home": bool}
+
+def clean_profile(p):
+    out = {}
+    for k, typ in PROFILE_KEYS.items():
+        v = (p or {}).get(k)
+        if v in (None, ""): continue
+        try: out[k] = typ(v) if typ is not str else str(v)[:6]
+        except (TypeError, ValueError): pass
+    allowed = {"pref": ("tight", "normal", "loose"), "g": ("F", "M"), "top": SIZE_ORDER + ["XXL"], "bottom": SIZE_ORDER + ["XXL"]}
+    for k, ok in allowed.items():
+        if k in out and out[k] not in ok: out.pop(k)
+    for k, (lo, hi) in {"h": (100, 230), "w": (20, 200), "foot": (150, 350), "age": (5, 110)}.items():
+        if k in out and not lo <= out[k] <= hi: out.pop(k)
+    return out
+
+def _safe_next(n):
+    n = n or ""
+    return n if n.startswith("/") and not n.startswith("//") else "/go?at=ENTRANCE"
+
+def _locked(key):
+    t = [x for x in _FAILS.get(key, []) if time.time() - x < 300]
+    _FAILS[key] = t
+    return len(t) >= 5
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    nxt, err = _safe_next(request.values.get("next")), ""
+    if request.method == "POST":
+        name, pw = (request.form.get("username") or "").strip(), request.form.get("password") or ""
+        key = f"{name.lower()}|{request.remote_addr}"
+        if _locked(key): err = "여러 번 틀려서 5분 동안 잠겼어요"
+        else:
+            u = one("SELECT * FROM users WHERE username=?", (name,))
+            if u and check_password_hash(u["pw"], pw):
+                session.clear(); session.permanent = True; session["uid"] = u["id"]
+                _FAILS.pop(key, None)
+                return redirect(nxt)
+            _FAILS.setdefault(key, []).append(time.time())
+            err = "아이디 또는 비밀번호가 맞지 않아요"
+    return render_template("login.html", mode="login", nxt=nxt, err=err, at=request.args.get("at", "ENTRANCE"))
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    nxt, err = _safe_next(request.values.get("next")), ""
+    if request.method == "POST":
+        f = request.form
+        name, pw = (f.get("username") or "").strip(), f.get("password") or ""
+        if not USER_RX.fullmatch(name): err = "아이디는 영어 · 숫자 · _ 로 4~20자예요"
+        elif len(pw) < 8: err = "비밀번호는 8자 이상으로 해 주세요"
+        elif pw != f.get("password2"): err = "비밀번호가 서로 달라요"
+        elif one("SELECT 1 x FROM users WHERE username=?", (name,)): err = "이미 있는 아이디예요"
+        else:
+            try: prof = clean_profile(json.loads(f.get("profile") or "null"))   # 이 휴대폰에 저장해 둔 MY 정보를 그대로 가져감
+            except ValueError: prof = {}
+            uid = db().execute("INSERT INTO users (username, pw, created, profile) VALUES (?,?,?,?)",
+                               (name, generate_password_hash(pw), ts(), json.dumps(prof, ensure_ascii=False))).lastrowid
+            db().commit()
+            session.clear(); session.permanent = True; session["uid"] = uid
+            return redirect(nxt)
+    return render_template("login.html", mode="signup", nxt=nxt, err=err, at=request.args.get("at", "ENTRANCE"))
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(_safe_next(request.form.get("next")))
+
+@app.route("/api/me", methods=["GET", "POST"])
+def api_me():
+    """로그인한 손님의 MY 정보 불러오기 / 저장 (키 · 몸무게 · 내 사이즈 · '찾았어요 → 처음 화면' 설정)"""
+    uid = session.get("uid")
+    if not uid: return jsonify(ok=False, login=False)
+    if request.method == "POST":
+        prof = clean_profile((request.get_json(force=True) or {}).get("profile"))
+        db().execute("UPDATE users SET profile=? WHERE id=?", (json.dumps(prof, ensure_ascii=False), uid)); db().commit()
+        return jsonify(ok=True, login=True, profile=prof)
+    u = one("SELECT username, profile FROM users WHERE id=?", (uid,))
+    if not u: session.clear(); return jsonify(ok=False, login=False)
+    return jsonify(ok=True, login=True, user=u["username"], profile=json.loads(u["profile"] or "null"))
+
 @app.route("/me")
 def me():
     """키·몸무게 입력 (값은 휴대폰 브라우저에만 저장, 서버 저장 없음)"""
@@ -1308,7 +1573,7 @@ def staff_reports():
         w["mins"] = mins_since(w["wait_at"])
         w["label"] = {"none": "위치에 없음", "size": "사이즈 요청", "call": "직원 호출"}.get(w["kind"], w["kind"])
     # ② 위치 고칠 것 (선반별로 묶음)
-    loc = rows("""SELECT r.sku, r.fixture_id, COUNT(DISTINCT COALESCE(r.device,'r'||r.id)) n, MIN(r.created_at) first,
+    loc = rows("""SELECT r.sku, r.fixture_id, COUNT(DISTINCT COALESCE(r.device,'r'||r.id)) n, MIN(r.created_at) first, MAX(r.staff) staff,
                          MAX(r.created_at) last, i.name, i.color, i.image, f.name fixture_name, f.zone,
                          (SELECT p.active FROM placements p WHERE p.sku=r.sku AND p.fixture_id=r.fixture_id
                           ORDER BY p.updated_at DESC LIMIT 1) active,
@@ -1317,10 +1582,12 @@ def staff_reports():
                   FROM reports r LEFT JOIN items i ON i.sku=r.sku LEFT JOIN fixtures f ON f.id=r.fixture_id
                   WHERE r.kind='none' AND r.done=0
                   GROUP BY r.sku, r.fixture_id ORDER BY r.fixture_id, last DESC""")
-    groups = {}
+    groups, claims = {}, {}
     for x in loc:
         x["since"] = mins_since(x["first"])
-        groups.setdefault(x["fixture_id"] or "위치 없음", []).append(x)
+        k = x["fixture_id"] or "위치 없음"
+        groups.setdefault(k, []).append(x)
+        if x["staff"] and k not in claims: claims[k] = x["staff"]     # '제가 갈게요' 누른 직원
     # ③ 최근 처리 기록
     history = rows("""SELECT r.*, i.name FROM reports r LEFT JOIN items i ON i.sku=r.sku
                       WHERE r.done=1 AND r.resolution IS NOT NULL ORDER BY r.resolved_at DESC LIMIT 8""")
@@ -1328,8 +1595,9 @@ def staff_reports():
     if not one("SELECT 1 x FROM fixtures WHERE id=?", (start,)): start = "COUNTER"
     fmap, order, meters = fix_map(start, groups)
     groups = {k: groups[k] for k in order + [k for k in groups if k not in order]}   # 도는 순서대로
-    return render_template("reports.html", waiting=waiting, groups=groups, history=history,
-                           map=fmap, route=order, meters=meters, start=start,
+    return render_template("reports.html", waiting=waiting, groups=groups, history=history, claims=claims,
+                           map=fmap, route=order, meters=meters, start=start, show_route=bool(request.args.get("from")),
+                           rets=open_returns(), large=is_large(), CROWD_N=CROWD_N,
                            starts=[("COUNTER", "계산대"), ("ENTRANCE", "입구")] + [(f["id"], f["id"]) for f in shelves()],
                            busy_mode=setting("busy", "auto"), staff_count=setting("staff_count", "4"),
                            summary=manager_summary(), WAIT_MIN=WAIT_MIN,
@@ -1375,12 +1643,14 @@ def manager_summary(days=7):
     top_fx = rows("""SELECT r.fixture_id, f.name, f.zone, COUNT(*) n FROM reports r LEFT JOIN fixtures f ON f.id=r.fixture_id
                      WHERE r.kind='none' AND r.created_at>=? AND r.fixture_id IS NOT NULL
                      GROUP BY r.fixture_id ORDER BY n DESC LIMIT 3""", (since,))
-    top_items = rows("""SELECT r.sku, i.name, i.color, i.image, COUNT(*) n FROM reports r LEFT JOIN items i ON i.sku=r.sku
+    top_items = rows("""SELECT r.sku, i.name, i.color, i.image, COUNT(*) n FROM reports r JOIN items i ON i.sku=r.sku
                         WHERE r.kind='none' AND r.created_at>=? GROUP BY r.sku ORDER BY n DESC LIMIT 3""", (since,))
     top_liked = rows("""SELECT l.sku, i.name, i.color, i.image, COUNT(*) n,
                                (SELECT COALESCE(SUM(qty),0) FROM stock WHERE sku=l.sku) floor,
                                (SELECT COALESCE(SUM(wh),0) FROM stock WHERE sku=l.sku) wh
                         FROM likes l JOIN items i ON i.sku=l.sku GROUP BY l.sku ORDER BY n DESC, floor ASC LIMIT 5""")
+    top_tried = rows("""SELECT fr.sku, i.name, i.color, i.image, COUNT(*) n FROM fitting_returns fr JOIN items i ON i.sku=fr.sku
+                        WHERE fr.returned_at>=? GROUP BY fr.sku ORDER BY n DESC LIMIT 5""", (since,))   # 입어 보기만 하고 안 산 옷
     heat = {r["fixture_id"]: r["n"] for r in rows("""SELECT fixture_id, COUNT(*) n FROM reports
                  WHERE kind='none' AND created_at>=? AND fixture_id IS NOT NULL GROUP BY fixture_id""", (since,))}
     zone_n = Counter()
@@ -1425,7 +1695,7 @@ def manager_summary(days=7):
     usage = dict(cur, calls=cur["calls"])
     return {"cur": cur, "last": last, "deltas": deltas, "grade": grade, "acts": acts[:3], "open_fix": open_fix, "waiting": waiting,
             "heat": heat, "heat_max": max(heat.values(), default=0), "zone_n": zone_n.most_common(),
-            "usage": usage, "top_liked": top_liked, "top_fx": top_fx, "top_items": top_items,
+            "usage": usage, "top_liked": top_liked, "top_tried": top_tried, "top_fx": top_fx, "top_items": top_items,
             "serve_min": cur["serve_min"], "fix_min": cur["fix_min"], "missed": cur["missed"], "found": cur["found"]}
 
 # ---------- 발표 시연 모드: 버튼 한 번으로 시연 상황 만들기 / 지우기 ----------
@@ -1439,6 +1709,7 @@ def demo_clear():
     skus = [r["sku"] for r in rows("SELECT DISTINCT sku FROM reports WHERE device LIKE 'demo%'")]
     db().execute("DELETE FROM reports WHERE device LIKE 'demo%'")
     db().execute("DELETE FROM events WHERE src='demo'")
+    db().execute("DELETE FROM fitting_returns WHERE demo=1")
     for sku in set(skus + [DEMO_SKU]):
         if not one("SELECT 1 x FROM placements WHERE sku=? AND active=1", (sku,)):
             last = one("SELECT id FROM placements WHERE sku=? ORDER BY id DESC LIMIT 1", (sku,))
@@ -1473,6 +1744,13 @@ def demo_history():
                          (rnd.choice(skus), "ENTRANCE", "size" if i % 2 else "call", w.isoformat(timespec="seconds"),
                           "expired" if miss else "served", w.isoformat(timespec="seconds"),
                           None if miss else sv.isoformat(timespec="seconds"), "전달 완료", sv.isoformat(timespec="seconds")))
+        tried = [r["sku"] for r in rows("SELECT sku FROM items WHERE category IN ('상의','하의','아우터') ORDER BY sku LIMIT 40")]
+        for k in range(round(30 * use)):                      # 피팅룸 반납 (입어 보기만 하고 안 산 옷) — 몇 벌에 몰리게
+            sku = tried[min(int(rnd.expovariate(0.25)), len(tried) - 1)] if tried else None
+            r0 = back()
+            if sku: db().execute("""INSERT INTO fitting_returns (sku,fixture_id,level,returned_at,returned_by,rehung_at,rehung_by,demo)
+                                   SELECT ?, fixture_id, level, ?, '시연', ?, '시연', 1 FROM placements WHERE sku=? AND active=1 LIMIT 1""",
+                                 (sku, r0.isoformat(timespec="seconds"), (r0 + datetime.timedelta(minutes=rnd.randint(5, 40))).isoformat(timespec="seconds"), sku))
         for kind, n in [("search", 64), ("photo", 19), ("tag", 27), ("view", 118), ("kiosk", 41), ("call", 13)]:
             for _ in range(round(n * use)):
                 db().execute("INSERT INTO events (kind,sku,src,ts) VALUES (?,?,'demo',?)", (kind, None, back().isoformat(timespec="seconds")))
@@ -1493,6 +1771,11 @@ def demo_live():
     db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,detail,size,device,wait_state,wait_at)
                     VALUES (?,'ENTRANCE','size',?,'260 창고에서 가져다주세요 (키오스크)','260','demo-k','waiting',?)""",
                  (DEMO_WH_SKU, ts(), ts()))
+    for k, ofx in enumerate(["A-H1", "B-H1"]):            # 피팅룸에서 반납받은 옷 2벌 → '제자리로 돌려놓을 옷'
+        o = one("""SELECT p.sku, p.level FROM placements p JOIN items i ON i.sku=p.sku
+                   WHERE p.fixture_id=? AND p.active=1 AND COALESCE(i.is_demo,0)=0 ORDER BY p.sku LIMIT 1""", (ofx,))
+        if o: db().execute("""INSERT INTO fitting_returns (sku,fixture_id,level,returned_at,returned_by,demo)
+                              VALUES (?,?,?,?,'김준구',1)""", (o["sku"], ofx, o["level"], (now() - datetime.timedelta(minutes=4 + k * 7)).isoformat(timespec="seconds")))
     db().commit()
     last = one("SELECT MAX(id) n FROM reports")["n"]
     if last: notify_report(last)
@@ -1502,7 +1785,7 @@ def demo():
     act, msg = request.form.get("act"), None
     if act == "clear":   demo_clear(); msg = "시연 기록을 지웠어요"
     elif act == "hist":  demo_clear(); demo_history(); msg = "지난 2주 기록을 채웠어요 — 점장 요약을 열어 보세요"
-    elif act == "live":  demo_live(); msg = "손님 신고 5건(선반 4곳) · 창고 사이즈 요청 1건을 만들었어요 — 신고함을 열어 보세요"
+    elif act == "live":  demo_live(); msg = "손님 신고 5건(선반 4곳) · 창고 사이즈 요청 1건 · 피팅룸 반납 2벌을 만들었어요 — 신고함을 열어 보세요"
     elif act == "all":   demo_clear(); demo_history(); demo_live(); msg = "발표 준비 끝! 아래 순서대로 열어 보세요"
     it = one("SELECT * FROM items WHERE sku=?", (DEMO_SKU,))
     p = one("SELECT fixture_id FROM placements WHERE sku=? ORDER BY active DESC, id DESC LIMIT 1", (DEMO_SKU,))
@@ -1517,13 +1800,14 @@ def staff_wait_action(rid):
     act = request.form.get("act")
     r = one("SELECT * FROM reports WHERE id=?", (rid,))
     if r:
+        me = cur_staff() or None
         if act == "going":
-            db().execute("UPDATE reports SET wait_state='going' WHERE id=?", (rid,))
+            db().execute("UPDATE reports SET wait_state='going', staff=? WHERE id=?", (me, rid))
         elif act in ("served", "nostock"):
-            db().execute("UPDATE reports SET wait_state=?, served_at=? WHERE id=?", (act, ts(), rid))
+            db().execute("UPDATE reports SET wait_state=?, served_at=?, staff=COALESCE(staff, ?) WHERE id=?", (act, ts(), me, rid))
             if r["kind"] != "none":                       # 호출·사이즈 요청은 여기서 끝
-                db().execute("UPDATE reports SET done=1, resolution=?, resolved_at=? WHERE id=?",
-                             ("전달 완료" if act == "served" else "재고 없음", ts(), rid))
+                db().execute("UPDATE reports SET done=1, resolution=?, resolved_at=?, resolved_by=? WHERE id=?",
+                             ("전달 완료" if act == "served" else "재고 없음", ts(), me, rid))
             if act == "nostock":                           # 그 사이즈(없으면 전체) 재고 0
                 if r["size"]: db().execute("UPDATE stock SET qty=0, wh=0 WHERE sku=? AND size=?", (r["sku"], r["size"]))
                 else: db().execute("UPDATE stock SET qty=0, wh=0 WHERE sku=?", (r["sku"],))
@@ -1535,6 +1819,7 @@ def staff_fix():
     """위치 고칠 것: 찾아서 재등록 / 다른 곳에 있었음 / 재고 없음 / 그 자리에 있음(오신고)"""
     f = request.form
     sku, fx, act = f.get("sku"), f.get("fixture") or None, f.get("act")
+    if not sku or not one("SELECT 1 x FROM items WHERE sku=?", (sku,)): return redirect(url_for("staff_reports"))
     last = one("SELECT * FROM placements WHERE sku=? AND fixture_id IS ? ORDER BY updated_at DESC LIMIT 1", (sku, fx))
     level = (last or {}).get("level") or "중단"
     def place(to_fx, to_lv):
@@ -1552,9 +1837,17 @@ def staff_fix():
         db().execute("UPDATE placements SET active=1, confirmed_at=? WHERE id=?", (ts(), last["id"])); res = "오신고"
     else:
         return redirect(url_for("staff_reports"))
-    close_loc_reports(sku, fx, res)
+    close_loc_reports(sku, fx, res, cur_staff())
     db().commit()
     return redirect(url_for("staff_reports"))
+
+@app.route("/staff/reports/claim", methods=["POST"])
+def staff_claim():
+    """위치 고칠 것: '제가 갈게요' → 그 선반의 열린 신고에 직원 이름을 붙임 (다른 직원 화면에 'OO 처리 중')"""
+    fx = request.form.get("fixture") or None
+    db().execute("UPDATE reports SET staff=? WHERE kind='none' AND done=0 AND fixture_id IS ?", (cur_staff() or "직원", fx))
+    db().commit()
+    return redirect(url_for("staff_reports") + "#fix")
 
 # ---------- ⑪ 매장 설정 / ④ 바쁨 모드 ----------
 STORE_TYPES = {"대형": "손님이 많은 대형 매장",
@@ -1569,9 +1862,12 @@ def staff_settings():
         set_setting("staff_count", max(1, int(f.get("staff_count") or 1)))
         set_setting("kiosk", "1" if f.get("kiosk") else "0")
         set_setting("busy", f.get("busy") if f.get("busy") in ("auto", "on", "off") else "auto")
+        if "staff_names" in f:
+            names = [n.strip()[:12] for n in re.split(r"[,，\n]", f.get("staff_names", "")) if n.strip()]
+            set_setting("staff_names", ",".join(dict.fromkeys(names)) or DEFAULT_STAFF)
         db().commit()
         return redirect(url_for("staff_settings", saved=1))
-    return render_template("settings.html", s={k: setting(k) for k in ("store_type", "staff_count", "kiosk", "busy")},
+    return render_template("settings.html", s={k: setting(k) for k in ("store_type", "staff_count", "kiosk", "busy")}, CROWD_N=CROWD_N,
                            types=STORE_TYPES, busy_now=is_busy(), saved=request.args.get("saved"))
 
 @app.route("/staff/busy", methods=["POST"])
@@ -1592,7 +1888,7 @@ def credits():
 # ---------- 키오스크 ----------
 @app.route("/kiosk")
 def kiosk():
-    """어르신용: 대분류 → 종류(사진) → 색 → 결과(+선택: 핏·무늬로 더 좁히기). AI 사진검색은 없음."""
+    """어르신용: 대분류 → 종류(사진) → 결과(+선택: 색·핏·무늬로 더 좁히기), 또는 이름으로 찾기(화면 키보드 · 말). AI 사진검색은 없음."""
     if setting("kiosk", "1") != "1":                    # ⑪ 이 매장은 키오스크를 쓰지 않음
         return render_template("kiosk_off.html")
     step = request.args.get("step", "cat")
@@ -1602,8 +1898,22 @@ def kiosk():
     fit = request.args.get("fit", "")
     pattern = request.args.get("pattern", "")
     pz = request.args.get("pz", "")                     # 신상 · 세일 (입구 P구역 매대)
-    items, tiles, colors, kf = [], [], [], {}
-    if step == "result" and pz:
+    q = request.args.get("q", "").strip()[:40]          # 이름으로 찾기 (화면 키보드 · 말로 찾기 · 인기 검색어)
+    items, tiles, colors, kf, popular = [], [], [], {}, []
+    if step == "search":
+        pop, rise, _ = search_trends(None, n=8)
+        popular = list(dict.fromkeys(pop + rise))[:12]
+    elif step == "result" and q:
+        base, parsed, _ = smart_search(rows("SELECT * FROM items"), q)
+        exact = [it for it in base if S.is_exact(it, parsed)]
+        base = exact if exact else base[:30]                # 딱 맞는 옷이 있으면 그것만 (키오스크는 짧게)
+        sel = {"color": color, "fit": fit, "pattern": pattern}
+        items = decorate(apply_filters(base, sel))
+        fc = facet_counts(base, sel)
+        kf = {k: fc.get(k, []) for k in ("color", "fit", "pattern")}
+        log_event("search", src=q)
+        log_event("kiosk", src=f"q/{q}")
+    elif step == "result" and pz:
         items = decorate(rows("""SELECT i.* FROM items i JOIN placements p ON p.sku=i.sku AND p.active=1
                                  WHERE p.fixture_id IN ('P-T1','P-T2') ORDER BY p.fixture_id, i.price DESC"""))
         log_event("kiosk", src="P/신상·세일")
@@ -1617,8 +1927,8 @@ def kiosk():
         sel = {"cat": cat, "sub": sub, "color": color, "fit": fit, "pattern": pattern}
         base = rows("SELECT * FROM items")
         items = decorate(apply_filters(base, sel))
-        fc = facet_counts(base, sel)            # 핏·무늬: 지금 조건 안에 실제로 있는 값만 버튼으로
-        kf = {k: fc.get(k, []) for k in ("fit", "pattern")}
+        fc = facet_counts(base, sel)            # 색·핏·무늬: 지금 조건 안에 실제로 있는 값만 버튼으로 (색 단계는 결과 화면으로 합침)
+        kf = {k: fc.get(k, []) for k in ("color", "fit", "pattern")}
         log_event("kiosk", src=f"{cat}/{sub}/{color}")
     catinfo, mm, czone = {}, None, cat_zones()
     if step == "cat":                                    # 첫 화면 타일: 대분류별 상품 수 + 대표 사진
@@ -1630,17 +1940,21 @@ def kiosk():
         if p_n: catinfo["신상 · 세일"] = {"n": p_n, "rep": p_rep, "pz": True}
         mm = mini_map("ENTRANCE")
     return render_template("kiosk.html", step=step, cat=cat, sub=sub, color=color, catinfo=catinfo,
-                           fit=fit, pattern=pattern, kf=kf, pz=pz, mm=mm, czone=czone,
+                           fit=fit, pattern=pattern, kf=kf, pz=pz, mm=mm, czone=czone, q=q, popular=popular, colormap=COLORS,
                            splace=sub_places() if step == "sub" else {},
                            cats=list(CATS), tiles=tiles, kcolors=colors, items=items)
 
 @app.route("/kiosk/item/<sku>")
 def kiosk_item(sku):
-    it = decorate([one("SELECT * FROM items WHERE sku=?", (sku,))])[0]
+    row = one("SELECT * FROM items WHERE sku=?", (sku,))
+    if not row: return redirect(url_for("kiosk"))           # 직원이 삭제한 옷
+    it = decorate([row])[0]
     it["sizes"] = sort_sizes(it["sizes"])
     fx = it["place"]["fixture_id"] if it["place"] else None
+    link = f"{public_base()}/item/{sku}?at=ENTRANCE&src=kiosk"   # 휴대폰으로 받기: 찍으면 이 옷 위치 화면 → 지도 사진 저장 · 카톡
     return render_template("kiosk_item.html", it=it, map=map_data("ENTRANCE", fx), flag=loc_flag(it),
-                           dirtext=direction_text(fx) if fx else "", walk=walk("ENTRANCE", fx))
+                           dirtext=direction_text(fx) if fx else "", walk=walk("ENTRANCE", fx),
+                           phone_qr=qr_data_uri(link), phone_link=link, fitret=fitting_open(sku))
 
 KIOSK_PLACES = {"FIT": ("피팅룸", "door", "옷을 입어 볼 수 있어요"), "COUNTER": ("계산대", "card", "계산 · 교환 · 환불"),
                 "P-T1": ("신상품 매대", "sparkle", "이번 주 새로 들어온 옷"), "P-T2": ("할인 매대", "tag", "할인하는 옷")}

@@ -9,6 +9,7 @@
     <input name="q" value="{{ q or '' }}" placeholder="{{ sb_ph if sb_ph is defined and sb_ph else '어떤 옷을 찾으세요?' }}" enterkeyhint="search">
     <span class="cam" title="사진으로 찾기" aria-label="사진으로 찾기">{{ cxs.icon('camera', 23) }}
       <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)"></span>
+    <button type="button" class="mic" aria-label="말로 찾기" title="말로 찾기" onclick="voiceSearch(this.form)" hidden>{{ cxs.icon('mic', 22) }}</button>
     <button class="sgo" aria-label="찾기">{{ cxs.icon('search', 23) }}</button>
   </label>
 </form>
@@ -19,6 +20,7 @@
     <input name="q" value="{{ q or '' }}" placeholder="예) 파란색 후드티, 오버핏 맨투맨" enterkeyhint="search" {{ 'autofocus' if autofocus }}>
     <span class="cam" title="사진으로 찾기" aria-label="사진으로 찾기">{{ cxs.icon('camera', 21) }}
       <input type="file" name="photo" accept="image/*" form="pf" onchange="photoPicked(this)"></span>
+    <button type="button" class="mic" aria-label="말로 찾기" title="말로 찾기" onclick="voiceSearch(this.form)" hidden>{{ cxs.icon('mic', 21) }}</button>
   </label>
   <button>찾기</button>
 </form>
@@ -30,7 +32,25 @@
   <h3>{{ cxs.icon('sparkle', 22) }}AI가 사진 속 옷을 분석하고 있어요…</h3>
   <div class="steps"><div><i class="dotc"></i>옷 종류 · 색 알아보기</div><div><i class="dotc"></i>무늬 · 핏 살펴보기</div><div><i class="dotc"></i>매장 상품과 비교하기</div></div>
 </div>
+<div id="vbusy" class="vbusy" onclick="if(event.target===this)voiceStop()" aria-live="polite">
+  <div class="vb-in"><span class="vb-mic">{{ cxs.icon('mic', 34) }}</span><b>말씀해 주세요</b><p id="vbText">예) "검정 후드티", "모자 달린 회색 옷"</p>
+    <button type="button" class="btn" onclick="voiceStop()">그만하기</button></div>
+</div>
 <script>
+/* 말로 찾기: 휴대폰 브라우저의 음성 인식(아이폰 Safari · 안드로이드 Chrome). 안 되는 브라우저는 마이크 버튼을 숨김 */
+const WW_SR=window.SpeechRecognition||window.webkitSpeechRecognition; let wwRec=null;
+if(WW_SR) document.querySelectorAll('.searchbox .mic').forEach(b=>b.hidden=false);
+function voiceSearch(form){
+  if(!WW_SR) return; const vb=document.getElementById('vbusy'), vt=document.getElementById('vbText');
+  wwRec=new WW_SR(); wwRec.lang=document.documentElement.lang==='en'?'en-US':'ko-KR'; wwRec.interimResults=true;
+  vt.textContent='예) "검정 후드티", "모자 달린 회색 옷"'; vb.classList.add('on'); let sent=false;
+  wwRec.onresult=e=>{ const t=[...e.results].map(r=>r[0].transcript).join('').trim(); vt.textContent=t; form.q.value=t;
+    if(e.results[e.results.length-1].isFinal && t){ sent=true; wwRec.stop(); saveRecent(t); setTimeout(()=>form.submit(),350); } };
+  wwRec.onerror=e=>{ vt.textContent = (e.error==='not-allowed'||e.error==='service-not-allowed') ? '마이크 권한을 허용해 주세요 (설정 → 브라우저 → 마이크)' : '잘 못 들었어요. 다시 눌러 주세요'; setTimeout(voiceStop,2200); };
+  wwRec.onend=()=>{ if(!sent) setTimeout(voiceStop,900); };
+  try{ wwRec.start(); }catch(e){ voiceStop(); }
+}
+function voiceStop(){ try{ wwRec&&wwRec.abort(); }catch(e){} document.getElementById('vbusy').classList.remove('on'); }
 function saveRecent(q){ q=(q||'').trim(); if(!q) return;
   try{ let r=JSON.parse(localStorage.getItem('ww_recent')||'[]').filter(x=>x!==q); r.unshift(q);
        localStorage.setItem('ww_recent', JSON.stringify(r.slice(0,8))); }catch(e){} }

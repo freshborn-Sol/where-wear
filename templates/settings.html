@@ -8,10 +8,17 @@
   <div class="sh2">언어 · Language</div>
   <div class="regseg slang">{% for code, name in [('ko', '한국어'), ('en', 'English')] %}<a class="{{ 'on' if LANG == code }}" href="/lang?m=s&to={{code}}&next=/staff/settings">{{ cx.icon('globe', 16) }}{{name}}</a>{% endfor %}</div>
   <form method="post" style="display:flex;flex-direction:column;gap:8px">
+    <div class="sh2">직원 이름</div>
+    <div class="card meset"><div class="mrow">{{ cx.icon('user', 18) }}<div><small>이 휴대폰</small><b>{{ staff_name or '아직 안 골랐어요' }}</b></div>
+      <button type="button" class="sbtn sm line" onclick="staffPick()">{{ '바꾸기' if staff_name else '고르기' }}</button></div>
+      <label class="fld">고르기 목록 (쉼표로 나눠요)<input name="staff_names" value="{{ staff_names|join(', ') }}" autocomplete="off"></label>
+      <small class="mhint">신고함에서 누가 가는지 · 누가 처리했는지 이 이름으로 남아요</small></div>
+
     <div class="sh2">매장 유형</div>
     {% for k, d in types.items() %}
-      <label class="radio"><input type="radio" name="store_type" value="{{k}}" {{'checked' if s.store_type==k}}><div><b>{{k}} 매장</b><small>{{d}}</small></div></label>
+      <label class="radio"><input type="radio" name="store_type" value="{{k}}" {{'checked' if s.store_type==k}} onchange="largeMode()"><div><b>{{k}} 매장</b><small>{{d}}</small></div></label>
     {% endfor %}
+    <p class="hintcard" id="largenote"><b>대형 매장은 바쁨 모드를 쓰지 않아요</b>늘 바빠서 계산대 안내로 바꾸지 않고, 기다리는 손님이 {{CROWD_N}}명 이상이면 손님 화면에 '직원이 조금 늦을 수 있어요'를 띄워요.</p>
 
     <div class="sh2">지금 근무하는 직원 수</div>
     <div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:10px 12px">
@@ -20,7 +27,7 @@
         <input type="number" name="staff_count" id="sc" min="1" max="30" value="{{s.staff_count}}">
         <button type="button" onclick="stepN(1)" aria-label="한 명 늘리기">{{ cx.icon('plus', 16) }}</button>
       </div>
-      <div style="flex:1;min-width:0"><b style="font-size:12px;display:block">2명 이하이면 바쁨 모드가 자동으로 켜져요</b>
+      <div style="flex:1;min-width:0"><b style="font-size:12px;display:block" class="busyonly">2명 이하이면 바쁨 모드가 자동으로 켜져요</b>
 </div>
     </div>
 
@@ -30,15 +37,21 @@
       <span class="toggle"><input type="checkbox" name="kiosk" {{'checked' if s.kiosk=='1'}}><i></i></span>
     </label>
 
+    <div class="busyonly" style="display:flex;flex-direction:column;gap:8px">
     <div class="sh2">바쁨 모드 <span class="chip {{ 'a' if busy_now }}" style="margin-left:4px">{{ '지금 켜짐' if busy_now else '지금 꺼짐' }}</span></div>
     {% for k, lab, d in [('auto','자동','직원이 적거나 손님이 몰리면 켜져요'),('on','켜기','직원 호출 대신 계산대로 안내'),('off','끄기','항상 직원 호출 가능')] %}
       <label class="radio"><input type="radio" name="busy" value="{{k}}" {{'checked' if s.busy==k}}><div><b>{{lab}}</b><small>{{d}}</small></div></label>
     {% endfor %}
+    </div>
     <button class="save">{{ cx.icon('check', 18) }}저장</button>
   </form>
   <a class="linkrow" href="/demo" style="margin-top:14px">🎬 발표 시연 모드 (시연 상황 만들기 · 지우기){{ cx.icon('chev', 16) }}</a>
 </main>
 {{ ks.stabs('set') }}
 </div>
-<script>function stepN(d){const i=document.getElementById('sc');i.value=Math.max(1,Math.min(30,(+i.value||1)+d));}</script>
+<script>function stepN(d){const i=document.getElementById('sc');i.value=Math.max(1,Math.min(30,(+i.value||1)+d));}
+// 대형 매장이면 바쁨 모드를 숨기고 붐빔 안내 설명을 보여 줌
+function largeMode(){ const big = (document.querySelector('input[name=store_type]:checked') || {}).value === '대형';
+  document.querySelectorAll('.busyonly').forEach(e => e.hidden = big); document.getElementById('largenote').hidden = !big; }
+largeMode();</script>
 {% endblock %}

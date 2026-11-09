@@ -94,6 +94,11 @@
     {% else %}<li class="none">아직 없어요</li>{% endfor %}</ol>
   </div>
   <div class="card rk">
+    <h4>{{ cx.icon('door', 16) }}입어 보기만 하고 안 산 옷</h4>
+    <ol>{% for i in summary.top_tried %}<li><img src="{{ url_for('static', filename=i.image) if i.image else '' }}" alt=""><span class="nm">{{i.name}} ({{i.color}})</span><b>{{i.n}}</b></li>
+    {% else %}<li class="none">아직 없어요 · 피팅룸 반납을 찍으면 쌓여요</li>{% endfor %}</ol>
+  </div>
+  <div class="card rk">
     <h4>{{ cx.icon('heart', 16) }}많이 찜한 옷</h4>
     <ol>{% for i in summary.top_liked %}<li><img src="{{ url_for('static', filename=i.image) if i.image else '' }}" alt=""><span class="nm">{{i.name}} ({{i.color}})</span>
       {% if i.floor + i.wh <= 3 %}<span class="chip r">재고 {{i.floor}}+{{i.wh}}</span>{% endif %}<b>{{i.n}}</b></li>

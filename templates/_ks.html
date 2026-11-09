@@ -22,7 +22,7 @@
 
 {% macro kstep(cur) -%}
 <ol class="kstep">
-  {% for l in ['종류', '세부 종류', '색', '위치'] %}
+  {% for l in ['종류', '세부 종류', '옷 고르기', '위치'] %}
     <li class="{{ 'on' if loop.index0 == cur else ('done' if loop.index0 < cur) }}"><i>{{ loop.index }}</i>{{ l }}</li>
   {% endfor %}
 </ol>
@@ -66,13 +66,61 @@
   <h1>{{ title }}</h1>
   {% if live %}<span class="sb-live" id="live"><i></i>자동 새로고침</span>
   {% elif right %}<span class="sb-right">{{ right|safe }}</span>{% endif %}
+  <button type="button" class="sb-me {{ 'none' if not staff_name }}" onclick="staffPick()" aria-label="직원 이름">{{ cx.icon('user', 14) }}<span>{{ staff_name or '이름 고르기' }}</span></button>
 </header>
+{{ staffpick() }}
+{%- endmacro %}
+
+{# 직원 이름 고르기: 로그인 없이 이 휴대폰에 한 번 저장 (쿠키 ww_staff + localStorage).
+   이름이 없을 때 class="needname" 폼을 누르면 먼저 이름을 물어보고 그대로 이어서 보냄 #}
+{% macro staffpick() -%}
+<div class="spick" id="spick" onclick="if(event.target===this)this.classList.remove('on')"><div class="spick-in">
+  <b>누가 쓰는 휴대폰인가요?</b>
+  <small>신고함에 누가 가는지 · 누가 처리했는지 이름으로 남아요<br>로그인 없이 이 휴대폰에만 저장돼요</small>
+  <div class="spick-n">{% for n in staff_names %}<button type="button" class="{{ 'on' if n == staff_name }}" onclick="staffSet(this.textContent)">{{n}}</button>{% endfor %}</div>
+  <form class="spick-f" onsubmit="staffSet(this.nm.value);return false"><input name="nm" placeholder="다른 이름 직접 입력" maxlength="12" autocomplete="off"><button class="sbtn sm">확인</button></form>
+</div></div>
+<script>
+const WW_STAFF = {{ (staff_name or '')|tojson }}; let wwPend = null;
+function wwCookie(n){ document.cookie = 'ww_staff=' + encodeURIComponent(n) + ';path=/;max-age=31536000;samesite=lax'; }
+function staffPick(form, btn){ wwPend = form ? [form, btn] : null; document.getElementById('spick').classList.add('on'); }
+function staffSet(n){ n = (n || '').trim().slice(0, 12); if (!n) return;
+  wwCookie(n); try{ localStorage.setItem('ww_staff', n); }catch(e){}
+  if (!wwPend) return location.reload();
+  const [f, b] = wwPend;
+  if (b && b.name) { const h = document.createElement('input'); h.type = 'hidden'; h.name = b.name; h.value = b.value; f.appendChild(h); }
+  f.submit(); }
+document.addEventListener('submit', e => { if (!WW_STAFF && e.target.classList.contains('needname')) { e.preventDefault(); staffPick(e.target, e.submitter); } });
+if (!WW_STAFF) { try{ const s = localStorage.getItem('ww_staff');            // 쿠키만 지워졌으면 저장해 둔 이름으로
+  if (s && !sessionStorage.getItem('ww_sr')) { sessionStorage.setItem('ww_sr', '1'); wwCookie(s); location.reload(); } }catch(e){} }
+</script>
+{%- endmacro %}
+
+{# 피팅룸 반납 → 제자리로 돌려놓을 옷 (신고함 · 피팅룸 반납 화면 공통) #}
+{% macro fitlist(rets, back='/staff/fitting') -%}
+{% if not rets %}<div class="empty">돌려놓을 옷이 없어요.</div>{% else %}
+<ul class="fitlist">
+  {% for r in rets %}
+  <li>
+    <img src="{{ url_for('static', filename=r.image) if r.image else '' }}" alt="">
+    <div class="fb">
+      <b>{{ r.name }} <small>({{ r.color }})</small></b>
+      <span class="fto">{% if r.fixture_id %}{{ cx.icon('pin', 13) }}제자리 <em>{{ r.fixture_id }} {{ r.level or '' }}</em>{% else %}<em class="no">위치 없음 · 등록 화면에서 찍어 주세요</em>{% endif %}</span>
+      <small>{{ '방금' if r.mins < 1 else r.mins ~ '분 전' }} 반납{% if r.returned_by %} · {{ r.returned_by }}{% endif %}</small>
+    </div>
+    <form method="post" action="/staff/fitting/{{r.id}}/done" class="needname"><input type="hidden" name="back" value="{{ back }}"><button class="sbtn sm line">스캔 없이 처리</button></form>
+  </li>
+  {% endfor %}
+</ul>
+<p class="fithint">{{ cx.icon('scan', 14) }}제자리에 걸 때 <b>등록</b> 화면에서 선반 QR → 옷 태그를 찍으면 목록과 손님 화면 표시가 사라져요</p>
+{% endif %}
 {%- endmacro %}
 
 {# 등록 화면 위: 바코드 모드(위치 등록) ↔ 사진 모드(새 옷 등록) #}
 {% macro regseg(active) -%}
-<nav class="regseg"><a class="{{ 'on' if active == 'scan' }}" href="/staff">{{ cx.icon('scan', 18) }}바코드 모드</a>
-  <a class="{{ 'on' if active == 'photo' }}" href="/staff/ai">{{ cx.icon('camera', 18) }}사진 모드</a></nav>
+<nav class="regseg reg3"><a class="{{ 'on' if active == 'scan' }}" href="/staff">{{ cx.icon('scan', 18) }}바코드 모드</a>
+  <a class="{{ 'on' if active == 'photo' }}" href="/staff/ai">{{ cx.icon('camera', 18) }}사진 모드</a>
+  <a class="{{ 'on' if active == 'fit' }}" href="/staff/fitting">{{ cx.icon('door', 18) }}피팅룸 반납</a></nav>
 {%- endmacro %}
 
 {% macro stabs(active) -%}

@@ -6,7 +6,8 @@
 <main class="kmain">
 {% if step == 'cat' %}
   {{ ks.kstep(0) }}
-  <div><h1 class="kh1">무엇을 찾으세요?</h1></div>
+  <div class="khrow"><h1 class="kh1">무엇을 찾으세요?</h1>
+    <a class="ksbtn" href="/kiosk?step=search">{{ cx.icon('search', 40) }}<b>검색</b></a></div>
   <div class="kcats">
     {% for c in cats + ['신상 · 세일'] if catinfo.get(c) %}{% set ci = catinfo[c] %}
       <a class="kcat {{ 'kp' if ci.pz }}" href="{{ '/kiosk?step=result&pz=1' if ci.pz else '/kiosk?step=sub&cat=' ~ c }}">
@@ -47,12 +48,41 @@
   {{ ks.kstep(1) }}
   <h1 class="kh1">{{cat}} · 어떤 종류인가요?</h1>
   <div class="ktiles">
-    <a class="ktile all" href="/kiosk?step=color&cat={{cat}}"><div class="big"><b>전체</b><span>모든 {{cat}}</span>{% if czone.get(cat) %}<span class="kz in">{{ cx.icon('pinfill', 20) }}{{czone[cat]}}구역</span>{% endif %}</div><b>잘 모르겠어요</b><small>{{ tiles|sum(attribute='n') }}종</small></a>
+    <a class="ktile all" href="/kiosk?step=result&cat={{cat}}"><div class="big"><b>전체</b><span>모든 {{cat}}</span>{% if czone.get(cat) %}<span class="kz in">{{ cx.icon('pinfill', 20) }}{{czone[cat]}}구역</span>{% endif %}</div><b>잘 모르겠어요</b><small>{{ tiles|sum(attribute='n') }}종</small></a>
     {% for t in tiles %}
       {% set sp = splace.get(cat ~ '/' ~ t.sub) %}
-      <a class="ktile" href="/kiosk?step=color&cat={{cat}}&sub={{t.sub}}"><span class="kimg"><img src="{{ imgsrc(t.rep) }}" alt="">{% if sp %}<span class="kz">{{ cx.icon('pinfill', 20) }}{{ sp[0] }}구역 {{ sp.split('-',1)[1] if '-' in sp else '' }}</span>{% endif %}</span><b>{{t.sub}}</b><small>{{t.n}}종</small></a>
+      <a class="ktile" href="/kiosk?step=result&cat={{cat}}&sub={{t.sub}}"><span class="kimg"><img src="{{ imgsrc(t.rep) }}" alt="">{% if sp %}<span class="kz">{{ cx.icon('pinfill', 20) }}{{ sp[0] }}구역 {{ sp.split('-',1)[1] if '-' in sp else '' }}</span>{% endif %}</span><b>{{t.sub}}</b><small>{{t.n}}종</small></a>
     {% endfor %}
   </div>
+{% elif step == 'search' %}
+  <h1 class="kh1">무엇을 찾으세요?</h1>
+  <div class="kq">
+    <div class="kq-box" id="kqBox"><span id="kqText"></span><i class="kq-caret"></i><span class="kq-ph" id="kqPh">예) 검정 후드티 · 청바지</span></div>
+    <button type="button" class="kq-clr" onclick="kqClear()" aria-label="모두 지우기">{{ cx.icon('close', 34) }}</button>
+  </div>
+  <div class="kq-acts">
+    <button type="button" class="kq-mic" id="kqMic" onclick="kqVoice()" hidden>{{ cx.icon('mic', 44) }}<span>말로 찾기</span></button>
+    <button type="button" class="kq-go" onclick="kqGo()">{{ cx.icon('search', 40) }}<span>찾기</span></button>
+  </div>
+  {% if popular %}
+  <section class="kq-pop"><b>많이 찾는 옷</b><span>누르면 바로 찾아요</span>
+    <div class="kq-chips">{% for w in popular %}<a class="kchip" href="/kiosk?step=result&q={{ w|urlencode }}">{{w}}</a>{% endfor %}</div></section>
+  {% endif %}
+  <div class="kkb" id="kkb">
+    {% for row in [['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ'], ['ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ'], ['ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ']] %}
+    <div class="kkb-r">
+      {% if loop.index == 3 %}<button type="button" class="kk wide shift" id="kkShift" onclick="kkShift()">쌍자음</button>{% endif %}
+      {% for k in row %}<button type="button" class="kk" data-k="{{k}}" onclick="kkType(this.dataset.k)">{{k}}</button>{% endfor %}
+      {% if loop.index == 3 %}<button type="button" class="kk wide back" onclick="kkBack()" aria-label="한 글자 지우기">{{ cx.icon('back', 36) }}</button>{% endif %}
+    </div>
+    {% endfor %}
+    <div class="kkb-r"><button type="button" class="kk space" onclick="kkType(' ')">띄어쓰기</button></div>
+  </div>
+  <div class="kdim" id="kVoice"><div class="kmodal">
+    <div class="bi kv-pulse">{{ cx.icon('mic', 76) }}</div>
+    <h3>말씀해 주세요</h3><p id="kvText">예) "검정 후드티", "허리 고무줄 바지"</p>
+    <div class="kbtns"><button class="kbtn gray" onclick="kqVoiceStop()">그만하기</button></div>
+  </div></div>
 {% elif step == 'color' %}
   {{ ks.kstep(2) }}
   <div><h1 class="kh1">{{ sub or cat }} · 어떤 색인가요?</h1></div>
@@ -63,20 +93,24 @@
     {% endfor %}
   </div>
 {% else %}
-  {% set base = '/kiosk?step=result&cat=' ~ cat ~ '&sub=' ~ sub ~ '&color=' ~ color %}
+  {% macro kurl(key=None, val='') -%}
+    /kiosk?step=result{% if q %}&q={{ q|urlencode }}{% else %}&cat={{ cat|urlencode }}&sub={{ sub|urlencode }}{% endif %}
+    {%- for k in ['color', 'fit', 'pattern'] %}{% set v = val if k == key else {'color': color, 'fit': fit, 'pattern': pattern}[k] %}{% if v and key != 'clear' %}&{{k}}={{ v|urlencode }}{% endif %}{% endfor %}
+  {%- endmacro %}
   {% if pz %}<h1 class="kh1">신상 · 세일<small>{{items|length}}개</small></h1>
+  {% elif q %}<h1 class="kh1"><span>‘{{q}}’</span> 찾은 옷<small>{{items|length}}개</small></h1>
   {% else %}{{ ks.kstep(2) }}
-  <h1 class="kh1">{{ color or '모든 색' }} {{ sub or cat }}<small>{{items|length}}개</small></h1>{% endif %}
+  <h1 class="kh1">{{ color ~ ' ' if color }}{{ sub or cat }}<small>{{items|length}}개</small></h1>{% endif %}
   <p class="klead">옷 사진을 누르면 있는 곳을 크게 보여드려요</p>
-  {% if kf.fit|length > 1 or kf.pattern|length > 1 or fit or pattern %}
+  {% if not pz and (kf.color|length > 1 or kf.fit|length > 1 or kf.pattern|length > 1 or color or fit or pattern) %}
   <section class="knarrow">
-    <div class="knh"><b>핏·무늬</b><span>(안 눌러도 돼요)</span>
-      {% if fit or pattern %}<a class="kclear" href="{{base}}">조건 지우기</a>{% endif %}</div>
-    {% for key, label, cur, okey, oval in [('fit','핏',fit,'pattern',pattern), ('pattern','무늬',pattern,'fit',fit)] %}
+    <div class="knh"><b>색 · 핏 · 무늬</b><span>(안 눌러도 돼요)</span>
+      {% if color or fit or pattern %}<a class="kclear" href="{{ kurl('clear') }}">조건 지우기</a>{% endif %}</div>
+    {% for key, label, cur in [('color', '색', color), ('fit', '핏', fit), ('pattern', '무늬', pattern)] %}
       {% if kf[key]|length > 1 or cur %}
-      <div class="krow"><div class="kl">{{label}}</div>
+      <div class="krow {{ 'kcolrow' if key == 'color' }}"><div class="kl">{{label}}</div>
         {% for v, n in kf[key] %}{% set on = (v == cur) %}
-          <a class="kchip{{ ' on' if on }}" href="{{base}}&{{key}}={{ '' if on else v }}&{{okey}}={{oval}}">{{ '✓ ' if on }}{{v}} <small>{{n}}</small></a>
+          <a class="kchip{{ ' on' if on }}" href="{{ kurl(key, '' if on else v) }}">{% if key == 'color' %}<i class="ksw" style="background:{{ colormap.get(v, '#ccc') }}"></i>{% endif %}{{ '✓ ' if on }}{{v}} <small>{{n}}</small></a>
         {% endfor %}
       </div>
       {% endif %}
@@ -101,7 +135,63 @@
 {% elif step == 'sub' %}{{ ks.knav('/kiosk', '종류 다시 고르기') }}
 {% elif step == 'color' %}{{ ks.knav('/kiosk?step=sub&cat=' ~ cat, '세부 종류 다시') }}
 {% elif pz %}{{ ks.knav() }}
-{% else %}{{ ks.knav('/kiosk?step=color&cat=' ~ cat ~ '&sub=' ~ sub, '색 다시 고르기') }}{% endif %}
+{% elif step == 'search' %}{{ ks.knav() }}
+{% elif q %}{{ ks.knav('/kiosk?step=search', '다시 찾기') }}
+{% else %}{{ ks.knav('/kiosk?step=sub&cat=' ~ cat, '세부 종류 다시') }}{% endif %}
 </div>
 {% if step != 'cat' %}{{ ks.kidle(90) }}{% endif %}
+{% if step == 'search' %}
+<script>
+/* 화면 한글 키보드: 누른 자모를 순서대로 모아 두고, 그때마다 글자로 조합한다 (지우기 = 마지막 자모 하나 빼기) */
+const CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ', JUNG='ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ', JONG=' ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ';
+const VV={'ㅗㅏ':'ㅘ','ㅗㅐ':'ㅙ','ㅗㅣ':'ㅚ','ㅜㅓ':'ㅝ','ㅜㅔ':'ㅞ','ㅜㅣ':'ㅟ','ㅡㅣ':'ㅢ'};
+const CC={'ㄱㅅ':'ㄳ','ㄴㅈ':'ㄵ','ㄴㅎ':'ㄶ','ㄹㄱ':'ㄺ','ㄹㅁ':'ㄻ','ㄹㅂ':'ㄼ','ㄹㅅ':'ㄽ','ㄹㅌ':'ㄾ','ㄹㅍ':'ㄿ','ㄹㅎ':'ㅀ','ㅂㅅ':'ㅄ'};
+const SPLIT={}; for(const k in CC) SPLIT[CC[k]]=[k[0],k[1]];
+const SHIFT={'ㅂ':'ㅃ','ㅈ':'ㅉ','ㄷ':'ㄸ','ㄱ':'ㄲ','ㅅ':'ㅆ','ㅐ':'ㅒ','ㅔ':'ㅖ'};
+let pre='', seq=[], shift=false;
+function compose(a){
+  let out='', c=null, v=null, j=null;
+  const flush=()=>{ if(c&&v) out+=String.fromCharCode(0xAC00+(CHO.indexOf(c)*21+JUNG.indexOf(v))*28+(j?JONG.indexOf(j):0)); else if(c) out+=c; else if(v) out+=v; c=v=j=null; };
+  for(const k of a){
+    if(k===' '){ flush(); out+=' '; continue; }
+    if(JUNG.includes(k)){
+      if(c&&!v){ v=k; }
+      else if(v&&!j&&VV[v+k]){ v=VV[v+k]; }
+      else if(j){ let nc; if(SPLIT[j]){ nc=SPLIT[j][1]; j=SPLIT[j][0]; } else { nc=j; j=null; } flush(); c=nc; v=k; }
+      else { flush(); v=k; }
+    } else {
+      if(c&&v&&!j&&JONG.includes(k)&&k!==' '){ j=k; }
+      else if(j&&!SPLIT[j]&&CC[j+k]){ j=CC[j+k]; }
+      else { flush(); c=k; }
+    }
+  }
+  flush(); return out;
+}
+const $k=id=>document.getElementById(id);
+function kqText(){ return (pre+compose(seq)).replace(/\s+/g,' '); }
+function kqDraw(){ const t=kqText(); $k('kqText').textContent=t; $k('kqPh').hidden=!!t; }
+function kkType(k){ if(shift&&SHIFT[k]) k=SHIFT[k]; seq.push(k); if(shift) kkShift(false); kqDraw(); }
+function kkBack(){ if(seq.length) seq.pop(); else pre=pre.slice(0,-1); kqDraw(); }
+function kkShift(on){ shift=(on===undefined)?!shift:on; $k('kkShift').classList.toggle('on',shift);
+  document.querySelectorAll('.kk[data-k]').forEach(b=>{ const k=b.dataset.k; b.textContent=(shift&&SHIFT[k])?SHIFT[k]:k; }); }
+function kqClear(){ pre=''; seq=[]; kqDraw(); }
+function kqGo(){ const t=kqText().trim(); if(!t){ $k('kqBox').classList.add('shake'); setTimeout(()=>$k('kqBox').classList.remove('shake'),400); return; }
+  location.href='/kiosk?step=result&q='+encodeURIComponent(t); }
+/* 말로 찾기 (패드 마이크) — 브라우저가 음성 인식을 지원할 때만 버튼이 보인다 */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition; let rec=null;
+if(SR) $k('kqMic').hidden=false;
+function kqVoice(){
+  if(!SR) return; rec=new SR(); rec.lang=document.documentElement.lang==='en'?'en-US':'ko-KR'; rec.interimResults=true;
+  $k('kvText').textContent='예) "검정 후드티", "허리 고무줄 바지"'; $k('kVoice').classList.add('on');
+  rec.onresult=e=>{ const t=[...e.results].map(r=>r[0].transcript).join(''); $k('kvText').textContent=t;
+    if(e.results[e.results.length-1].isFinal){ pre=t; seq=[]; kqDraw(); rec.stop(); setTimeout(kqGo,500); } };
+  rec.onerror=e=>{ $k('kvText').textContent = e.error==='not-allowed'||e.error==='service-not-allowed' ? '마이크를 쓸 수 없어요. 글자로 찾아 주세요' : '잘 못 들었어요. 다시 눌러 주세요'; setTimeout(kqVoiceStop,1800); };
+  rec.onend=()=>{ if(!kqText()) setTimeout(kqVoiceStop,1200); };
+  try{ rec.start(); }catch(e){ kqVoiceStop(); }
+}
+function kqVoiceStop(){ try{ rec&&rec.abort(); }catch(e){} $k('kVoice').classList.remove('on'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Enter') kqGo(); });
+kqDraw();
+</script>
+{% endif %}
 {% endblock %}

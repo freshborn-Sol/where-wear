@@ -185,6 +185,58 @@ def normalize(a):
     return a
 
 
+# ---------- 말 · 글자 설명 → 옷 특징 (이름을 몰라도 찾기) ----------
+TEXT_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "is_clothing": {"type": "BOOLEAN"},
+        "category": {"type": "STRING", "enum": CATEGORIES + ["모름"]},
+        "subcat":   {"type": "STRING", "enum": ALL_SUBS + ["모름"]},
+        "color":    {"type": "STRING", "enum": COLORS + ["모름"]},
+        "fit":      {"type": "STRING", "enum": FITS},
+        "say":      {"type": "STRING"},
+    },
+    "required": ["is_clothing", "category", "subcat", "color", "fit", "say"],
+}
+TEXT_PROMPT = """너는 의류 매장 직원이다. 손님이 옷 이름을 몰라서 생김새로 설명했다. 매장 분류표에서 가장 가까운 것을 고른다.
+- 손님 말: "{q}"
+- 말에 없는 것은 '모름' (색을 말하지 않았으면 color=모름, 핏을 말하지 않았으면 fit=알수없음).
+- 예: "허리에 고무줄 있는 편한 바지" → 하의/조거팬츠, "목까지 올라오는 따뜻한 윗옷" → 상의/니트,
+       "모자 달리고 앞에 지퍼" → 아우터/후드집업, "출근할 때 입는 바지" → 하의/슬랙스.
+- 옷과 관계없는 말이면 is_clothing=false.
+- say는 손님에게 보여 줄 한국어 15자 이내 해석 (예: "허리 밴딩 바지 → 조거팬츠")."""
+
+_TEXT_OFF_UNTIL = 0                          # 실패하면 1분 동안은 AI를 건너뛰고 사전 검색만 (손님이 기다리지 않게)
+
+def interpret(text, timeout=5):
+    """손님의 설명 → {'category','subcat','color','fit','say'} ('모름'은 뺌). 키가 없거나 실패하면 None (사전 검색만 씀)"""
+    text = (text or "").strip()[:80]
+    key = api_key()
+    global _TEXT_OFF_UNTIL
+    if not key or len(text) < 3 or time.time() < _TEXT_OFF_UNTIL: return None
+    cache = _cache_load(); ck = "t:" + text
+    if ck in cache: return cache[ck]
+    body = {"contents": [{"parts": [{"text": TEXT_PROMPT.format(q=text.replace('"', "'"))}]}],
+            "generationConfig": {"responseMimeType": "application/json", "responseSchema": TEXT_SCHEMA}}
+    req = urllib.request.Request(ENDPOINT.format(m=MODEL), data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json", "x-goog-api-key": key})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.loads(r.read().decode())
+        parts = data["candidates"][0]["content"]["parts"]
+        a = json.loads(next(p["text"] for p in parts if "text" in p and not p.get("thought")))
+    except Exception as e:
+        print(f"[AI 설명 검색] 실패 {type(e).__name__}: {str(e).replace(key, '***')[:120]} → 1분 동안 사전 검색만", flush=True)
+        _TEXT_OFF_UNTIL = time.time() + 60
+        return None
+    out = {"say": (a.get("say") or "")[:30]}
+    if not a.get("is_clothing", True): out["none"] = True
+    for k, ok in (("category", CATEGORIES), ("subcat", ALL_SUBS), ("color", COLORS), ("fit", FITS[:-1])):
+        if a.get(k) in ok and a.get(k) != "기타": out[k] = a[k]
+    cache[ck] = out; _cache_save(cache)
+    return out
+
+
 # ---------- 비교 · 점수 ----------
 SIMILAR_COLOR = {
     "블랙": ["네이비", "그레이"], "그레이": ["블랙", "화이트"], "화이트": ["베이지", "그레이"],

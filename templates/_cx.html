@@ -42,6 +42,9 @@
   'minus': '<path d="M5 12h14"/>',
   'plus': '<path d="M12 5v14M5 12h14"/>',
   'x': '<path d="M18 6 6 18M6 6l12 12"/>',
+  'mic': '<rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M18.5 10.5v.5a6.5 6.5 0 0 1-13 0v-.5"/><path d="M12 17.5V21.5"/><path d="M8.5 21.5h7"/>',
+  'download': '<path d="M12 3.5v12"/><path d="m7 10.5 5 5 5-5"/><path d="M4.5 20.5h15"/>',
+  'phone': '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
   'tag': '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor"/>',
   'door': '<path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><path d="M4 21h16"/><circle cx="14.5" cy="12" r=".8" fill="currentColor"/>',
   'card': '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>',
@@ -88,6 +91,7 @@ function wwSeg(p){ let v=''; if(p&&p.g&&p.age){ const a=Math.min(50,Math.max(10,
   const old=(document.cookie.match(/(?:^|; )ww_seg=([^;]*)/)||[])[1]||'';
   if(v!==old) document.cookie='ww_seg='+v+'; path=/; max-age='+(v?31536000:0)+'; samesite=lax';
   return v!==old; }
-(()=>{ let p=null; try{ p=JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){}
+{% if me_profile %}try{ localStorage.setItem('ww_body', JSON.stringify({{ me_profile|tojson }})); }catch(e){}   /* 로그인: 계정의 MY 정보를 이 휴대폰에도 */
+{% endif %}(()=>{ let p=null; try{ p=JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){}
   if(wwSeg(p) && location.pathname==='/go') location.reload(); })();</script>
 {%- endmacro %}

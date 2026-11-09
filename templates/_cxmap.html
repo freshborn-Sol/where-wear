@@ -88,11 +88,11 @@
   {% endfor %}
 
   {# 길 안내 #}
-  {% if map.path %}
+  {% if map.path %}<g class="mroute">
     <polyline points="{{map.path}}" fill="none" stroke="#fff" stroke-width="{{ 13 if M else 11 }}" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
     <polyline points="{{map.path}}" fill="none" stroke="{{ '#000' if M else '#12A8A0' }}" stroke-width="{{ 7 if M else 6 }}" stroke-dasharray="{{ '14 9' if M else '12 10' }}"
               stroke-linecap="round" stroke-linejoin="round"/>
-  {% endif %}
+  </g>{% endif %}
   {% if STOPS is not none %}{% for f in map.fixtures if STOPS.get(f.id) %}
     <g transform="translate({{f.x + 2}},{{f.y + 2}})"><circle r="17" fill="#E5484D" stroke="#fff" stroke-width="4"/>
       <text y="7" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">{{STOPS[f.id].no}}</text></g>
@@ -111,10 +111,10 @@
     {% endfor %}
   {% endif %}
   {% set sx, sy = map.start %}
-  {% if sx or sy %}
+  {% if sx or sy %}<g class="mstart">
     <circle cx="{{sx}}" cy="{{sy}}" r="21" fill="{{ '#000' if M else '#E8590C' }}" stroke="#fff" stroke-width="5"/>
     <text x="{{sx}}" y="{{sy + 7}}" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">나</text>
-  {% endif %}
+  </g>{% endif %}
   {% for f in map.fixtures if f.kind == '입구' %}
     <text x="{{f.x + f.w/2}}" y="{{map.H - 4}}" text-anchor="middle" font-size="14" font-weight="700" fill="{{ '#000' if M else '#8A94A5' }}">입구</text>
   {% endfor %}

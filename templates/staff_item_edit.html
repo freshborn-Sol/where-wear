@@ -39,6 +39,10 @@
     <button class="save">{{ cx.icon('check', 18) }}저장</button>
     <a class="linkrow" href="/item/{{it.sku}}?at={{ it.place.fixture_id if it.place else 'ENTRANCE' }}" target="_blank">손님 화면으로 보기{{ cx.icon('chev', 16) }}</a>
   </form>
+  <form method="post" action="/staff/items/{{it.sku}}/delete" class="idel" data-label="이 옷을 삭제할까요? 손님 화면 · 검색 · 키오스크에서 빠져요. 옷 목록 「삭제한 옷」에서 되살릴 수 있어요." onsubmit="return confirm(this.dataset.label)">
+    <button class="sbtn red">{{ cx.icon('x', 16) }}이 옷 삭제</button>
+    <small>더 이상 팔지 않는 옷 · 잘못 등록한 옷 · 되살릴 수 있어요</small>
+  </form>
 </main>
 {{ ks.stabs('items') }}
 </div>

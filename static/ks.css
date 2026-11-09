@@ -555,3 +555,93 @@ body.kiosk{--dk:#2A2F38;--dk2:#3A3F3B;--sale:#D8452E}
 .kcat .kz{top:auto;bottom:18px;right:18px}
 .ktop{box-shadow:0 0 0 100vmax var(--dk);clip-path:inset(0 -100vmax)}
 .ktop .klang,.ktop .khere{white-space:nowrap}.ktop .khere{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* 키오스크: 이름으로 찾기 (화면 키보드 · 말로 · 많이 찾는 옷) */
+.khrow{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.ksbtn{display:flex;align-items:center;gap:14px;padding:18px 30px 18px 24px;border-radius:26px;background:var(--navy);color:#fff;box-shadow:0 10px 24px rgba(22,119,232,.25);flex:none}
+.ksbtn b{display:block;font-size:32px;font-weight:900;line-height:1.15}.ksbtn small{font-size:22px;font-weight:600;opacity:.85}
+.kq{display:flex;align-items:center;gap:14px;padding:0 18px 0 32px;height:132px;border-radius:28px;border:3px solid var(--navy);background:#fff}
+.kq-box{flex:1;min-width:0;display:flex;align-items:center;font-size:52px;font-weight:800;white-space:nowrap;overflow:hidden}
+.kq-box.shake{animation:kshake .35s}
+@keyframes kshake{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+.kq-caret{width:4px;height:58px;margin-left:4px;background:var(--navy);animation:kblink 1s steps(1) infinite;flex:none}
+@keyframes kblink{50%{opacity:0}}
+.kq-ph{font-size:38px;font-weight:500;color:var(--g400);margin-left:10px}
+.kq-clr{width:84px;height:84px;border:0;border-radius:50%;background:var(--g100);color:var(--g700);display:grid;place-items:center}
+.kq-acts{display:flex;gap:20px}
+.kq-acts button{flex:1;height:120px;border:0;border-radius:28px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:36px;font-weight:900;font-family:inherit}
+.kq-mic{background:var(--blue50);color:var(--btx);border:3px solid var(--blue100)!important}
+.kq-mic[hidden]{display:none}
+.kq-go{background:var(--navy);color:#fff}
+.kq-pop{display:flex;flex-direction:column;gap:14px}
+.kq-pop>b{font-size:32px;font-weight:900}.kq-pop>span{margin-top:-10px;font-size:24px;color:var(--g500)}
+.kq-chips{display:flex;flex-wrap:wrap;gap:14px}
+.kkb{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:30px;background:var(--g100)}
+.kkb-r{display:flex;gap:10px;justify-content:center}
+.kk{flex:1;max-width:76px;height:96px;border:0;border-radius:18px;background:#fff;box-shadow:0 2px 0 var(--g300);font-size:40px;font-weight:700;color:var(--ink);font-family:inherit;padding:0;display:grid;place-items:center}
+.kk:active{background:var(--blue100)}
+.kk.wide{max-width:132px;flex:1.7;font-size:26px;background:var(--g200)}
+.kk.shift.on{background:var(--navy);color:#fff}
+.kk.space{max-width:560px;flex:1;font-size:30px;color:var(--g700)}
+.kv-pulse{animation:kvp 1.2s ease-in-out infinite;border-radius:50%}
+@keyframes kvp{0%,100%{box-shadow:0 0 0 0 rgba(22,119,232,.35)}50%{box-shadow:0 0 0 26px rgba(22,119,232,0)}}
+/* 결과 화면: 색 줄 */
+.ksw{width:30px;height:30px;border-radius:50%;border:2px solid var(--g300);display:inline-block;flex:none}
+.kchip.on .ksw{border-color:#fff}
+/* 휴대폰으로 받기 */
+.kphone .kpqr{width:380px;height:380px;image-rendering:pixelated;border:3px solid var(--ink);border-radius:18px;padding:12px;background:#fff}
+.kphone p{line-height:1.5}
+.khrow .kh1{font-size:58px;white-space:nowrap}
+.khrow .ksbtn{padding:16px 24px 16px 20px;gap:12px}
+.khrow .ksbtn b{font-size:30px}.khrow .ksbtn small{font-size:20px}
+.khrow .ksbtn{padding:18px 34px 18px 26px}.khrow .ksbtn>b{font-size:36px;font-weight:900}
+
+/* ===== 2026.11 직원 피드백: 직원 이름 · 피팅룸 반납 · 동선 토글 · 옷 삭제 ===== */
+.sb-me{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 9px;border-radius:14px;border:1px solid var(--g200);background:var(--g50);
+  color:var(--g700);font-size:12px;font-weight:700;max-width:110px;white-space:nowrap;flex:none}
+.sb-me span{overflow:hidden;text-overflow:ellipsis}.sb-me.none{border-color:var(--blue);background:var(--blue50);color:var(--btx)}
+.spick{position:fixed;inset:0;z-index:90;display:none;align-items:flex-end;justify-content:center;background:rgba(15,23,38,.45)}
+.spick.on{display:flex}
+.spick-in{width:100%;max-width:480px;background:#fff;border-radius:22px 22px 0 0;padding:22px 20px calc(22px + var(--safe));display:flex;flex-direction:column;gap:10px}
+.spick-in>b{font-size:18px;font-weight:900}.spick-in>small{font-size:12px;color:var(--g700);line-height:1.5}
+.spick-n{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.spick-n button{height:52px;border-radius:14px;border:1.5px solid var(--g200);background:#fff;font-size:15px;font-weight:700;color:var(--ink)}
+.spick-n button.on{border-color:var(--blue);background:var(--blue50);color:var(--btx)}
+.spick-f{display:flex;gap:6px}.spick-f input{flex:1;min-width:0;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--g300);font-size:14px}
+.spick-f .sbtn{height:40px}
+.regseg.reg3 a{gap:4px;font-size:12.5px;padding:0 2px;white-space:nowrap}
+.rsum a{white-space:nowrap;font-size:12.5px;padding:10px}.rsum a b{margin-left:auto}.rsum .fit{background:var(--blue50);color:var(--btx)}
+.sh2 .dot.b{background:var(--blue)}
+.froute .rtbtn .on{display:none}.froute.rt .rtbtn .on{display:inline}.froute.rt .rtbtn .off{display:none}
+.froute:not(.rt) .mroute,.froute:not(.rt) .mstart,.froute:not(.rt) .rt-only{display:none}
+.froute .rt-only{display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--g200);padding-top:8px}
+.fclaim{display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid var(--g200);background:#fff;font-size:12px}
+.fclaim .claimed{flex:1;display:flex;align-items:center;gap:5px;font-weight:700;color:var(--btx)}
+.fclaim .claimed.me{color:var(--ok)}.fclaim .claimed.none{color:var(--g500);font-weight:500}
+.wact .going b{font-weight:900}
+.wact{flex-wrap:wrap}.wact .going{flex:1 0 100%;white-space:nowrap}
+.hlog .by{font-weight:700;color:var(--g700)}
+.fitlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.fitlist li{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:#fff;border:1px solid var(--g200)}
+.fitlist img{width:46px;height:58px;border-radius:8px;object-fit:cover;background:var(--g100);flex:none}
+.fitlist .fb{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.fitlist .fb b{font-size:14px;font-weight:700}.fitlist .fb b small{font-size:12px;font-weight:400;color:var(--g500)}
+.fitlist .fto{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:var(--g700)}
+.fitlist .fto em{font-style:normal;font-weight:900;color:var(--btx)}.fitlist .fto em.no{font-weight:500;color:var(--red)}
+.fitlist .fb>small{font-size:11.5px;color:var(--g500)}
+.fitlist form .sbtn{white-space:nowrap}
+.fithint{margin:0 2px;font-size:12px;line-height:1.5;color:var(--g700)}.fithint .ic{display:inline-block;vertical-align:-2px;margin-right:4px}
+.fitbar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:var(--blue50);color:var(--btx)}
+.fitbar div{flex:1}.fitbar b{display:block;font-size:14px;font-weight:900}.fitbar small{font-size:12px;color:var(--g700)}
+.linkrow.tofix{font-size:13px;color:var(--amber);border-color:var(--amb50);background:var(--amb50)}
+.meset{gap:10px}.meset .mrow{display:flex;align-items:center;gap:10px}.meset .mrow>div{flex:1}
+.meset .mrow small{display:block;font-size:11px;color:var(--g500)}.meset .mrow b{font-size:15px}
+.meset .mhint{font-size:11px;color:var(--g500)}
+.delmsg span{flex:1}.delmsg .sbtn{flex:none}
+.ilist .trow{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 8px;border-radius:14px;background:#fff;border:1px solid var(--g200)}
+.ilist.trash img{filter:grayscale(.7);opacity:.75}
+.idel{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:22px;padding-top:16px;border-top:1px solid var(--g200)}
+.idel .sbtn{width:100%}.idel small{font-size:11px;color:var(--g500)}
+/* 키오스크: 피팅룸 반납 안내 (글씨 크기 유지) */
+.kfresh.fit{background:var(--blue50);color:var(--btx);align-items:flex-start}
+.kfresh.fit small{display:block;font-size:22px;font-weight:500;color:var(--g700);margin-top:4px}

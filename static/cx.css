@@ -581,3 +581,74 @@ html.ww-inframe{--safe:20px}
 
 /* 아래 탭 글씨(홈 · 카테고리 · 찜 · MY): 회색을 더 진하게 */
 .tb2 .tab-i:not(.on):not(.fab)>span:last-child{color:#4A5260;font-weight:600}
+
+/* 말로 찾기 (검색창 마이크) */
+.mic{width:38px;height:38px;border:0;border-radius:11px;background:var(--blue50);color:var(--blue);display:grid;place-items:center;flex:none;padding:0}
+.mic[hidden]{display:none}
+.searchbox.dark .mic{background:none;color:inherit;width:40px;height:40px}
+.vbusy{display:none;position:fixed;inset:0;z-index:70;background:rgba(15,23,40,.45);align-items:flex-end;justify-content:center}
+.vbusy.on{display:flex}
+.vb-in{width:100%;max-width:480px;background:#fff;border-radius:24px 24px 0 0;padding:28px 24px calc(24px + var(--safe));display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.vb-in b{font-size:20px;font-weight:800}.vb-in p{margin:0 0 8px;font-size:16px;color:var(--g700);min-height:24px}
+.vb-mic{width:76px;height:76px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;animation:vpulse 1.2s ease-in-out infinite}
+@keyframes vpulse{0%,100%{box-shadow:0 0 0 0 rgba(22,119,232,.35)}50%{box-shadow:0 0 0 16px rgba(22,119,232,0)}}
+
+/* 상품 위치: '찾았어요' 설명 · 지도 사진 저장 */
+.findbar.withnote{flex-wrap:wrap;padding-top:8px}
+.fnote{flex:0 0 100%;margin:0;display:flex;align-items:center;justify-content:center;gap:4px;font-size:11.5px;line-height:1.35;color:var(--g500);text-align:center}
+.fnote .ic{flex:none;color:var(--g400)}
+main.item{padding-bottom:calc(132px + var(--safe))}
+.mapsave{display:flex;align-items:center;justify-content:center;gap:7px;height:48px;margin-top:-4px;border-radius:14px;border:1px solid var(--blue100);
+  background:var(--blue50);color:var(--blueTx,var(--blue));font-size:15px;font-weight:700;font-family:inherit}
+.mapsave.hl{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 6px 16px rgba(22,119,232,.25)}
+.fromk{margin:0;display:flex;gap:8px;align-items:flex-start;padding:11px 14px;border-radius:14px;background:var(--blue50);font-size:13px;line-height:1.45;color:var(--g700)}
+.fromk .ic{flex:none;margin-top:2px;color:var(--blue)}
+.mapshot{display:none;position:fixed;inset:0;z-index:80;background:rgba(15,23,40,.6);align-items:center;justify-content:center;padding:20px}
+.mapshot.on{display:flex}
+.ms-in{width:100%;max-width:440px;max-height:100%;overflow:auto;background:#fff;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px;text-align:center}
+.ms-in img{width:100%;border-radius:12px;border:1px solid var(--g100)}
+.ms-in p{margin:0;font-size:14px;color:var(--g700)}
+.ms-btns{display:flex;gap:8px}.ms-btns>*{flex:1}
+/* 피팅룸에 반납된 옷 안내 (위치는 그대로) */
+.lflag.fit{background:var(--blue50);color:var(--blueTx)}.lflag.fit b{font-weight:700}
+
+/* ===== 2026.11 손님 피드백: 찾았어요 되돌리기 · 처음 화면 · 로그인 · 내 사이즈 ===== */
+.fbtn.found.done{background:var(--okLite)}
+.fsheet{position:fixed;left:50%;transform:translate(-50%,16px);bottom:calc(130px + var(--safe));width:calc(100% - 24px);max-width:456px;z-index:60;
+  display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:18px;background:#fff;box-shadow:0 10px 30px rgba(15,23,38,.22);
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.fsheet.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.fs-t{display:flex;align-items:flex-start;gap:10px;color:var(--ok)}.fs-t>div{flex:1}
+.fs-t b{display:block;font-size:15px;color:var(--ink)}.fs-t small{display:block;font-size:12.5px;color:var(--blue);font-weight:700;margin-top:2px}
+.fs-x{border:0;background:none;color:var(--g500);padding:2px;cursor:pointer}
+.fs-b{display:flex;gap:8px}
+.fs-b>*{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;height:44px;border-radius:12px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer}
+.fs-undo{border:1.5px solid var(--g300);background:#fff;color:var(--g700)}
+.fs-home{background:var(--blue);color:#fff!important;border:0}
+.fs-opt{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--g700);font-weight:500}
+.fs-opt input{width:17px;height:17px;accent-color:var(--blue);margin:0}
+.acct{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1.2px solid var(--g200);background:#fff;color:var(--g500)}
+.acct.on{border-color:var(--blue100);background:var(--blue50);color:var(--blue)}
+.acct>div{flex:1;min-width:0}.acct b{display:block;font-size:15px;color:var(--ink)}.acct small{font-size:12px;color:var(--g700);font-weight:500}
+.acct form{margin:0}
+.abtn{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:10px;border:1.2px solid var(--g300);background:#fff;font-size:13px;font-weight:700;color:var(--g700);font-family:inherit;cursor:pointer;white-space:nowrap}
+.abtn.blue{background:var(--blue);border-color:var(--blue);color:#fff!important}
+.szrow{display:flex;flex-direction:column;gap:7px}.szrow>span{font-size:13px;font-weight:700;color:var(--g700)}
+.szchips{display:flex;gap:6px}
+.szchips label{flex:1;display:flex;align-items:center;justify-content:center;height:42px;border:1.2px solid var(--g300);border-radius:10px;font-size:13.5px;font-weight:700;color:var(--g700);cursor:pointer}
+.szchips input{display:none}
+.szchips label:has(input:checked){background:var(--blue50);border:1.8px solid var(--blue);color:var(--blue)}
+.frow2{display:flex;gap:10px}.frow2 .fld{flex:1;min-width:0}
+.optrow{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:1.2px solid var(--g300);cursor:pointer}
+.optrow>div{flex:1}.optrow b{display:block;font-size:14px}.optrow small{font-size:12px;color:var(--g500);font-weight:500}
+.optrow .toggle{position:relative;width:46px;height:28px;flex:none}
+.optrow .toggle input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:var(--g300);margin:0;cursor:pointer;transition:background .15s}
+.optrow .toggle input:checked{background:var(--blue)}
+.optrow .toggle i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s;pointer-events:none}
+.optrow .toggle input:checked+i{left:21px}
+.meform .err{margin:0;font-size:13px;color:var(--red);font-weight:700}
+.lgbrand{display:flex;align-items:center;gap:14px;padding:10px 2px 4px}
+.lgbrand img{width:52px;height:52px;border-radius:15px}
+.lgbrand b{display:block;font-size:22px;color:var(--blue);letter-spacing:-.03em}.lgbrand b i{font-style:normal;color:var(--goldD)}
+.lgbrand small{font-size:13px;color:var(--g700);font-weight:500;line-height:1.5}
+.lgerr{display:flex;align-items:center;gap:8px;margin:0;padding:11px 13px;border-radius:12px;background:var(--red50);color:var(--red);font-size:13.5px;font-weight:700}

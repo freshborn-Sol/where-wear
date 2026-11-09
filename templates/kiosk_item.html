@@ -18,6 +18,7 @@
         {% if flag and flag[0] == 'warn' %}<div class="kfresh warn">{{ cx.icon('alert', 28) }}{{ flag[1] }}</div>
         {% else %}<div class="kfresh {{it.fresh[1]}}">{{ cx.icon('clock', 28) }}{{it.fresh[0]}}</div>
           {% endif %}
+        {% if fitret %}<div class="kfresh fit">{{ cx.icon('door', 28) }}<span>피팅룸에 반납된 옷이 있어요<small>행거에 없으면 피팅룸 직원에게 물어보세요</small></span></div>{% endif %}
       {% else %}
         <div class="kloc none"><span class="pc">{{ cx.icon('pin', 40) }}</span>
           <div><b>위치가 등록되지 않았어요</b><span>직원에게 물어보면 바로 찾아 드려요</span></div></div>
@@ -47,8 +48,10 @@
 
   <div class="kbtns">
     <button class="kbtn navy" onclick="printMap()">{{ cx.icon('printer', 34) }}종이 지도 받기</button>
+    {% if it.place %}<button class="kbtn blue" onclick="show('mPhone')">{{ cx.icon('download', 34) }}지도 다운로드</button>{% endif %}
   </div>
   {% if busy %}<div class="kbusy">{{ cx.icon('alert', 44) }}<div><b>지금은 직원이 바빠요</b><span>도움이 필요하면 계산대에 말씀해 주세요</span></div></div>
+  {% elif crowd %}<div class="kbusy">{{ cx.icon('alert', 44) }}<div><b>지금 손님이 많아요</b><span>직원이 조금 늦을 수 있어요 · 급하면 계산대에 말씀해 주세요</span></div></div>
   {% else %}<div class="khelp">{{ cx.icon('help', 34) }}<span>못 찾으면 가까운 직원에게 물어보세요</span></div>{% endif %}
   </main>
 {{ ks.knav('javascript:history.back()', '목록으로') }}
@@ -59,6 +62,14 @@
   <div class="bi">{{ cx.icon('printer', 76) }}</div>
   <h3>종이 지도를 뽑고 있어요</h3><p>키오스크 아래 출력구에서 가져가세요</p>
   <div class="bar"><i></i></div>
+</div></div>
+
+<!-- 지도 다운로드: 찍으면 휴대폰에 이 옷 위치 → 지도 사진 저장 · 카카오톡 보내기 -->
+<div class="kdim" id="mPhone"><div class="kmodal kphone">
+  <h3>휴대폰 카메라로 찍어 주세요</h3>
+  <img class="kpqr" src="{{ phone_qr }}" alt="지도 다운로드 QR">
+  <p>이 옷의 위치와 지도가 휴대폰에 열려요<br><b>‘지도 사진으로 저장’</b>을 누르면 사진첩에 저장하거나<br>카카오톡으로 보낼 수 있어요</p>
+  <div class="kbtns"><button class="kbtn gray" onclick="$('mPhone').classList.remove('on')">닫기</button></div>
 </div></div>
 
 <!-- 창고 사이즈 요청 → 접수 -->

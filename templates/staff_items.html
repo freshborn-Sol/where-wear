@@ -5,15 +5,21 @@
 {{ ks.sbar('옷 목록', right=total ~ '벌') }}
 <main class="swrap">
   {% if saved %}<p class="okmsg">{{ cx.icon('check', 16) }}{{saved}} 저장했어요</p>{% endif %}
-  <nav class="regseg"><a class="{{ 'on' if view != 'shelf' }}" href="/staff/items{{ '?q=' ~ q if q }}">종류별</a>
-    <a class="{{ 'on' if view == 'shelf' }}" href="/staff/items?view=shelf{{ '&q=' ~ q if q }}">선반별</a></nav>
+  {% if deleted %}<form class="okmsg delmsg" method="post" action="/staff/items/{{deleted.sku}}/restore">{{ cx.icon('check', 16) }}<span>{{deleted.name}} ({{deleted.color}}) 삭제했어요 · 손님 화면에서 빠져요</span><button class="sbtn sm line">되돌리기</button></form>{% endif %}
+  {% if restored %}<p class="okmsg">{{ cx.icon('check', 16) }}{{restored}} 되살렸어요</p>{% endif %}
+  <nav class="regseg"><a class="{{ 'on' if view not in ('shelf', 'trash') }}" href="/staff/items{{ '?q=' ~ q if q }}">종류별</a>
+    <a class="{{ 'on' if view == 'shelf' }}" href="/staff/items?view=shelf{{ '&q=' ~ q if q }}">선반별</a>
+    {% if trash or view == 'trash' %}<a class="{{ 'on' if view == 'trash' }}" href="/staff/items?view=trash">삭제한 옷 <small>{{ trash|length }}</small></a>{% endif %}</nav>
   <form class="isearch" method="get">
     {% if view == 'shelf' %}<input type="hidden" name="view" value="shelf">{% if zone %}<input type="hidden" name="zone" value="{{zone}}">{% endif %}{% if fx %}<input type="hidden" name="fx" value="{{fx}}">{% endif %}{% if lv %}<input type="hidden" name="lv" value="{{lv}}">{% endif %}
+    {% elif view == 'trash' %}<input type="hidden" name="view" value="trash">
     {% elif cat %}<input type="hidden" name="cat" value="{{cat}}">{% endif %}
     <label>{{ cx.icon('search', 18) }}<input name="q" value="{{q}}" placeholder="이름 · 색 · 상품번호로 찾기" autocomplete="off"></label>
   </form>
   {% set qs = ('&q=' ~ q) if q else '' %}
-  {% if view == 'shelf' %}
+  {% if view == 'trash' %}
+  <p class="ssub" style="margin:0 2px">삭제한 옷은 손님 화면 · 검색 · 키오스크에 나오지 않아요 · 되살리면 재고와 위치도 그대로 돌아와요</p>
+  {% elif view == 'shelf' %}
   <div class="izones">
     <a class="{{ 'on' if not zone }}" href="/staff/items?view=shelf{{qs}}"><b>전체</b></a>
     {% for zid, zname, n in zones %}<a class="{{ 'on' if zone == zid }}" href="/staff/items?view=shelf&zone={{zid}}{{qs}}"><b>{{zid}}</b><small>{{ zname|replace(' · ', '·') }}</small></a>{% endfor %}
@@ -33,7 +39,7 @@
     {% for c, n in cats %}<a class="{{ 'on' if cat == c }}" href="/staff/items?cat={{c}}{{qs}}">{{c}} <small>{{n}}</small></a>{% endfor %}
   </div>
   {% endif %}
-  {% if not items %}<div class="empty">맞는 옷이 없어요</div>{% endif %}
+  {% if not items and view != 'trash' %}<div class="empty">맞는 옷이 없어요</div>{% endif %}
   {% set back = '/staff/items?view=' ~ view ~ '&cat=' ~ cat ~ '&zone=' ~ zone ~ '&fx=' ~ fx ~ '&lv=' ~ lv ~ '&q=' ~ q %}
   {% macro row(it) %}
     <li id="i-{{it.sku}}" class="{{ 'just' if saved == it.sku }}"><a href="/staff/items/{{it.sku}}?back={{ back|urlencode }}">
@@ -47,7 +53,16 @@
       <div class="ip"><b>{{ "{:,}".format(it.price) }}</b><small>원</small>{{ cx.icon('chev', 16) }}</div>
     </a></li>
   {% endmacro %}
-  {% if view == 'shelf' %}
+  {% if view == 'trash' %}
+    {% if not trash %}<div class="empty">삭제한 옷이 없어요</div>{% endif %}
+    <ul class="ilist trash">{% for it in trash %}
+      <li id="i-{{it.sku}}"><div class="trow">
+        <img src="{{ imgsrc(it) }}" alt="" loading="lazy">
+        <div class="ib"><b>{{it.name}}</b><span class="im">{{it.color}} · {{it.sku}}</span>
+          <span class="il">{{ '방금' if it.ago < 1 else (it.ago ~ '분 전' if it.ago < 60 else (it.ago // 60 ~ '시간 전' if it.ago < 1440 else it.ago // 1440 ~ '일 전')) }} 삭제{% if it.deleted_by %} · {{it.deleted_by}}{% endif %}</span></div>
+        <form method="post" action="/staff/items/{{it.sku}}/restore"><button class="sbtn sm bluel">되살리기</button></form>
+      </div></li>{% endfor %}</ul>
+  {% elif view == 'shelf' %}
     {% for g_ in groups %}
       <div class="shelfh"><b>{{ g_.id if g_.id != 'none' else '위치 없음' }}</b>{% if g_.id != 'none' %}<span>{{g_.name}}</span>{% endif %}<small>{{g_['items']|length}}벌</small></div>
       {% for lvname, its in g_['levels'] %}

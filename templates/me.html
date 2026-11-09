@@ -3,23 +3,45 @@
 {% block body %}
 {{ cx.appbar('MY') }}
 <main class="page">
-  <p class="lockhint">{{ cx.icon('lock', 18) }}<span><b>이 휴대폰에만</b> 저장돼요</span></p>
+  {% if me_user %}
+  <div class="acct on">{{ cx.icon('user', 22) }}<div><b>{{ me_user }}님</b><small>로그인됨 · 어느 휴대폰에서나 같은 정보를 불러와요</small></div>
+    <form method="post" action="/logout" onsubmit="try{localStorage.removeItem('ww_body')}catch(e){}"><input type="hidden" name="next" value="{{ request.full_path }}"><button class="abtn">로그아웃</button></form></div>
+  {% else %}
+  <div class="acct">{{ cx.icon('user', 22) }}<div><b>로그인하고 내 사이즈 저장</b><small>다른 휴대폰에서도 내 사이즈를 불러와요 · 안 해도 돼요</small></div>
+    <a class="abtn blue" href="/login?at={{cx_at}}&next={{ request.full_path|urlencode }}">로그인</a></div>
+  {% endif %}
+  <p class="lockhint">{{ cx.icon('lock', 18) }}<span>{% if me_user %}<b>내 계정</b>에 저장돼요 · 다른 사람에게 보이지 않아요{% else %}로그인하지 않으면 <b>이 휴대폰에만</b> 저장돼요{% endif %}</span></p>
   <form id="f" class="meform" onsubmit="return save()">
-    <div class="prefq">성별<small> · 검색어 기준</small></div>
-    <div class="prefs">
-      <label><input type="radio" name="g" value="F">여성</label>
-      <label><input type="radio" name="g" value="M">남성</label>
+    <div class="prefq">내 사이즈<small> · 알면 바로 골라 주세요</small></div>
+    {% for key, lab in [('top', '상의 · 아우터'), ('bottom', '하의')] %}
+    <div class="szrow"><span>{{ lab }}</span><div class="szchips">
+      {% for v in ['', 'XS', 'S', 'M', 'L', 'XL', 'XXL'] %}<label><input type="radio" name="{{key}}" value="{{v}}" {{ 'checked' if not v }}>{{ v or '모름' }}</label>{% endfor %}
+    </div></div>
+    {% endfor %}
+    <label class="fld"><span>신발 · 발 사이즈<small>선택</small></span><span class="inp"><input name="foot" type="number" inputmode="numeric" min="200" max="320" step="5" placeholder="260">mm</span></label>
+
+    <div class="prefq">사이즈를 모르면<small> · 키 · 몸무게로 추천해요</small></div>
+    <div class="frow2">
+      <label class="fld"><span>키</span><span class="inp"><input name="h" type="number" inputmode="numeric" min="120" max="220" placeholder="172">cm</span></label>
+      <label class="fld"><span>몸무게</span><span class="inp"><input name="w" type="number" inputmode="numeric" min="30" max="150" placeholder="65">kg</span></label>
     </div>
-    <label class="fld"><span>나이</span><span class="inp"><input name="age" type="number" inputmode="numeric" min="10" max="99">세</span></label>
-    <label class="fld"><span>키</span><span class="inp"><input name="h" type="number" inputmode="numeric" min="120" max="220" required placeholder="172">cm</span></label>
-    <label class="fld"><span>몸무게</span><span class="inp"><input name="w" type="number" inputmode="numeric" min="30" max="150" required placeholder="65">kg</span></label>
-    <label class="fld"><span>발 사이즈<small>선택 · 신발 추천용</small></span><span class="inp"><input name="foot" type="number" inputmode="numeric" min="200" max="320" step="5" placeholder="260">mm</span></label>
     <div class="prefq">평소 옷을 어떻게 입나요?</div>
     <div class="prefs">
       <label><input type="radio" name="pref" value="tight">딱 맞게</label>
       <label><input type="radio" name="pref" value="normal" checked>보통</label>
       <label><input type="radio" name="pref" value="loose">넉넉하게</label>
     </div>
+    <div class="prefq">성별 · 나이<small> · 검색어 기준</small></div>
+    <div class="prefs">
+      <label><input type="radio" name="g" value="F">여성</label>
+      <label><input type="radio" name="g" value="M">남성</label>
+    </div>
+    <label class="fld"><span>나이</span><span class="inp"><input name="age" type="number" inputmode="numeric" min="10" max="99">세</span></label>
+
+    <div class="prefq">설정</div>
+    <label class="optrow"><div><b>‘찾았어요!’ 누르면 처음 화면으로</b><small>옷을 찾고 나면 바로 첫 화면으로 돌아가요</small></div>
+      <span class="toggle"><input type="checkbox" name="found_home"><i></i></span></label>
+    <p class="err" id="err" hidden>키 · 몸무게를 같이 적어 주세요</p>
     <button class="btn primary">저장하기</button>
   </form>
   <p class="foot"><a href="#" onclick="clearMe();return false" style="color:var(--g500);font-weight:500">내 정보 지우기</a></p>
@@ -27,16 +49,26 @@
 {{ cx.tabbar('me') }}
 <script>
 const f=document.getElementById('f'), next=new URLSearchParams(location.search).get('next')||'/go?at={{cx_at}}';
-try{ const p=JSON.parse(localStorage.getItem('ww_body')||'null');
-  if(p){ f.h.value=p.h; f.w.value=p.w; if(p.foot) f.foot.value=p.foot; f.querySelector(`[name=pref][value=${p.pref||'normal'}]`).checked=true;
-    if(p.g){ const r=f.querySelector(`[name=g][value=${p.g}]`); if(r) r.checked=true; } if(p.age) f.age.value=p.age; } }catch(e){}
+const LOGIN={{ 'true' if me_user else 'false' }}, SERVER={{ me_profile|tojson }};
+function fill(p){ if(!p) return;
+  ['h','w','foot','age'].forEach(k=>{ if(p[k]) f[k].value=p[k]; });
+  [['pref',p.pref||'normal'],['g',p.g],['top',p.top||''],['bottom',p.bottom||'']].forEach(([k,v])=>{
+    const r=f.querySelector(`[name=${k}][value="${v||''}"]`); if(r) r.checked=true; });
+  f.found_home.checked=!!p.found_home; }
+let local=null; try{ local=JSON.parse(localStorage.getItem('ww_body')||'null'); }catch(e){}
+fill(LOGIN ? (SERVER||local) : local);
 function back(){ location.href = (next.startsWith('/') && !next.startsWith('/me')) ? next : '/go?at={{cx_at}}'; }
 function save(){
-  const p={h:+f.h.value, w:+f.w.value, foot:+f.foot.value||0, pref:f.pref.value, g:f.g.value||'', age:+f.age.value||0};
+  const p={h:+f.h.value||0, w:+f.w.value||0, foot:+f.foot.value||0, pref:f.pref.value, g:f.g.value||'', age:+f.age.value||0,
+           top:f.top.value||'', bottom:f.bottom.value||'', found_home:f.found_home.checked};
+  if(!!p.h !== !!p.w){ document.getElementById('err').hidden=false; return false; }
   try{ localStorage.setItem('ww_body', JSON.stringify(p)); }catch(e){}
   wwSeg(p);
-  back(); return false;
+  if(LOGIN) fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:p})}).finally(back);
+  else back();
+  return false;
 }
-function clearMe(){ try{ localStorage.removeItem('ww_body'); }catch(e){} wwSeg(null); back(); }
+function clearMe(){ try{ localStorage.removeItem('ww_body'); }catch(e){} wwSeg(null);
+  if(LOGIN) fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:{}})}).finally(back); else back(); }
 </script>
 {% endblock %}
