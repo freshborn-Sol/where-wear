@@ -644,5 +644,13 @@ body.cx{background:#fff}
 .ct-l{font-weight:600;font-size:11px}
 /* 숫자는 고정폭으로 */
 .rc-pr,.price,.hm-trend em{font-variant-numeric:tabular-nums}
+/* '찾았어요!' 뒤 알림: 첫 화면으로 버튼 */
+.msg.withgo{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left}
+.msg-go{flex:none;padding:8px 14px;border-radius:10px;background:#fff;color:var(--ink)!important;font-size:13.5px;font-weight:600}
+/* 되살린 그라데이션 (같은 계열 색 안에서만) */
+body.cx{background:linear-gradient(180deg,#EEF6FF 0,#fff 260px) no-repeat,#fff}
+.locbox{background:linear-gradient(120deg,#1677E8 0,#0E5FC4 100%)}
+.tile.all .ti{background:linear-gradient(160deg,var(--blue50),#fff);border:1px solid var(--blue100)}
+.slide.photo,.hsl.photo{background:linear-gradient(135deg,#1677E8,#0B3B78)}
 /* 키보드 포커스 */
 .cx a:focus-visible,.cx button:focus-visible,.cx input:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:8px}
