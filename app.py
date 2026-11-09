@@ -12,7 +12,8 @@ import datetime, json, os, re, sqlite3, time, uuid
 from collections import Counter, deque
 from urllib.parse import urlencode
 from pathlib import Path
-from flask import Flask, g, jsonify, redirect, render_template, request, url_for
+from flask import Flask, g, jsonify, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import search as S
 import i18n
@@ -25,6 +26,18 @@ UPLOADS = BASE / "static" / "uploads"
 STORE_NAME = os.environ.get("WW_STORE", "유니클로 명동점")   # 고객 화면(안내)에 보이는 매장 이름
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024     # 사진 15MB까지
+
+def _secret():
+    """로그인 세션 서명용 열쇠: 처음 실행할 때 flask_secret.key 로 만들어 두고 계속 씀 (*.key 는 깃허브에 안 올라감)"""
+    if os.environ.get("WW_SECRET"): return os.environ["WW_SECRET"]
+    f = BASE / "flask_secret.key"
+    if not f.exists():
+        import secrets
+        f.write_text(secrets.token_hex(32))
+    return f.read_text().strip()
+app.secret_key = _secret()
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
+                  PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30))
 
 DEFAULT_STAFF = "김준구,류한솔,이준혁"      # 직원 이름 고르기 기본 명단 (설정에서 바꿈)
 
@@ -84,6 +97,9 @@ def ensure_schema():
                    demo INTEGER DEFAULT 0)""")
     # 직원이 지운 옷: 되살릴 수 있게 상품·재고·바코드를 통째로 보관
     con.execute("CREATE TABLE IF NOT EXISTS deleted_items (sku TEXT PRIMARY KEY, data TEXT, deleted_at TEXT, deleted_by TEXT)")
+    # 손님 로그인 (QR): 비밀번호는 해시로만 저장, profile = MY 정보(키·몸무게·내 사이즈·설정) JSON
+    con.execute("""CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE COLLATE NOCASE,
+                   pw TEXT, created TEXT, profile TEXT)""")
     con.commit(); con.close()
 ensure_schema()
 
@@ -177,12 +193,18 @@ def helpers():
         crowd = is_large() and wn >= CROWD_N               # 대형 매장 붐빔 안내
         if request.path.startswith("/staff"): staff_badge = wn   # 직원 탭바 '신고함' 숫자 = 기다리는 손님 수
     except Exception: pass
+    me_user, me_profile = None, None
+    if not request.path.startswith("/staff") and session.get("uid"):
+        try:
+            u = one("SELECT username, profile FROM users WHERE id=?", (session["uid"],))
+            if u: me_user, me_profile = u["username"], json.loads(u["profile"] or "null")
+        except Exception: pass
     sname, snames = "", []
     if request.path.startswith("/staff"):
         try: sname, snames = cur_staff(), staff_names()
         except Exception: pass
     return dict(imgsrc=imgsrc, with_args=with_args, store_name=STORE_NAME, busy=busy, staff_badge=staff_badge,
-                crowd=crowd, staff_name=sname, staff_names=snames,
+                crowd=crowd, staff_name=sname, staff_names=snames, me_user=me_user, me_profile=me_profile,
                 cx_at=request.args.get("at") or "ENTRANCE")   # 고객 화면 탭바·링크용 현재 QR 위치
 
 # ---------- 위치 + 갱신 시각 ----------
@@ -693,6 +715,26 @@ def search_trends(seg, n=6):
     rising += [w for w in dr if w not in rising and w not in popular[:3]][:n - len(rising)]
     return popular, rising, bool(seg)
 
+def smart_search(items, q, limit=999):
+    """글자 · 음성 검색: ① 단어 사전(이름 + 생김새 설명) ② 그래도 종류를 모르겠으면 Gemini가 설명을 해석
+       → (결과, 알아들은 조건, 안내 문구)"""
+    res, parsed, note = S.text_search(items, q, limit=limit)
+    if parsed["subs"] or (not any(parsed.values()) and res):       # 종류를 알아들었거나 상품 이름으로 찾음
+        return res, parsed, note
+    if any(parsed.values()) and len(q.replace(" ", "")) <= 6:      # '블랙', '검정 바지'처럼 짧은 말은 AI 없이
+        return res, parsed, note
+    try: a = V.interpret(q)
+    except Exception: a = None
+    if not a or a.get("none") or not (a.get("subcat") or a.get("category")):
+        return res, parsed, note
+    p2 = {"colors": [a["color"]] if a.get("color") else parsed["colors"], "subs": [a["subcat"]] if a.get("subcat") else [],
+          "cats": [a["category"]] if a.get("category") and not a.get("subcat") else [], "fits": [a["fit"]] if a.get("fit") else parsed["fits"]}
+    scored = sorted(((S.score_item(it, p2), it) for it in items), key=lambda t: -t[0])
+    res2 = [it for sc, it in scored if sc > 0][:limit]
+    if not res2: return res, parsed, note
+    words = " · ".join(v for v in (a.get("color"), a.get("subcat") or a.get("category"), a.get("fit")) if v)
+    return res2, p2, f"설명을 알아듣고 찾았어요 · {words}"
+
 @app.route("/search")
 def search():
     at = request.args.get("at", "ENTRANCE")
@@ -702,7 +744,7 @@ def search():
     note = ""
     exact_ids = None
     if q:
-        base, parsed, note = S.text_search(base, q, limit=999)
+        base, parsed, note = smart_search(base, q)
         exact_ids = {it["sku"] for it in base if S.is_exact(it, parsed)}
         log_event("search", src=q[:40])
     items = decorate(apply_filters(base, sel), at)
@@ -1025,14 +1067,34 @@ def found():
     """손님이 '찾았어요' → 이 위치가 맞다는 확인 + 같은 자리 신고는 취소"""
     d = request.get_json(force=True)
     sku, fx = d.get("sku"), d.get("fixture")
+    p = one("SELECT confirmed_at FROM placements WHERE sku=? AND fixture_id=? AND active=1", (sku, fx))
+    closed = [r["id"] for r in rows("""SELECT id FROM reports WHERE sku=? AND fixture_id=? AND kind='none' AND done=0
+                                         AND wait_state IN ('', 'expired')""", (sku, fx))]
     db().execute("UPDATE placements SET confirmed_at=? WHERE sku=? AND fixture_id=? AND active=1", (ts(), sku, fx))
-    db().execute("""UPDATE reports SET done=1, resolution='손님이 찾음', resolved_at=?
-                    WHERE sku=? AND fixture_id=? AND kind='none' AND done=0 AND wait_state IN ('', 'expired')""",
-                 (ts(), sku, fx))
-    db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,device,done,resolution,resolved_at)
-                    VALUES (?,?,'found',?,?,1,'손님이 찾음',?)""", (sku, fx, ts(), d.get("device"), ts()))   # 점장 요약용 기록
+    if closed:
+        db().execute(f"UPDATE reports SET done=1, resolution='손님이 찾음', resolved_at=? WHERE id IN ({','.join('?' * len(closed))})",
+                     [ts()] + closed)
+    undo = json.dumps({"prev": p["confirmed_at"] if p else None, "closed": closed})   # 되돌리기에 쓸 이전 상태
+    rid = db().execute("""INSERT INTO reports (sku,fixture_id,kind,created_at,device,done,resolution,resolved_at,detail)
+                          VALUES (?,?,'found',?,?,1,'손님이 찾음',?,?)""", (sku, fx, ts(), d.get("device"), ts(), undo)).lastrowid   # 점장 요약용 기록
     db().commit()
-    return jsonify(ok=True, message="고마워요")
+    return jsonify(ok=True, id=rid, message="고마워요!")
+
+@app.route("/api/found/undo", methods=["POST"])
+def found_undo():
+    """'찾았어요'를 잘못 눌렀을 때: 확인 시각 · 취소된 신고 · 기록을 누르기 전으로 되돌림 (같은 휴대폰 · 30분 안)"""
+    d = request.get_json(force=True)
+    r = one("SELECT * FROM reports WHERE id=? AND kind='found'", (d.get("id"),))
+    if not r or (r["device"] or "") != (d.get("device") or "") or mins_since(r["created_at"]) > 30:
+        return jsonify(ok=False, message="되돌릴 수 없어요"), 400
+    try: u = json.loads(r["detail"] or "{}")
+    except ValueError: u = {}
+    db().execute("UPDATE placements SET confirmed_at=? WHERE sku=? AND fixture_id=? AND active=1", (u.get("prev"), r["sku"], r["fixture_id"]))
+    for cid in u.get("closed") or []:
+        db().execute("UPDATE reports SET done=0, resolution=NULL, resolved_at=NULL WHERE id=? AND resolution='손님이 찾음'", (cid,))
+    db().execute("DELETE FROM reports WHERE id=?", (r["id"],))
+    db().commit()
+    return jsonify(ok=True, message="되돌렸어요")
 
 # ---------- 직원 화면 ----------
 # ---------- 찜목록 ----------
@@ -1412,6 +1474,89 @@ def info():
     here = one("SELECT * FROM fixtures WHERE id=?", (at,))
     return render_template("info.html", at=at, here=here)
 
+# ---------- 손님 로그인 · 내 사이즈 저장 ----------
+USER_RX = re.compile(r"[A-Za-z0-9_]{4,20}")
+_FAILS = {}                                   # 로그인 실패 기록 (아이디·IP별) → 5번 틀리면 5분 잠금
+PROFILE_KEYS = {"h": int, "w": int, "foot": int, "age": int, "pref": str, "g": str, "top": str, "bottom": str, "found_home": bool}
+
+def clean_profile(p):
+    out = {}
+    for k, typ in PROFILE_KEYS.items():
+        v = (p or {}).get(k)
+        if v in (None, ""): continue
+        try: out[k] = typ(v) if typ is not str else str(v)[:6]
+        except (TypeError, ValueError): pass
+    allowed = {"pref": ("tight", "normal", "loose"), "g": ("F", "M"), "top": SIZE_ORDER + ["XXL"], "bottom": SIZE_ORDER + ["XXL"]}
+    for k, ok in allowed.items():
+        if k in out and out[k] not in ok: out.pop(k)
+    for k, (lo, hi) in {"h": (100, 230), "w": (20, 200), "foot": (150, 350), "age": (5, 110)}.items():
+        if k in out and not lo <= out[k] <= hi: out.pop(k)
+    return out
+
+def _safe_next(n):
+    n = n or ""
+    return n if n.startswith("/") and not n.startswith("//") else "/go?at=ENTRANCE"
+
+def _locked(key):
+    t = [x for x in _FAILS.get(key, []) if time.time() - x < 300]
+    _FAILS[key] = t
+    return len(t) >= 5
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    nxt, err = _safe_next(request.values.get("next")), ""
+    if request.method == "POST":
+        name, pw = (request.form.get("username") or "").strip(), request.form.get("password") or ""
+        key = f"{name.lower()}|{request.remote_addr}"
+        if _locked(key): err = "여러 번 틀려서 5분 동안 잠겼어요"
+        else:
+            u = one("SELECT * FROM users WHERE username=?", (name,))
+            if u and check_password_hash(u["pw"], pw):
+                session.clear(); session.permanent = True; session["uid"] = u["id"]
+                _FAILS.pop(key, None)
+                return redirect(nxt)
+            _FAILS.setdefault(key, []).append(time.time())
+            err = "아이디 또는 비밀번호가 맞지 않아요"
+    return render_template("login.html", mode="login", nxt=nxt, err=err, at=request.args.get("at", "ENTRANCE"))
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    nxt, err = _safe_next(request.values.get("next")), ""
+    if request.method == "POST":
+        f = request.form
+        name, pw = (f.get("username") or "").strip(), f.get("password") or ""
+        if not USER_RX.fullmatch(name): err = "아이디는 영어 · 숫자 · _ 로 4~20자예요"
+        elif len(pw) < 8: err = "비밀번호는 8자 이상으로 해 주세요"
+        elif pw != f.get("password2"): err = "비밀번호가 서로 달라요"
+        elif one("SELECT 1 x FROM users WHERE username=?", (name,)): err = "이미 있는 아이디예요"
+        else:
+            try: prof = clean_profile(json.loads(f.get("profile") or "null"))   # 이 휴대폰에 저장해 둔 MY 정보를 그대로 가져감
+            except ValueError: prof = {}
+            uid = db().execute("INSERT INTO users (username, pw, created, profile) VALUES (?,?,?,?)",
+                               (name, generate_password_hash(pw), ts(), json.dumps(prof, ensure_ascii=False))).lastrowid
+            db().commit()
+            session.clear(); session.permanent = True; session["uid"] = uid
+            return redirect(nxt)
+    return render_template("login.html", mode="signup", nxt=nxt, err=err, at=request.args.get("at", "ENTRANCE"))
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(_safe_next(request.form.get("next")))
+
+@app.route("/api/me", methods=["GET", "POST"])
+def api_me():
+    """로그인한 손님의 MY 정보 불러오기 / 저장 (키 · 몸무게 · 내 사이즈 · '찾았어요 → 처음 화면' 설정)"""
+    uid = session.get("uid")
+    if not uid: return jsonify(ok=False, login=False)
+    if request.method == "POST":
+        prof = clean_profile((request.get_json(force=True) or {}).get("profile"))
+        db().execute("UPDATE users SET profile=? WHERE id=?", (json.dumps(prof, ensure_ascii=False), uid)); db().commit()
+        return jsonify(ok=True, login=True, profile=prof)
+    u = one("SELECT username, profile FROM users WHERE id=?", (uid,))
+    if not u: session.clear(); return jsonify(ok=False, login=False)
+    return jsonify(ok=True, login=True, user=u["username"], profile=json.loads(u["profile"] or "null"))
+
 @app.route("/me")
 def me():
     """키·몸무게 입력 (값은 휴대폰 브라우저에만 저장, 서버 저장 없음)"""
@@ -1759,7 +1904,7 @@ def kiosk():
         pop, rise, _ = search_trends(None, n=8)
         popular = list(dict.fromkeys(pop + rise))[:12]
     elif step == "result" and q:
-        base, parsed, _ = S.text_search(rows("SELECT * FROM items"), q, limit=999)
+        base, parsed, _ = smart_search(rows("SELECT * FROM items"), q)
         exact = [it for it in base if S.is_exact(it, parsed)]
         base = exact if exact else base[:30]                # 딱 맞는 옷이 있으면 그것만 (키오스크는 짧게)
         sel = {"color": color, "fit": fit, "pattern": pattern}

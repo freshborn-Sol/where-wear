@@ -610,3 +610,40 @@ JS_SUBS.update({
     ").<br>아래 \\'직접 입력\\'을 눌러 주세요.": ").<br>Tap \\'Manual entry\\' below.", "벌": "",
 })
 JS_RAW.update({"' · 피팅룸 반납 표시 지움'": "' · fitting room notice cleared'", "'벌)'": "')'"})
+
+# 2026.11.09 손님 피드백: 찾았어요 되돌리기 · 처음 화면 · 로그인 · 내 사이즈 · 지도 다운로드
+PHRASES.update({
+    "‘찾았어요!’를 누르면 정확도가 상승합니다!": "Tap 'Found it!' to improve accuracy!",
+    "찾았어요! 위치 정확도에 반영했어요": "Found it! This helps keep locations accurate", "잘못 눌렀어요": "Tapped by mistake",
+    "되돌리기": "Undo", "처음 화면으로": "Back to home", "다음부터 ‘찾았어요!’ 누르면 바로 처음 화면으로": "Next time, go straight home after 'Found it!'",
+    "↩ 되돌리기": "↩ Undo", "찾았어요!": "Found it!", "되돌렸어요 · 다시 찾으면 눌러 주세요": "Undone · tap again when you find it",
+    "되돌릴 수 없어요": "Can't undo", "되돌렸어요": "Undone",
+    "로그인": "Log in", "회원가입": "Sign up", "로그아웃": "Log out", "가입하고 로그인": "Sign up & log in",
+    "로그인하면 다른 휴대폰 · 다른 매장에서도 내 사이즈를 불러와요": "Log in to use your sizes on any phone, in any store",
+    "아이디 하나로 내 사이즈를 저장해 두세요": "Save your sizes with one ID",
+    "아이디": "ID", "영어 · 숫자 4~20자": "4–20 letters or numbers", "비밀번호": "Password", "8자 이상": "8+ characters",
+    "비밀번호 확인": "Confirm password", "예) hansol01": "e.g. hansol01",
+    "이 휴대폰에 적어 둔": "Your", "키 · 몸무게 · 내 사이즈": "height · weight · sizes",
+    "가 있으면 그대로 계정에 옮겨져요. 비밀번호는 암호화해서 저장해요.": "saved on this phone move to your account. Passwords are stored encrypted.",
+    "처음이세요?": "New here?", "이미 아이디가 있어요": "Already have an ID", "로그인하지 않아도 모든 기능을 쓸 수 있어요": "Every feature works without logging in",
+    "아이디 또는 비밀번호가 맞지 않아요": "Wrong ID or password", "여러 번 틀려서 5분 동안 잠겼어요": "Too many tries — locked for 5 minutes",
+    "아이디는 영어 · 숫자 · _ 로 4~20자예요": "IDs are 4–20 letters, numbers or _", "비밀번호는 8자 이상으로 해 주세요": "Use 8 or more characters",
+    "비밀번호가 서로 달라요": "Passwords don't match", "이미 있는 아이디예요": "That ID is taken",
+    "로그인됨 · 어느 휴대폰에서나 같은 정보를 불러와요": "Logged in · same info on any phone",
+    "로그인하고 내 사이즈 저장": "Log in to save your sizes", "다른 휴대폰에서도 내 사이즈를 불러와요 · 안 해도 돼요": "Use your sizes on other phones · optional",
+    "내 계정": "Your account", "에 저장돼요 · 다른 사람에게 보이지 않아요": "stores this · nobody else can see it",
+    "로그인하지 않으면": "Without logging in, it's saved on", "내 사이즈": "My size", "추천 사이즈": "Suggested size",
+    "알면 바로 골라 주세요": "pick if you know", "모름": "Not sure", "신발 · 발 사이즈": "Shoes · foot size", "선택": "optional",
+    "사이즈를 모르면": "Don't know your size?", "키 · 몸무게로 추천해요": "we'll suggest one from height · weight", "성별 · 나이": "Gender · age",
+    "설정": "Settings", "‘찾았어요!’ 누르면 처음 화면으로": "Go home after 'Found it!'",
+    "옷을 찾고 나면 바로 첫 화면으로 돌아가요": "Return to the home screen once you find it", "키 · 몸무게를 같이 적어 주세요": "Please enter both height and weight",
+    "내 사이즈 등록": "Add my size", "몸무게로 추천해요": "weight → suggested size", "이미 아이디가 있어요 ·": "Already have an ID? ·", "하고 바로 보기": "to see it right here", "지도 다운로드": "Download map",
+})
+PATTERNS.insert(0, _p(r"([A-Za-z0-9_]{4,20})님", lambda m, t: f"Hi, {m[1]}"))
+JS_SUBS.update({"초 뒤 처음 화면으로 가요": " s until home", "\">내 사이즈</a>를 적으면 바로 보여 드려요": "\">Add your size</a> to see it here",
+                "\">내 사이즈 등록</a>하고 바로 보기": "\">Add my size</a> to see it right here"})
+
+# 설명으로 찾기 (음성 · 글자)
+PHRASES.update({'예) "검정 후드티", "모자 달린 회색 옷"': 'e.g. "black hoodie", "gray top with a hood"',
+                '예) "검정 후드티", "허리 고무줄 바지"': 'e.g. "black hoodie", "pants with an elastic waist"',
+                "설명을 알아듣고 찾았어요": "Found from your description"})

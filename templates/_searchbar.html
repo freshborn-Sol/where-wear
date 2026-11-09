@@ -33,7 +33,7 @@
   <div class="steps"><div><i class="dotc"></i>옷 종류 · 색 알아보기</div><div><i class="dotc"></i>무늬 · 핏 살펴보기</div><div><i class="dotc"></i>매장 상품과 비교하기</div></div>
 </div>
 <div id="vbusy" class="vbusy" onclick="if(event.target===this)voiceStop()" aria-live="polite">
-  <div class="vb-in"><span class="vb-mic">{{ cxs.icon('mic', 34) }}</span><b>말씀해 주세요</b><p id="vbText">예) "검정 후드티", "흰 운동화"</p>
+  <div class="vb-in"><span class="vb-mic">{{ cxs.icon('mic', 34) }}</span><b>말씀해 주세요</b><p id="vbText">예) "검정 후드티", "모자 달린 회색 옷"</p>
     <button type="button" class="btn" onclick="voiceStop()">그만하기</button></div>
 </div>
 <script>
@@ -43,7 +43,7 @@ if(WW_SR) document.querySelectorAll('.searchbox .mic').forEach(b=>b.hidden=false
 function voiceSearch(form){
   if(!WW_SR) return; const vb=document.getElementById('vbusy'), vt=document.getElementById('vbText');
   wwRec=new WW_SR(); wwRec.lang=document.documentElement.lang==='en'?'en-US':'ko-KR'; wwRec.interimResults=true;
-  vt.textContent='예) "검정 후드티", "흰 운동화"'; vb.classList.add('on'); let sent=false;
+  vt.textContent='예) "검정 후드티", "모자 달린 회색 옷"'; vb.classList.add('on'); let sent=false;
   wwRec.onresult=e=>{ const t=[...e.results].map(r=>r[0].transcript).join('').trim(); vt.textContent=t; form.q.value=t;
     if(e.results[e.results.length-1].isFinal && t){ sent=true; wwRec.stop(); saveRecent(t); setTimeout(()=>form.submit(),350); } };
   wwRec.onerror=e=>{ vt.textContent = (e.error==='not-allowed'||e.error==='service-not-allowed') ? '마이크 권한을 허용해 주세요 (설정 → 브라우저 → 마이크)' : '잘 못 들었어요. 다시 눌러 주세요'; setTimeout(voiceStop,2200); };
