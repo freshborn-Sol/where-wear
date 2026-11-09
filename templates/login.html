@@ -19,7 +19,7 @@
     {% if mode == 'signup' %}
     <label class="fld"><span>비밀번호 확인</span><span class="inp"><input name="password2" type="password" required minlength="8" autocomplete="new-password"></span></label>
     <input type="hidden" name="profile" id="prof">
-    <p class="lockhint">{{ cx.icon('lock', 18) }}<span>이 휴대폰에 적어 둔 <b>키 · 몸무게 · 내 사이즈</b>가 있으면 그대로 계정에 옮겨져요. 비밀번호는 암호화해서 저장해요.</span></p>
+    <p class="lockhint">{{ cx.icon('lock', 18) }}<span>기존 내 정보는 보관됩니다.</span></p>
     {% endif %}
     <button class="btn primary">{{ '로그인' if mode == 'login' else '가입하고 로그인' }}</button>
   </form>
