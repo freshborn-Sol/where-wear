@@ -9,7 +9,7 @@
   <form method="post" class="meform" id="lf" autocomplete="on">
     <input type="hidden" name="next" value="{{ nxt }}">
     {% if mode == 'signup' %}
-    <label class="fld"><span>닉네임<small>1~12자 · ‘~님’으로 불러요</small></span>
+    <label class="fld"><span>닉네임<small>1~12자</small></span>
       <span class="inp"><input name="nickname" value="{{ request.form.get('nickname', '') }}" required maxlength="12" autocomplete="nickname"></span></label>
     {% endif %}
     <label class="fld"><span>아이디<small>영어 · 숫자 4~20자</small></span>
