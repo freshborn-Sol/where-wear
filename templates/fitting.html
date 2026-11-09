@@ -1,0 +1,94 @@
+{% extends "base.html" %}{% import "_ks.html" as ks with context %}{% import "_cx.html" as cx with context %}
+{% block styles %}{{ ks.styles() }}{% endblock %}{% block bodyclass %}staff{% endblock %}
+{% block body %}
+<div class="sshell">
+{{ ks.sbar('피팅룸 반납') }}
+<main class="swrap">
+  {{ ks.regseg('fit') }}
+  <div class="hintcard"><b>반납받은 옷 태그를 찍어요</b>위치는 그대로 두고, 손님 화면에 「피팅룸에 반납된 옷이 있어요」가 떠요. 옷을 제자리에 다시 걸 때 <a href="/staff">등록</a> 화면에서 선반 QR → 옷 태그를 찍으면 표시가 사라져요.</div>
+
+  <div class="cam"><div id="reader"></div><div class="camhint" id="camhint">옷 태그 바코드를 가로로 맞춰 주세요</div></div>
+  <div class="regres" id="regres" hidden aria-live="assertive"></div>
+
+  <details class="manual-d" id="manual">
+    <summary>{{ cx.icon('camoff', 18) }}직접 입력{{ cx.icon('chev', 16) }}</summary>
+    <div class="mbody">
+      <label class="fld">옷 이름이나 색으로 찾기<input id="iq" placeholder="예) 후드 블랙, 청바지, UQ013" autocomplete="off" oninput="findItems(this.value)"></label>
+      <ul class="ipick" id="ipick"><li class="none">두 글자 이상 입력하면 아래에 나와요 · 누르면 바로 반납</li></ul>
+      <div class="frow"><label class="fld">바코드 직접 입력<input id="code" placeholder="8800000000001" inputmode="numeric"></label>
+        <button class="sbtn" style="height:42px" onclick="ret(document.getElementById('code').value)">반납</button></div>
+    </div>
+  </details>
+
+  <div class="sh2" id="list"><span class="dot b"></span>제자리로 돌려놓을 옷<small id="fitn">{{ rets|length }}벌</small></div>
+  <div id="fitwrap">{{ ks.fitlist(rets) }}</div>
+</main>
+{{ ks.stabs('reg') }}
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+// 피팅룸 반납: 옷 태그 QR(…/item/UQ001) · 시즌 바코드(880…) · 상품번호를 찍으면 반납 기록
+const $ = id => document.getElementById(id), ITEMS = {{ items|tojson }};
+let last = 0, undoTimer = null;
+const AC = window.AudioContext ? new AudioContext() : null;
+function beep(ok){ if(!AC) return; try{ AC.resume(); const o = AC.createOscillator(), g = AC.createGain();
+  o.frequency.value = ok ? 1320 : 220; o.type = ok ? 'sine' : 'square'; g.gain.value = .08; o.connect(g); g.connect(AC.destination);
+  o.start(); o.stop(AC.currentTime + (ok ? .12 : .35)); }catch(e){} }
+function findItems(q){
+  const box = $('ipick'); q = (q||'').trim().toLowerCase().replace(/\s+/g,' ');
+  if (q.length < 2) { box.innerHTML = '<li class="none">두 글자 이상 입력하면 아래에 나와요 · 누르면 바로 반납</li>'; return; }
+  const words = q.split(' ');
+  const hit = ITEMS.filter(it => words.every(w => (it.sku+' '+it.name+' '+it.color+' '+it.subcat).toLowerCase().includes(w))).slice(0, 8);
+  box.innerHTML = hit.length ? '' : '<li class="none">맞는 옷이 없어요</li>';
+  hit.forEach(it => { const li = document.createElement('li'); li.innerHTML = '<button type="button"><b></b><small></small><span>반납</span></button>';
+    li.querySelector('b').textContent = it.name; li.querySelector('small').textContent = it.color + ' · ' + it.sku;
+    li.querySelector('button').onclick = () => ret(it.sku); box.appendChild(li); });
+}
+function addRow(d){
+  let ul = document.querySelector('#fitwrap .fitlist');
+  if (!ul) { $('fitwrap').innerHTML = '<ul class="fitlist"></ul>'; ul = document.querySelector('#fitwrap .fitlist'); }
+  const li = document.createElement('li'); li.dataset.id = d.id;
+  li.innerHTML = '<img alt=""><div class="fb"><b></b><span class="fto"></span><small>방금 반납</small></div>';
+  li.querySelector('img').src = d.image || '';
+  li.querySelector('b').textContent = d.name + ' (' + d.color + ')';
+  li.querySelector('.fto').innerHTML = d.fixture ? '제자리 <em></em>' : '<em class="no">위치 없음 · 등록 화면에서 찍어 주세요</em>';
+  if (d.fixture) li.querySelector('.fto em').textContent = d.fixture + ' ' + d.level;
+  ul.prepend(li); count(1); return li;
+}
+function count(d){ const n = $('fitn'); n.textContent = Math.max(0, parseInt(n.textContent) + d) + '벌'; }
+function ret(code){
+  if (!code) return;
+  fetch('/api/fitting/return', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sku: code})})
+   .then(r => r.json()).then(d => {
+      beep(d.ok); if (navigator.vibrate) navigator.vibrate(d.ok ? 60 : [120, 80, 120]);
+      const box = $('regres'); box.hidden = false; clearInterval(undoTimer);
+      if (!d.ok) { box.className = 'regres bad'; box.innerHTML = '<div class="rr-t">찾지 못했어요</div><div class="rr-m"></div><small>바코드를 다시 찍거나 아래 \'직접 입력\'에서 이름으로 찾아 주세요</small>';
+        box.querySelector('.rr-m').textContent = d.message; return; }
+      const li = addRow(d);
+      box.className = 'regres ok';
+      box.innerHTML = '<img alt=""><div class="rr-b"><div class="rr-t">✓ 반납 받았어요</div><b class="rr-n"></b><div class="rr-to"></div><small class="rr-p"></small></div>' +
+                      '<button type="button" class="sbtn sm line rr-u">되돌리기 <em>10</em></button>';
+      box.querySelector('img').src = d.image || '';
+      box.querySelector('.rr-n').textContent = d.name + ' · ' + d.color;
+      box.querySelector('.rr-to').textContent = d.fixture ? '제자리 → ' + d.fixture_name + ' · ' + d.level : '위치 없음 · 등록 화면에서 찍어 주세요';
+      box.querySelector('.rr-p').textContent = '위치는 그대로 · 손님 화면에 피팅룸 반납 표시' + (d.n > 1 ? ' (' + d.n + '벌)' : '');
+      let left = 10; const ub = box.querySelector('.rr-u'), em = ub.querySelector('em');
+      undoTimer = setInterval(() => { left--; em.textContent = left; if (left <= 0) { clearInterval(undoTimer); ub.remove(); } }, 1000);
+      ub.onclick = () => { clearInterval(undoTimer);
+        fetch('/api/fitting/undo', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: d.id})})
+          .then(() => { li.remove(); count(-1); box.className = 'regres undo'; box.innerHTML = '<div class="rr-t">↩ 되돌렸어요</div>'; }); };
+   });
+}
+function onScan(text){
+  const t = Date.now(); if (t - last < 1500) return; last = t;
+  if (/[?&]at=/.test(text)) { const box = $('regres'); box.hidden = false; box.className = 'regres bad';
+    box.innerHTML = '<div class="rr-t">선반 QR이에요</div><small>피팅룸 반납은 옷 태그만 찍어요 · 제자리에 걸 때는 등록 화면에서 찍어 주세요</small>'; return; }
+  const it = text.match(/\/item\/([A-Za-z0-9]+)/);
+  ret(it ? it[1] : text.trim().toUpperCase());
+}
+new Html5Qrcode("reader").start({facingMode:"environment"}, {fps:10, qrbox:220}, onScan, ()=>{})
+   .catch(e => { $('reader').innerHTML = '<p class="camfail">카메라를 쓸 수 없어요 (' + e + ').<br>아래 \'직접 입력\'을 눌러 주세요.</p>';
+                 $('camhint').hidden = true; $('manual').open = true; });
+</script>
+{% endblock %}
