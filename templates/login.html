@@ -9,7 +9,7 @@
   <form method="post" class="meform" id="lf" autocomplete="on">
     <input type="hidden" name="next" value="{{ nxt }}">
     <label class="fld"><span>아이디<small>영어 · 숫자 4~20자</small></span>
-      <span class="inp"><input name="username" value="{{ request.form.get('username', '') }}" required minlength="4" maxlength="20" pattern="[A-Za-z0-9_]{4,20}" autocapitalize="off" autocomplete="username" placeholder="예) hansol01"></span></label>
+      <span class="inp"><input name="username" value="{{ request.form.get('username', '') }}" required minlength="4" maxlength="20" pattern="[A-Za-z0-9_]{4,20}" autocapitalize="off" autocomplete="username"></span></label>
     <label class="fld"><span>비밀번호{% if mode == 'signup' %}<small>8자 이상</small>{% endif %}</span>
       <span class="inp"><input name="password" type="password" required {% if mode == 'signup' %}minlength="8"{% endif %} autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}"></span></label>
     {% if mode == 'signup' %}
