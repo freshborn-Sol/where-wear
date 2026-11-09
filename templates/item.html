@@ -119,8 +119,8 @@
 </main>
 
 <div class="findbar {{ 'withnote' if it.place }}">
-  {% if it.place %}<p class="fnote">{{ cx.icon('info', 13) }}‘찾았어요’를 누르면 위치 정보가 더 정확해져요</p>{% endif %}
-  {% if it.place %}<button class="fbtn found" id="foundBtn" onclick="foundIt()">{{ cx.icon('check', 20) }}<span>찾았어요</span></button>{% endif %}
+  {% if it.place %}<p class="fnote">{{ cx.icon('info', 13) }}첫 화면으로 가려면 '찾았어요!'를 누르세요.</p>{% endif %}
+  {% if it.place %}<button class="fbtn found" id="foundBtn" onclick="foundIt()">{{ cx.icon('check', 20) }}<span>찾았어요!</span></button>{% endif %}
   <button class="fbtn red" onclick="openHelp()">{{ cx.icon('help', 20) }}<span>찾는 게 없나요?</span></button>
 </div>
 <p id="msg" class="msg"></p>
@@ -236,7 +236,11 @@ let RID=null, WAIT_SZ='', POLL=null;
 function foundIt(){
   const b=$('#foundBtn'); if(!b||b.disabled) return;
   fetch('/api/found',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:SKU,fixture:FX,device:DEV})})
-   .then(r=>r.json()).then(d=>{ b.disabled=true; b.querySelector('span').textContent='고마워요'; toast(d.message); });
+   .then(r=>r.json()).then(d=>{ b.disabled=true; b.querySelector('span').textContent='고마워요';
+     /* 버튼 바로 위 안내 문구 자리에 '처음으로' 선택지 */
+     const n=document.querySelector('.findbar .fnote'); const a=document.createElement('a');
+     a.className='fgo'; a.href='/go?at='+encodeURIComponent(AT); a.textContent='처음으로';
+     if(n) n.replaceWith(a); else b.parentNode.prepend(a); });
 }
 function notHere(){
   post('none','').then(d=>{
