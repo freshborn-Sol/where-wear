@@ -18,7 +18,7 @@
     {% for k, d in types.items() %}
       <label class="radio"><input type="radio" name="store_type" value="{{k}}" {{'checked' if s.store_type==k}} onchange="largeMode()"><div><b>{{k}} 매장</b><small>{{d}}</small></div></label>
     {% endfor %}
-    <p class="hintcard" id="largenote"><b>대형 매장은 바쁨 모드를 쓰지 않아요</b>늘 바빠서 계산대 안내로 바꾸지 않고, 기다리는 손님이 {{CROWD_N}}명 이상이면 손님 화면에 '직원이 조금 늦을 수 있어요'를 띄워요.</p>
+    <p class="hintcard" id="largenote"><b>대형 매장은 바쁨 모드를 쓰지 않아요</b>늘 바빠서 계산대 안내로 바꾸지 않고 기다리는 손님이 {{CROWD_N}}명 이상이면 손님 화면에 '직원이 조금 늦을 수 있어요'를 띄워요.</p>
 
     <div class="sh2">지금 근무하는 직원 수</div>
     <div class="card" style="flex-direction:row;align-items:center;gap:12px;padding:10px 12px">

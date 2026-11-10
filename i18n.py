@@ -223,7 +223,7 @@ PHRASES = {
     "지금 손님 신고 만들기": "Create a customer report now", "손님 화면 열기": "Open customer view", "손님 화면으로 보기": "View as customer",
     "키오스크 열기": "Open kiosk", "신고함 열기": "Open requests", "점장 요약 열기": "Open manager summary",
     "입구 키오스크 화면": "Entrance kiosk", "키오스크 상품 화면": "Kiosk item screen", "기록 중…": "Recording…",
-    "입구 키오스크에서 종류 → 색 → 위치를 고르고, 종이 지도를 뽑아요": "At the kiosk pick category → color → location and print a map",
+    "입구 키오스크에서 종류 → 색 → 위치를 고르고 종이 지도를 뽑아요": "At the kiosk pick category → color → location and print a map",
     "캔버스 로우 스니커즈 화면에서 \"가져다 주세요\"를 누르면 직원 신고함에 바로 떠요": "Tap \"Bring it\" on Canvas Low Sneakers and it shows in staff requests",
 }
 
@@ -558,7 +558,7 @@ PHRASES.update({
     "위치 없는 옷": "Items without a location", "안내할 위치가 아직 없어요 · 자주 찾는 옷부터": "No location to guide yet · most viewed first",
     "위치 없는 옷이 없어요.": "Every item has a location.", "찍어서 등록": "Scan to register",
     "반납받은 옷 태그를 찍어요": "Scan the tag of returned items",
-    "위치는 그대로 두고, 손님 화면에 「피팅룸에 반납된 옷이 있어요」가 떠요. 옷을 제자리에 다시 걸 때": "The location stays the same, and shoppers see 'Some were returned to the fitting room'. When you hang it back, scan the shelf QR → item tag on the",
+    "위치는 그대로 두고 손님 화면에 「피팅룸에 반납된 옷이 있어요」가 떠요. 옷을 제자리에 다시 걸 때": "The location stays the same, and shoppers see 'Some were returned to the fitting room'. When you hang it back, scan the shelf QR → item tag on the",
     "화면에서 선반 QR → 옷 태그를 찍으면 표시가 사라져요.": "screen and the notice disappears.",
     "직접 입력": "Manual entry", "반납": "Return", "스캔 없이 처리": "Done without scan", "방금 반납": "Just returned",
     "제자리에 걸 때": "When hanging it back, scan the shelf QR → item tag on the",
@@ -591,7 +591,7 @@ PATTERNS[:0] = [
     _p(r"피팅룸 반납 (\d+)벌", lambda m, t: f"{m[1]} fitting room returns"),
     _p(r"기다리는 손님 (\d+)명", lambda m, t: f"{m[1]} customers waiting"),
     _p(r"손님 화면에 '직원이 조금 늦을 수 있어요'가 떠요", lambda m, t: "shoppers see 'Staff may take a little longer'"),
-    _p(r"늘 바빠서 계산대 안내로 바꾸지 않고, 기다리는 손님이 (\d+)명 이상이면 손님 화면에 '직원이 조금 늦을 수 있어요'를 띄워요\.",
+    _p(r"늘 바빠서 계산대 안내로 바꾸지 않고 기다리는 손님이 (\d+)명 이상이면 손님 화면에 '직원이 조금 늦을 수 있어요'를 띄워요\.",
        lambda m, t: f"They're always busy, so instead of sending shoppers to the checkout, shoppers see 'Staff may take a little longer' when {m[1]}+ are waiting."),
     _p(r"(\d+)(분|시간|일) 전 삭제", lambda m, t: f"Deleted {m[1]} {dict(분='min', 시간='h', 일='d')[m[2]]} ago"),
     _p(r"(.+) \((.+)\) 삭제했어요", lambda m, t: f"Deleted {t(m[1])} ({t(m[2])})"),

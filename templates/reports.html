@@ -15,17 +15,9 @@
   {% if large %}
   {% if waiting|length >= CROWD_N %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>기다리는 손님 {{waiting|length}}명 · 손님 화면에 '직원이 조금 늦을 수 있어요'가 떠요</span></div>{% endif %}
   {% else %}
-  <div class="busybar {{'on' if busy}}">
-    <div class="bt"><b>{{ '바쁨 모드 켜짐' if busy else '바쁨 모드 꺼짐' }}</b><small>직원 {{staff_count}}명{{ ' · 자동으로 켜졌어요' if busy and busy_mode=='auto' else ' 근무 중' }}</small></div>
-    <form method="post" action="/staff/busy">
-      {% for k, lab in [('auto','자동'),('on','켜기'),('off','끄기')] %}<button name="mode" value="{{k}}" class="{{'sel' if busy_mode==k}}">{{lab}}</button>{% endfor %}
-    </form>
-  </div>
   {% if busy %}<div class="busynote">{{ cx.icon('alert', 16) }}<span>손님에게 계산대로 안내 중이에요</span></div>{% endif %}
   {% endif %}
   <div class="newreq" id="newreq" hidden>{{ cx.icon('bell', 20) }}<b>새 손님 요청이 들어왔어요</b><span>아래 빨간 카드부터 확인하세요</span></div>
-  <div class="pushbar" id="pushbar"><button type="button" class="sndbtn" id="pushbtn" onclick="togglePush()">{{ cx.icon('bell', 15) }}<span>잠금화면 신고 알림 켜기</span></button>
-    <small id="pushhint"></small></div>
   <div class="rsum">
     <a class="urgent" href="#wait">손님 대기 <b>{{ waiting|length }}</b></a>
     <a class="fix" href="#fix">고칠 위치 <b>{{ groups.values()|map('length')|sum }}</b></a>
@@ -132,7 +124,6 @@
     document.title = '새 요청 · 신고함';
   }
   try{ localStorage.setItem('ww_seen', JSON.stringify(ids)); localStorage.setItem('ww_seen_init', '1'); }catch(e){}
-  pushInit();
 })();
 // 잠금화면 알림 (Web Push): 이 휴대폰을 구독 → 신고가 들어오면 기본 알림음과 함께 잠금화면에 뜸
 const PB = () => document.getElementById('pushbtn'), PH = () => document.getElementById('pushhint');
