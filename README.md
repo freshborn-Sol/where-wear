@@ -34,56 +34,35 @@ python app.py                 # http://localhost:5001/go?at=A-H1
 
 **손님 (매장 QR)** — 앱 설치 없이 휴대폰으로 바로 열림
 
-| 홈 | 사진으로 찾기 (AI) | 위치 + 2D 길 안내 | 매장 지도 | English |
+| 홈 | 말 · 설명으로 찾기 | 사진으로 찾기 (AI) | 위치 + 2D 길 안내 | 찾았어요! |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screens/qr_home.jpg" width="160"> | <img src="docs/screens/qr_photo.jpg" width="160"> | <img src="docs/screens/qr_item.jpg" width="160"> | <img src="docs/screens/qr_map.jpg" width="160"> | <img src="docs/screens/qr_item_en.jpg" width="160"> |
-| 지금 내 자리 · 이번 주 배너<br>· 글자 · 말 · 사진 검색 | Vision AI가 옷 특징을 뽑고<br>가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단"<br>+ 경로 · 사이즈별 재고 | 피팅룸 · 계산대 · 매대까지<br>거리와 걸리는 시간 | 휴대폰 언어에 맞춰<br>영어 화면 |
+| <img src="docs/screens/qr_home.jpg" width="160"> | <img src="docs/screens/qr_desc.jpg" width="160"> | <img src="docs/screens/qr_photo.jpg" width="160"> | <img src="docs/screens/qr_item.jpg" width="160"> | <img src="docs/screens/qr_found.jpg" width="160"> |
+| 지금 내 자리 · 이번 주 배너<br>· 매장 한눈에 보기 · 추천 | 옷 이름을 몰라도 "허리 고무줄<br>있는 편한 바지"처럼 말하면 찾음 | Vision AI가 옷 특징을 뽑고<br>가장 비슷한 옷을 일치도와 함께 | "C구역 · 벽면 선반 · 중단"<br>+ 경로 · 사이즈별 재고 | 위치가 맞다고 기록 → 안내가 정확해짐<br>잘못 눌렀으면 되돌리기 |
 
-**사용성 평가 뒤 새로 넣은 기능 (10주차)** — 부모님 세대 · 매장 직원 평가에서 나온 의견을 그대로 반영
-
-| 설명으로 찾기 | 찾았어요 → 되돌리기 · 처음으로 | 지도 사진 저장 · 카톡 | 로그인 · 내 사이즈 | 키오스크 검색 |
-|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screens/qr_desc.jpg" width="160"> | <img src="docs/screens/qr_found.jpg" width="160"> | <img src="docs/screens/qr_mapsave.jpg" width="160"> | <img src="docs/screens/qr_me.jpg" width="160"> | <img src="docs/screens/kiosk_search.jpg" width="180"> |
-| 옷 이름을 몰라도 "허리 고무줄<br>있는 편한 바지"처럼 말하면 찾음 | 잘못 눌렀으면 되돌리기,<br>원하면 바로 첫 화면으로 | 위치 · 지도를 사진 한 장으로<br>사진첩 저장 · 카카오톡 공유 | 다른 휴대폰에서도 내 사이즈<br>→ 상품마다 "내 사이즈 M · 4벌" | 화면 키보드 · 많이 찾는 옷<br>· 말로 찾기 |
+| 매장 지도 | 지도 사진 저장 · 카톡 | MY · 내 사이즈 | English |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screens/qr_map.jpg" width="160"> | <img src="docs/screens/qr_mapsave.jpg" width="160"> | <img src="docs/screens/qr_me.jpg" width="160"> | <img src="docs/screens/qr_item_en.jpg" width="160"> |
+| 피팅룸 · 계산대 · 매대까지<br>거리와 걸리는 시간 | 위치 · 지도를 사진 한 장으로<br>사진첩 저장 · 카카오톡 공유 | 내 사이즈를 적어 두면 상품마다<br>"내 사이즈 M · 4벌" (로그인은 선택) | 휴대폰 언어에 맞춰<br>영어 화면 |
 
 **키오스크 (입구 · 40대 이상)**
 
-| 첫 화면 | 결과에서 바로 좁히기 | 위치 | 지도 다운로드 | 종이 지도 (80mm 감열지) |
+| 첫 화면 | 검색 | 위치 | 지도 다운로드 | 종이 지도 (80mm 감열지) |
 |:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screens/kiosk_home.jpg" width="170"> | <img src="docs/screens/kiosk_result.jpg" width="170"> | <img src="docs/screens/kiosk_item.jpg" width="170"> | <img src="docs/screens/kiosk_download.jpg" width="170"> | <img src="docs/screens/kiosk_print.jpg" width="250"> |
-| 큰 글씨 · 터치만으로 종류 선택<br>+ 「검색」 버튼 | 색 · 핏 · 무늬를 결과 화면에서<br>골라 단계를 줄임 | 문장 길 안내 + 도면<br>창고에만 있는 사이즈는 가져다 드림 | QR을 찍으면 휴대폰에<br>같은 위치 안내가 열림 | 도면 + 꺾는 곳마다 번호,<br>옷이 없으면 직원 호출 QR |
+| <img src="docs/screens/kiosk_home.jpg" width="170"> | <img src="docs/screens/kiosk_search.jpg" width="170"> | <img src="docs/screens/kiosk_item.jpg" width="170"> | <img src="docs/screens/kiosk_download.jpg" width="170"> | <img src="docs/screens/kiosk_print.jpg" width="250"> |
+| 큰 글씨 · 터치만으로 종류 선택<br>종류마다 구역 표시 | 화면 키보드 · 많이 찾는 옷<br>· 말로 찾기, 결과에서 색 · 핏으로 좁히기 | 문장 길 안내 + 도면<br>창고에만 있는 사이즈는 가져다 드림 | QR을 찍으면 휴대폰에<br>같은 위치 안내가 열림 | 도면 + 꺾는 곳마다 번호,<br>옷이 없으면 직원 호출 QR |
 
 **직원**
 
 | 등록 | 신고함 | 피팅룸 반납 | 옷 목록 | 점장 요약 |
 |:---:|:---:|:---:|:---:|:---:|
 | <img src="docs/screens/staff_register.jpg" width="150"> | <img src="docs/screens/staff_reports.jpg" width="150"> | <img src="docs/screens/staff_fitting.jpg" width="150"> | <img src="docs/screens/staff_items.jpg" width="150"> | <img src="docs/screens/staff_summary.jpg" width="150"> |
-| 선반 QR → 옷 태그 연속 스캔<br>· 위치 없는 옷 목록 | 기다리는 손님 · 고칠 선반 번호<br>· '제가 갈게요' · 처리한 사람 | 반납 때 태그를 찍으면<br>손님 화면에 반납 안내 | 종류별 · 선반별 보기<br>· 삭제 · 되살리기 | 찾은 비율 · 할 일<br>· 입어 보기만 한 옷 순위 |
+| 선반 QR → 옷 태그<br>연속 스캔으로 위치 등록 | 기다리는 손님 · 고칠 선반<br>· '제가 갈게요' · 처리한 사람 | 피팅룸에 두고 간 옷을 찍으면<br>손님 화면에 반납 안내 | 종류별 · 선반별 보기<br>· 정보 수정 · 삭제 · 되살리기 | 찾은 비율 · 할 일<br>· 자주 못 찾는 자리 |
 
 **PC · 노트북에서 열면** — 고객 · 직원 화면은 휴대폰 틀, 키오스크는 32인치 세로형(1080×1920) 틀 안에서 스크롤해 볼 수 있습니다 (`?noframe=1`이면 틀 없이).
 
 <p align="center"><img src="docs/screens/pc_frames.jpg" width="720"></p>
 
-> 화면은 모두 이 저장소의 코드를 실행해 캡처했습니다 (2026.11.10). 신고함 숫자는 시연 모드(`/demo`)의 예시 데이터, 사진으로 찾기는 실제 Gemini 응답을 저장해 둔 결과입니다.
-
----
-
-## 사용성 평가 → 바뀐 점 (10주차)
-
-닐슨의 사용성 10원칙(휴리스틱 평가)으로 화면을 점검하고, **부모님 세대**(관찰법 · 면접법)와 **매장 직원**(직원 앱 사용 후 면접)에게 직접 써 보게 했습니다.
-
-| 누가 | 들은 의견 | 바꾼 점 |
-|---|---|---|
-| 부모님 세대 | 키오스크에도 검색이 필요하다 · 단계가 너무 많다 | 첫 화면 「검색」 (화면 키보드 · 많이 찾는 옷 · 말로 찾기), 색 고르는 단계를 결과 화면 칩으로 합침 |
-| 부모님 세대 | 음성으로 찾고 싶다 · 옷 이름을 모를 때 설명으로 찾고 싶다 | 검색창 마이크 + **설명으로 찾기** (아래 AI 활용 3) |
-| 부모님 세대 | 카카오톡으로 지도를 받고 싶다 | 「지도 사진으로 저장 · 카톡으로 보내기」, 키오스크 「지도 다운로드」 QR |
-| 부모님 세대 | '찾았어요'가 무슨 버튼인지 모르겠다 · 잘못 눌렀다 | 버튼 위 안내 문구, 누른 뒤 되돌리기 · 처음 화면으로 |
-| 부모님 세대 | 내 사이즈를 매번 입력하기 번거롭다 | 로그인(선택)과 MY '내 사이즈' 저장 → 상품마다 내 사이즈 재고 표시 |
-| 직원 | 지도에 동선보다 위치만 · 누가 처리하러 가는지 보였으면 | 고칠 선반은 번호만(동선은 버튼), 직원 이름 → '제가 갈게요' · 'OO 처리 중' · 처리 기록 |
-| 직원 | 피팅룸에 두고 간 옷은 어떻게 하나 | 반납 때 태그 스캔 → 손님 화면에 '피팅룸에 반납된 옷이 있어요', 제자리에 걸며 다시 스캔하면 해제 |
-| 직원 | 큰 매장은 늘 바빠서 바쁨 모드가 의미 없다 | 대형 매장은 바쁨 모드 대신, 기다리는 손님 3명 이상이면 손님 화면에 '조금 늦을 수 있어요' |
-| 직원 | 등록의 '없어요'와 신고함 '위치 고칠 것'이 겹친다 · 오래된 위치는 필요 없다 | 손님 신고는 신고함에서만, 등록 화면은 위치 없는 옷만 · 오래된 위치 탭 삭제 |
-| 직원 | 옷 목록에서 옷을 지울 수 있어야 한다 | 옷 삭제 + 「삭제한 옷」에서 재고 · 위치까지 되살리기 |
+> 화면은 모두 이 저장소의 코드를 실행해 캡처했습니다 (2026.11). 신고함 숫자는 시연 모드(`/demo`)의 예시 데이터, 사진으로 찾기는 실제 Gemini 응답을 저장해 둔 결과입니다.
 
 ---
 
