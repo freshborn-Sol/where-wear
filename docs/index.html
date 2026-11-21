@@ -21,6 +21,9 @@ li b{color:#1677E8}
 .main{background:#1677E8;color:#fff}
 .sub{background:#fff;color:#16202C;border:1px solid #D6E2F0}
 .small{font-size:12.5px;color:#7A8594;margin-top:8px}
+.pick{text-align:left;padding:16px 18px}
+.pick b{display:block;font-size:16.5px}
+.pick span{display:block;font-size:13px;font-weight:500;margin-top:3px;opacity:.85}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -30,6 +33,14 @@ li b{color:#1677E8}
 <div id="wait">
 <div class="spin" aria-hidden="true"></div>
 <p>시연 서버에 연결하는 중이에요…</p>
+</div>
+<div id="pick" hidden>
+<h1>어떤 화면을 써볼까요?</h1>
+<p>지금 부스에서 시연 중인 서버로 연결돼요.</p>
+<a class="btn main pick" id="toGo" href="#"><b>손님으로 써보기</b><span>매장에서 QR을 찍은 손님 화면</span></a>
+<a class="btn sub pick" id="toKiosk" href="#"><b>키오스크 화면 보기</b><span>매장 입구의 큰 화면</span></a>
+<a class="btn sub pick" id="toStaff" href="#"><b>직원 모드 보기</b><span>옷 등록 · 신고 처리 · 점장 요약</span></a>
+<p class="small">오프라인 의류 매장 내 위치 안내 서비스 · 팀 뿌셔뿌셔</p>
 </div>
 <div id="off" hidden>
 <h1>지금은 시연 서버가 꺼져 있어요</h1>
@@ -46,9 +57,14 @@ li b{color:#1677E8}
 </main>
 <script>
 var PREFIX = '/where-wear';
-function target(base) {
+function path() {
   var p = location.pathname;
   if (p.indexOf(PREFIX) === 0) p = p.slice(PREFIX.length);
+  return p;
+}
+var ROOT = ['', '/', '/index.html', '/404.html'].indexOf(path()) >= 0 && !location.search;
+function target(base) {
+  var p = path();
   if (p === '' || p === '/' || p === '/index.html' || p === '/404.html') p = '/go';
   var q = location.search;
   if (p === '/go' && !/[?&]at=/.test(q)) q = (q ? q + '&' : '?') + 'at=ENTRANCE';
@@ -66,6 +82,7 @@ var timer = null;
 function show(id) {
   document.getElementById('wait').hidden = id !== 'wait';
   document.getElementById('off').hidden = id !== 'off';
+  document.getElementById('pick').hidden = id !== 'pick';
 }
 function connect(quiet) {
   if (!quiet) show('wait');
@@ -74,6 +91,13 @@ function connect(quiet) {
     .then(function (s) { return s.url ? alive(s.url).then(function (ok) { return ok ? s.url : null; }) : null; })
     .catch(function () { return null; })
     .then(function (url) {
+      if (url && ROOT) {
+        var b = url.replace(/\/$/, '');
+        document.getElementById('toGo').href = b + '/go?at=ENTRANCE';
+        document.getElementById('toKiosk').href = b + '/kiosk';
+        document.getElementById('toStaff').href = b + '/staff';
+        show('pick'); return;
+      }
       if (url) { location.replace(target(url)); return; }
       show('off');
       clearTimeout(timer);
