@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>where:wear</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F3F7FC;color:#16202C;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif}
+main{width:100%;max-width:420px;padding:32px 24px;text-align:center}
+.logo{font-size:34px;font-weight:800;color:#1677E8;letter-spacing:-0.5px;margin-bottom:24px}
+.logo span{color:#3DD6CF}
+.spin{width:36px;height:36px;margin:0 auto 14px;border:4px solid #D6E2F0;border-top-color:#1677E8;border-radius:50%;animation:r 0.9s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+h1{font-size:21px;margin:0 0 8px}
+p{font-size:15px;line-height:1.55;color:#4A5565;margin:0 0 16px}
+ul{list-style:none;padding:0;margin:0 0 20px;text-align:left;background:#fff;border-radius:14px;padding:14px 16px}
+li{font-size:14.5px;line-height:1.5;padding:4px 0}
+li b{color:#1677E8}
+.btn{display:block;width:100%;padding:14px;border-radius:12px;font-size:15.5px;font-weight:700;text-decoration:none;margin-bottom:10px;border:0;cursor:pointer}
+.main{background:#1677E8;color:#fff}
+.sub{background:#fff;color:#16202C;border:1px solid #D6E2F0}
+.small{font-size:12.5px;color:#7A8594;margin-top:8px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<div class="logo">where<span>:</span>wear</div>
+<div id="wait">
+<div class="spin" aria-hidden="true"></div>
+<p>시연 서버에 연결하는 중이에요…</p>
+</div>
+<div id="off" hidden>
+<h1>지금은 시연 서버가 꺼져 있어요</h1>
+<p>where:wear는 행사 시간에 부스에서 직접 써볼 수 있어요.</p>
+<ul>
+<li><b>11월 28일(토)</b> 제2회 인공지능 활용 우수사례 공모전 본선</li>
+<li><b>12월 3일(목)</b> 창의설계입문 작품 전시회</li>
+</ul>
+<button class="btn main" id="retry" type="button">다시 연결하기</button>
+<a class="btn sub" href="https://youtu.be/30Rv38LvmzM">시연 영상 보기</a>
+<a class="btn sub" href="https://github.com/freshborn-Sol/where-wear">GitHub에서 자세히 보기</a>
+<p class="small">서버가 켜지면 이 화면에서 자동으로 연결돼요.</p>
+</div>
+</main>
+<script>
+var PREFIX = '/where-wear';
+function target(base) {
+  var p = location.pathname;
+  if (p.indexOf(PREFIX) === 0) p = p.slice(PREFIX.length);
+  if (p === '' || p === '/' || p === '/index.html' || p === '/404.html') p = '/go';
+  var q = location.search;
+  if (p === '/go' && !/[?&]at=/.test(q)) q = (q ? q + '&' : '?') + 'at=ENTRANCE';
+  return base.replace(/\/$/, '') + p + q + location.hash;
+}
+function alive(base) {
+  return new Promise(function (done) {
+    var img = new Image(), timer = setTimeout(function () { img.src = ''; done(false); }, 6000);
+    img.onload = function () { clearTimeout(timer); done(true); };
+    img.onerror = function () { clearTimeout(timer); done(false); };
+    img.src = base.replace(/\/$/, '') + '/static/logo/icon-32.png?t=' + Date.now();
+  });
+}
+var timer = null;
+function show(id) {
+  document.getElementById('wait').hidden = id !== 'wait';
+  document.getElementById('off').hidden = id !== 'off';
+}
+function connect(quiet) {
+  if (!quiet) show('wait');
+  fetch(PREFIX + '/server.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (s) { return s.url ? alive(s.url).then(function (ok) { return ok ? s.url : null; }) : null; })
+    .catch(function () { return null; })
+    .then(function (url) {
+      if (url) { location.replace(target(url)); return; }
+      show('off');
+      clearTimeout(timer);
+      timer = setTimeout(function () { connect(true); }, 15000);
+    });
+}
+document.getElementById('retry').onclick = function () { connect(false); };
+connect(false);
+</script>
+</body>
+</html>
