@@ -375,12 +375,12 @@ function buildMap(){
     const img=new Image(); img.decoding='async';
     img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(cl));
     await new Promise((ok,no)=>{ img.onload=ok; img.onerror=no; });
-    const F='"Noto Sans KR","Apple SD Gothic Neo",sans-serif', blue=getComputedStyle(document.body).getPropertyValue('--blue').trim()||'#1677E8';
+    const F='"Noto Sans KR","Apple SD Gothic Neo",sans-serif', blue=getComputedStyle(document.body).getPropertyValue('--blue').trim()||'#1558C9';
     const top=356, H=top+mh+150, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const g=cv.getContext('2d');
     g.fillStyle='#fff'; g.fillRect(0,0,W,H);
     g.fillStyle=blue; g.font='800 30px '+F; g.fillText('where:wear', P, 70);
     g.fillStyle='#8A94A5'; g.font='500 24px '+F; g.textAlign='right'; g.fillText('매장 안 옷 위치 안내', W-P, 70); g.textAlign='left';
-    g.fillStyle='#1B1F2D'; g.font='800 46px '+F; g.fillText(MAPINFO.name, P, 136, mw);
+    g.fillStyle='#030407'; g.font='800 46px '+F; g.fillText(MAPINFO.name, P, 136, mw);
     g.fillStyle='#485366'; g.font='500 28px '+F; g.fillText(MAPINFO.meta, P, 180, mw);
     roundRect(g,P,206,mw,124,22); g.fillStyle=blue; g.fill();
     g.fillStyle='#fff'; g.font='800 40px '+F; g.fillText(MAPINFO.loc, P+30, 262, mw-60);

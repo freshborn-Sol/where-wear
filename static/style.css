@@ -1,4 +1,4 @@
-:root{--ink:#1d2330;--mute:#6b7688;--line:#dfe5ec;--blue:#1677E8;--navy:#1677E8;
+:root{--ink:#1d2330;--mute:#6b7688;--line:#dfe5ec;--blue:#1558C9;--navy:#1558C9;
       --bg:#fff;--surf:#f5f8fb;--warn:#b3261e;--ok:#1D7A46}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:var(--ink);background:var(--bg)}
@@ -142,7 +142,7 @@ body.kiosk{background:#fff}
 .fchips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .fchip{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;font-size:13px;background:#fff;white-space:nowrap}
 .fchip small{color:var(--mute);font-size:11px}
-.fchip.on{background:var(--blue);border-color:var(--blue);color:#fff}.fchip.on small{color:#D6EAFF}
+.fchip.on{background:var(--blue);border-color:var(--blue);color:#fff}.fchip.on small{color:#CFDDF7}
 .fchip i{width:12px;height:12px;border-radius:50%;border:1px solid #0002;display:inline-block}
 .note b{color:var(--ink)}
 .ktiles{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
@@ -162,7 +162,7 @@ body.kiosk{background:#fff}
 .kchips{display:flex;flex-wrap:wrap;gap:10px}
 .kchip{font-size:24px;min-height:64px;padding:0 24px;display:inline-flex;align-items:center;gap:8px;border-radius:32px;background:#fff;border:2px solid #ccd;color:#222;text-decoration:none}
 .kchip small{font-size:18px;color:#888}
-.kchip.on{background:#1677E8;border-color:#1677E8;color:#fff}
+.kchip.on{background:#1558C9;border-color:#1558C9;color:#fff}
 .kchip.on small{color:#C7E0FF}
 
 /* ---- 상품 화면: '찾는 게 없나요?' ---- */
@@ -183,7 +183,7 @@ body.kiosk{background:#fff}
 .szb{min-width:64px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font-size:17px;font-weight:800;color:var(--ink)}
 .szb small{display:block;font-size:11px;font-weight:500;color:var(--ok)}
 .szb.zero small{color:var(--warn)}
-.szb.on{border-color:var(--navy);background:#EAF4FF}
+.szb.on{border-color:var(--navy);background:#E9F0FC}
 .ans{padding:12px;border-radius:12px;margin:12px 0;font-size:15px;line-height:1.5}
 .ans.ok{background:#EAF6EF}.ans.no{background:#fdecea}
 .ans small{color:var(--mute)}
@@ -212,7 +212,7 @@ body.kiosk{background:#fff}
 button.sz{background:#fff;color:var(--ink);font-family:inherit;cursor:pointer}
 .sz small{font-size:11px;color:var(--mute)}
 .sz.zero{text-decoration:none;color:#aab}.sz.zero small{color:var(--warn)}
-.sz.on{border-color:var(--navy);background:#EAF4FF}
+.sz.on{border-color:var(--navy);background:#E9F0FC}
 .sz.mine{border:2px solid var(--ok);font-weight:800}
 .rec{font-size:13px;line-height:1.5;padding:8px 10px;border-radius:10px;background:var(--surf);margin:4px 0 6px}
 .rec.ok{background:#EAF6EF}.rec.no{background:#fdecea}
@@ -220,7 +220,7 @@ button.sz{background:#fff;color:var(--ink);font-family:inherit;cursor:pointer}
 .szres{margin-top:12px}.szres > .btn{display:block;width:100%}
 .mebanner{background:var(--surf);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px;line-height:1.5}
 .mebanner a{color:var(--blue);margin-left:6px}
-.mebanner.new{background:#EAF4FF;border:1px solid #C7E0FF}
+.mebanner.new{background:#E9F0FC;border:1px solid #C7E0FF}
 .mebanner .mego{display:inline-block;margin:6px 0 0;padding:6px 14px;border-radius:999px;background:var(--navy);color:#fff}
 .meform label{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-weight:700}
 .meform label small{font-weight:400;color:var(--mute)}
@@ -229,7 +229,7 @@ button.sz{background:#fff;color:var(--ink);font-family:inherit;cursor:pointer}
 .prefs{display:flex;gap:8px}
 .prefs label{flex:1;justify-content:center;border:1.5px solid var(--line);border-radius:12px;padding:12px 4px;font-weight:700}
 .prefs input{margin-right:6px}
-.prefs label:has(input:checked){border-color:var(--navy);background:#EAF4FF}
+.prefs label:has(input:checked){border-color:var(--navy);background:#E9F0FC}
 
 /* ---- 로고 · 빨간 '찾는 게 없나요?' ---- */
 .logo{height:30px;display:block}
@@ -288,13 +288,13 @@ h2 small{font-weight:400;margin-left:6px}
 /* ---- 지도 밑: 찾았어요! / 찾는 게 없나요? ---- */
 .findbar{display:flex;gap:10px;margin-top:16px}
 .fbtn{flex:1;padding:16px 8px;border:0;border-radius:14px;color:#fff;font-size:17px;font-weight:800;font-family:inherit}
-.fbtn.found{background:var(--ok)}.fbtn.found:disabled{background:#3DD6CF}
+.fbtn.found{background:var(--ok)}.fbtn.found:disabled{background:#7FB898}
 .fbtn.red{background:#d93025}.fbtn.red:active{background:#b3261e}
 
 /* ---- 직원: 진열 점검 · 다시 찍을 옷 · 설정 ---- */
 .checkbar{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:#fff4e0;border:1px solid #f2d9a6;margin-bottom:12px}
 .checkbar div{flex:1}.checkbar small{display:block;color:var(--mute);font-size:12px}.checkbar .btn{flex:0 0 auto;padding:10px 14px}
-.allc{display:block;font-size:14px;margin:4px 0 10px;padding:10px 12px;border-radius:10px;background:#EAF4FF}
+.allc{display:block;font-size:14px;margin:4px 0 10px;padding:10px 12px;border-radius:10px;background:#E9F0FC}
 .allc small{color:var(--mute)}
 .manual.code{margin-top:8px}.manual.code input{padding:10px;border:1px solid var(--line);border-radius:8px;font-size:14px;width:180px}
 .manual.code .hint{width:100%;margin:0}.manual.code a{color:var(--blue)}

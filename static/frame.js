@@ -33,7 +33,7 @@
     '.wwf-if{position:absolute;left:0;top:47px;width:390px;height:797px;border:0;display:block;background:#fff}',
     '.wwf-home{position:absolute;left:50%;bottom:8px;width:134px;height:5px;margin-left:-67px;border-radius:3px;background:#111;z-index:3;pointer-events:none}',
     '.wwf-cap{font-size:13px;color:#5C665F;display:flex;gap:6px;align-items:center;flex:none}',
-    '.wwf-cap b{color:#2A2F38}.wwf-cap a{color:#1677E8;font-weight:700;text-decoration:none}',
+    '.wwf-cap b{color:#030407}.wwf-cap a{color:#1558C9;font-weight:700;text-decoration:none}',
     '.wwf-cap .sep{color:#B5BCC8}'
   ].join('\n');
   var ICONS = '<svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>' +
@@ -103,12 +103,12 @@
       '.wwk-low{flex:1;width:100%;display:flex;align-items:center;justify-content:center;gap:60px}',
       '.wwk-slot{width:380px;height:26px;border-radius:13px;background:#0E100F;box-shadow:0 2px 0 #3E4341}',
       '.wwk-lbl{font-size:30px;font-weight:700;color:#8E9691;letter-spacing:.02em}',
-      '.wwk-logo{display:flex;align-items:center;gap:14px;font-size:34px;font-weight:900;color:#E9EEF5}.wwk-logo i{font-style:normal;color:#9CCBFA}',
+      '.wwk-logo{display:flex;align-items:center;gap:14px;font-size:34px;font-weight:900;color:#E9EEF5}.wwk-logo i{font-style:normal;color:#D4FF24}',
       '.wwk-logo img{width:52px;height:52px;border-radius:14px}',
       '.wwk-neck{width:260px;height:90px;background:linear-gradient(90deg,#1C1F1E,#353A38,#1C1F1E)}',
       '.wwk-foot{width:640px;height:60px;border-radius:30px 30px 14px 14px;background:linear-gradient(180deg,#2B2F2D,#151817)}',
       '.wwk-cap{font-size:13px;color:#5C665F;display:flex;gap:6px;align-items:center;flex:none}',
-      '.wwk-cap b{color:#2A2F38}.wwk-cap a{color:#1677E8;font-weight:700;text-decoration:none}.wwk-cap .sep{color:#B5BCC8}'
+      '.wwk-cap b{color:#030407}.wwk-cap a{color:#1558C9;font-weight:700;text-decoration:none}.wwk-cap .sep{color:#B5BCC8}'
     ].join('\n');
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     var w = document.createElement('div'); w.className = 'wwk';
