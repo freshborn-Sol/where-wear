@@ -6,21 +6,22 @@
 <title>where:wear</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F3F7FC;color:#16202C;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#030407;color:#FFFFFF;font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif}
 main{width:100%;max-width:420px;padding:32px 24px;text-align:center}
-.logo{font-size:34px;font-weight:800;color:#1677E8;letter-spacing:-0.5px;margin-bottom:24px}
-.logo span{color:#3DD6CF}
-.spin{width:36px;height:36px;margin:0 auto 14px;border:4px solid #D6E2F0;border-top-color:#1677E8;border-radius:50%;animation:r 0.9s linear infinite}
+.logo{font-size:38px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
+.logo .w{color:#FFFFFF}.logo .b{color:#2F74E8}
+.team{font-size:14px;color:#AEB6C2;margin:0 0 28px}
+.spin{width:36px;height:36px;margin:0 auto 14px;border:4px solid #2A2F38;border-top-color:#2F74E8;border-radius:50%;animation:r 0.9s linear infinite}
 @keyframes r{to{transform:rotate(360deg)}}
 h1{font-size:21px;margin:0 0 8px}
-p{font-size:15px;line-height:1.55;color:#4A5565;margin:0 0 16px}
+p{font-size:15px;line-height:1.55;color:#AEB6C2;margin:0 0 16px}
 ul{list-style:none;padding:0;margin:0 0 20px;text-align:left;background:#fff;border-radius:14px;padding:14px 16px}
 li{font-size:14.5px;line-height:1.5;padding:4px 0}
 li b{color:#1677E8}
 .btn{display:block;width:100%;padding:14px;border-radius:12px;font-size:15.5px;font-weight:700;text-decoration:none;margin-bottom:10px;border:0;cursor:pointer}
-.main{background:#1677E8;color:#fff}
-.sub{background:#fff;color:#16202C;border:1px solid #D6E2F0}
-.small{font-size:12.5px;color:#7A8594;margin-top:8px}
+.main{background:#1558C9;color:#fff}
+.sub{background:#15191F;color:#FFFFFF;border:1px solid #2A2F38}
+.small{font-size:12.5px;color:#8A94A3;margin-top:8px}
 .pick{text-align:left;padding:16px 18px}
 .pick b{display:block;font-size:16.5px}
 .pick span{display:block;font-size:13px;font-weight:500;margin-top:3px;opacity:.85}
@@ -29,10 +30,11 @@ li b{color:#1677E8}
 </head>
 <body>
 <main>
-<div class="logo">where<span>:</span>wear</div>
+<div class="logo"><span class="w">where:</span><span class="b">wear</span></div>
+<p class="team">뿌셔뿌셔조 (류한솔, 김준구, 이준혁)</p>
 <div id="wait">
 <div class="spin" aria-hidden="true"></div>
-<p>시연 서버에 연결하는 중이에요…</p>
+<p>프로토타입 서버에 연결하는 중이에요…</p>
 </div>
 <div id="pick" hidden>
 <h1>어떤 화면을 써볼까요?</h1>
@@ -40,15 +42,10 @@ li b{color:#1677E8}
 <a class="btn main pick" id="toGo" href="#"><b>손님으로 써보기</b><span>매장에서 QR을 찍은 손님 화면</span></a>
 <a class="btn main pick" id="toKiosk" href="#"><b>키오스크 화면 보기</b><span>매장 입구의 큰 화면</span></a>
 <a class="btn sub pick" id="toStaff" href="#"><b>직원 모드 보기</b><span>옷 등록 · 신고 처리 · 점장 요약</span></a>
-<p class="small">오프라인 의류 매장 내 위치 안내 서비스 · 팀 뿌셔뿌셔</p>
+<p class="small">오프라인 의류 매장 내 위치 안내 서비스</p>
 </div>
 <div id="off" hidden>
-<h1>지금은 시연 서버가 꺼져 있어요</h1>
-<p>where:wear는 행사 시간에 부스에서 직접 써볼 수 있어요.</p>
-<ul>
-<li><b>11월 28일(토)</b> 제2회 인공지능 활용 우수사례 공모전 본선</li>
-<li><b>12월 3일(목)</b> 창의설계입문 작품 전시회</li>
-</ul>
+<h1 style="margin-bottom:22px">지금은 프로토타입 서버가 꺼져 있어요</h1>
 <button class="btn main" id="retry" type="button">다시 연결하기</button>
 <a class="btn sub" href="https://youtu.be/30Rv38LvmzM">시연 영상 보기</a>
 <a class="btn sub" href="https://github.com/freshborn-Sol/where-wear">GitHub에서 자세히 보기</a>
