@@ -441,7 +441,7 @@ def subcat_tiles():
     for r in rows("SELECT category, subcat, COUNT(*) n FROM items GROUP BY category, subcat"):
         if r["category"] not in tiles: continue
         rep = one("""SELECT * FROM items WHERE category=? AND subcat=?
-                     ORDER BY (image LIKE 'photos/%') DESC, sku LIMIT 1""", (r["category"], r["subcat"]))
+                     ORDER BY COALESCE(is_demo,0) DESC, (image LIKE 'photos/%') DESC, sku LIMIT 1""", (r["category"], r["subcat"]))
         tiles[r["category"]].append({"sub": r["subcat"], "n": r["n"], "rep": rep})
     for c in tiles:
         tiles[c].sort(key=lambda t: SUB_ORDER.index(t["sub"]) if t["sub"] in SUB_ORDER else 999)
@@ -451,7 +451,7 @@ def apply_filters(items, sel, skip=None):
     for k, col in FACET_COL.items():
         if k != skip and sel.get(k):
             items = [i for i in items if (i.get(col) or "") == sel[k]]
-    return items
+    return sorted(items, key=lambda i: not i.get("is_demo"))   # 전시용으로 직접 찍어 등록한 옷(EX…)을 맨 위로 (나머지 순서는 그대로)
 
 def facet_counts(base, sel):
     """각 필터 줄에 보여줄 값과 개수. 자기 줄은 빼고 나머지 조건으로 센다 (다른 값으로 바꿔 누를 수 있게)"""
@@ -554,12 +554,17 @@ def _hashtags(fx_ids, n=3):
                     WHERE p.fixture_id IN ({q}) GROUP BY i.subcat ORDER BY c DESC LIMIT {n}""", tuple(fx_ids))
     return " ".join("#" + r["subcat"] for r in subs)
 
+def hd_photo(it):
+    """배너는 화면 폭 가득 크게 보이므로, static/photos_hd/ 에 같은 이름의 고화질 사진이 있으면 그것을 씀"""
+    name = os.path.basename((it["image"] if it else "") or "")
+    return f"photos_hd/{name}" if name and os.path.exists(os.path.join(app.static_folder, "photos_hd", name)) else None
+
 def home_slides(at, hero):
     """배너: 신상품 매대 · 할인 매대 · 아우터 구역 (+ 맨 끝 사진으로 찾기). 거리는 지금 QR 자리 기준"""
     out = []
     for h in hero:
         w = walk(at, h["fx"])
-        out.append({"href": f"/search?at={at}&fx={h['fx']}", "img": h["rep"], "tag": "신상" if h["tag"] == "NEW" else "할인",
+        out.append({"href": f"/search?at={at}&fx={h['fx']}", "img": h["rep"], "hd": hd_photo(h["rep"]), "tag": "신상" if h["tag"] == "NEW" else "할인",
                     "title": "이번 주 신상품,\n입구 앞에 모았어요" if h["tag"] == "NEW" else "할인 매대에서\n가볍게 골라 보세요",
                     "loc": "P구역" + (f" · 여기서 {w['m']}m" if w else ""), "tags": _hashtags([h["fx"]]), "n": h["n"]})
     cfx = [f["id"] for f in rows("SELECT id FROM fixtures WHERE zone='C'")]
@@ -569,7 +574,7 @@ def home_slides(at, hero):
                       ORDER BY (i.image LIKE 'photos/%') DESC, i.price DESC LIMIT 1""", tuple(cfx))
         if rep:
             w = walk(at, "C-H1")
-            out.append({"href": f"/search?at={at}&cat=아우터", "img": rep, "tag": "아우터",
+            out.append({"href": f"/search?at={at}&cat=아우터", "img": rep, "hd": hd_photo(rep), "tag": "아우터",
                         "title": "따뜻한 아우터는\nC구역에 모여 있어요", "loc": "C구역" + (f" · 여기서 {w['m']}m" if w else ""),
                         "tags": _hashtags(cfx), "n": None})
     return out
@@ -756,7 +761,7 @@ def search():
     if not q:
         picked = [v for v in (sel["cat"], sel["sub"], sel["color"], sel["fit"], sel["pattern"]) if v]
         note = " · ".join(([fxrow["name"]] if fxrow else []) + picked) if (picked or fxrow) else "전체 상품"
-    near = lambda it: (it["place"] is None, (it["walk"] or {}).get("m", 999))
+    near = lambda it: (not it.get("is_demo"), it["place"] is None, (it["walk"] or {}).get("m", 999))   # 전시용 옷 먼저, 그다음 가까운 순
     if exact_ids is not None and exact_ids and len(exact_ids) < len(items):
         more = [it for it in items if it["sku"] not in exact_ids]
         items = sorted([it for it in items if it["sku"] in exact_ids], key=near)

@@ -14,7 +14,7 @@
     {% set total = slides|length + 1 %}
     {% for s in slides %}
     <a class="hsl" href="{{s.href}}">
-      <img src="{{ imgsrc(s.img) }}" alt="">
+      <img src="{{ url_for('static', filename=s.hd) if s.hd else imgsrc(s.img) }}" alt="">
       <span class="hs-loc">{{ cx.icon('pin', 14) }}{{s.loc}}</span>
       <b class="hs-t">{% for line in s.title.split('\n') %}{{line}}{% if not loop.last %}<br>{% endif %}{% endfor %}</b>
       <small class="hs-tags">{{s.tags}}</small>
