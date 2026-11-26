@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-<a href="https://freshborn-sol.github.io/where-wear/video.html"><img src="docs/demo_thumb.jpg" alt="where:wear 시연 영상" width="640"></a><br>
-▶ <a href="https://freshborn-sol.github.io/where-wear/video.html"><b>시연 영상 보기 (1분)</b></a> — 행거 QR 길 안내 · 사진(AI) 검색 · 옷 태그 재고, 키오스크 종이 지도, 직원 등록 · 신고 처리 · 점장 요약
+<a href="https://youtu.be/ajc5b5gxbS4"><img src="https://img.youtube.com/vi/ajc5b5gxbS4/hqdefault.jpg" alt="where:wear 시연 영상" width="640"></a><br>
+▶ <a href="https://youtu.be/ajc5b5gxbS4"><b>시연 영상 보기 (1분)</b></a> — 행거 QR 길 안내 · 사진(AI) 검색 · 옷 태그 재고, 키오스크 종이 지도, 직원 등록 · 신고 처리 · 점장 요약
 </p>
 
 ---
